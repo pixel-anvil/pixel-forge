@@ -24,7 +24,8 @@ User wants to review the spec and the plan before proceeding past each.
 - Deviation: no git repo yet, so W0 cards share the working tree (they write to separate directories). **No commits until T0.6 has scrubbed game references**, so the public history stays clean.
 - ☑ T0.5 (CC0 Hero Swordsman; the orchestrator fixed sheet.json). ☑ T0.1 (ADRs + agent docs). ☑ T0.2 (scaffold; `pnpm verify` passes; repo-local pseudonymous identity; no commits). ☑ T0.6 (game refs moved to `~/pf-work/GAME_NOTES.md`; privacy hook + denylist; LICENSE/README/SECURITY/CONTRIBUTING).
 - In flight: T0.4 RotSprite spike (opus/high).
-- Next: T0.4 done → show the user the spike sheets. O-1: the user created the org **`pixel-anvil`** (repo `pixel-anvil/pixel-forge`). Then T1.8 → T0.3 → Wave 1 (T1.1 is the next Opus card, so the orchestrator should be on Opus/high).
+- ☑ O-1: https://github.com/pixel-anvil/pixel-forge (public, CI green, `main` protected). **From now on, work goes on phase branches and PRs to `main`**: wave branch `m1a-wave1`.
+- Next: T0.4 done → show the user the spike sheets. Then T1.8 → T0.3 → Wave 1 (T1.1 is the next Opus card, so the orchestrator should be on Opus/high).
 
 ## Open questions for the user
 None right now.

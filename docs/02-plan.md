@@ -131,7 +131,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T0.5 | Fetch and check a CC0 character sheet → `fixtures/cc0/` | haiku | low | S | — | ∥ | ☑ |
 | T0.2 | Monorepo scaffold, tooling, CI | sonnet | medium | M | T0.1 | | ☑ |
 | T0.6 | Public-readiness: scrub game refs → GAME_NOTES.md, LICENSE, README, SECURITY, privacy hook | sonnet | medium | S | T0.1, T0.2 | | ☑ |
-| O-1 | User creates the `pixel-anvil` org → public repo, branch protection, push, CI green | orchestrator | — | S | T0.6 | | ☐ |
+| O-1 | User creates the `pixel-anvil` org → public repo, branch protection, push, CI green | orchestrator | — | S | T0.6 | |☑ |
 | T1.8 | `png` package: deterministic PNG encode/decode | sonnet | high | S | T0.2 | | ☐ |
 | T0.3 | testkit: golden helper, ASCII helpers, golden sheets, fixture runner | sonnet | medium | S | T1.8 | | ☐ |
 | T1.1 | schema: domain types + zod + ids (**+ review + user look**) | opus | xhigh | M | T0.2 | | ☐ |
@@ -260,6 +260,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - runs `gh repo create pixel-anvil/pixel-forge --public --source . --push --description "Pixel-art editor and animator with pixel-aware rigs, MCP and Godot import"`;
   - enables branch protection on `main` (requires CI to pass; no force-push), Dependabot alerts, and private vulnerability reporting.
 - Wait for CI to go green, and fix any CI-only failures here.
+- **Notes (2026-10-26)** — ☑ The org is **`pixel-anvil`** (the user's choice). Repo https://github.com/pixel-anvil/pixel-forge is public, and the user's org membership is private. First CI run is green on ubuntu and macOS. `main` is protected: required checks `verify (ubuntu-latest)` and `verify (macos-latest)` (strict), linear history, no force-push or deletion. Admins can bypass it, so the orchestrator follows the PR flow by convention. Dependabot alerts and private vulnerability reporting are on.
 
 #### T1.8 `png` codec  [sonnet] [S]
 - **Deliverables** — `packages/png`:
