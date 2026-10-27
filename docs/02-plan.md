@@ -141,7 +141,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T1.4 | raster: sparse tiled image, compositing, basic transforms | sonnet | high | M | T1.1, T0.3 | ∥ |☑ |
 | T1.5 | raster: primitives (line, rect, ellipse, fill, pixel-perfect) | sonnet | medium | S | T1.4 | ∥ | ☐ |
 | T1.6 | raster: fixed-point trig + RotSprite (+ review) | opus | xhigh | M | T1.4, T0.4 | ∥ | ☐ |
-| T1.7 | raster: orphan removal + outline pass | sonnet | medium | S | T1.4 | ∥ | ☐ |
+| T1.7 | raster: orphan removal + outline pass | sonnet | medium | S | T1.4 | ∥ |☑ |
 | T2.1 | core: document store, transactions, patches, history, rig hook interface (+ review) | opus | xhigh | M | T1.1, T1.4 | ∥ | ☐ |
 | T3.0 | rig: joint-gap definition + hand-written ASCII gap fixtures | opus | high | S | T1.1 | ∥ | ☐ |
 | T3.1 | rig: FK, interpolation + quantisation, hierarchical snapping (+ review) | opus | xhigh | M | T1.1, T1.6 | ∥ | ☐ |
@@ -350,6 +350,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 #### T1.7 orphan removal + outline  [sonnet] [S] ∥
 - **Deliverables** — `removeOrphans`, and `outline(img, colour, {outsideOnly, corners})` producing a four-connected, one-pixel outline.
 - **Oracle** — hand-written ASCII cases: convex and concave corners, single pixels, holes.
+- **Notes (2026-10-27)** — ☑ Verified. `removeOrphans` makes a single pass with no cascading (`XXX` with minNeighbours 2 → `.X.`). `outline` always grows the canvas by 1 px and returns `{img, offset:{1,1}}`; it never paints over opaque pixels; holes are 4-connected flood. The orchestrator changed the default corners to **'round'** so it matches the schema (`corners` absent = false = round), and updated the tests to state their mode explicitly. About 72k subagent tokens.
 
 ### Wave 2 — core + rig foundations
 

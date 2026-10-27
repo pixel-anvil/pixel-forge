@@ -92,3 +92,13 @@ All transforms read only stored (non-empty) pixels, so sparsity is preserved, an
 ## Benchmark
 
 `node packages/raster/bench/composite.bench.mjs` (after `pnpm exec tsc -b packages/raster`) times a 64x64 composite onto 256x256; not run in CI. On the dev machine it is about 0.07 ms including the `clone()`.
+
+## Post-passes
+
+Pure, integer-only clean-up passes for the rig renderer (FR-RIG-20 step 6, run on the composite before the final overrides), for `TiledImage` and `IndexedImage`. "Opaque" means alpha != 0 (RGBA, so partial alpha counts) or index != `transparentIndex` (indexed). Neither pass modifies its input.
+
+`removeOrphans(img, { minNeighbours = 1, connectivity = 8 }) -> { img, removed }` removes every opaque pixel that has fewer than `minNeighbours` opaque pixels among its 4 or 8 neighbours (outside the image counts as empty). It is a single pass: counts are taken on the input, so removals do not cascade (`XXX` with `minNeighbours: 2` becomes `.X.`, not empty). `minNeighbours` is an integer 0..8 (0 removes nothing); anything else throws `BAD_VALUE`.
+
+`outline(img, colour, { outsideOnly = true, corners = 'round' }) -> { img, offset }` paints a 1-px outline on transparent pixels only, never over opaque ones. `corners: 'square'` outlines a transparent pixel if any of its 8 neighbours is opaque (diagonal corner pixels included); `'round'` uses the 4 edge neighbours only, which omits the convex corner diagonals. `colour` is an `Rgba` with alpha > 0 for `TiledImage`, a palette index (not `transparentIndex`) for `IndexedImage`. With `outsideOnly: true`, holes (transparent pixels not 4-connected to the outside) are not outlined; a ring closed only diagonally still counts as closed. `outsideOnly: false` also outlines the inside of holes.
+
+Canvas: the result is always grown by 1 px on each side, `(w + 2) x (h + 2)`, so border-touching shapes are never clipped. `offset` is always `{ x: 1, y: 1 }` (input pixel `(x, y)` is output `(x + 1, y + 1)`); the renderer places the result at its part offset minus `offset`. Use `crop` to get the old canvas back. The schema's boolean `corners` maps `true` to `'square'` and `false` or absent to `'round'` (the default, so the defaults agree).
