@@ -17,14 +17,14 @@ User wants to review the spec and the plan before proceeding past each.
 - 2026-10-26: User: name pixel-forge, GitHub, AI panel M3 or later, M1a exit move = the target move, 4 phases (GAME_NOTES §5, local).
 - 2026-10-26: Also use a CC0 sprite sheet (candidate: Hero Swordsman by tbbk, OpenGameArt node 165036, 64×64, jump/air-attack) as a committed real-art fixture, MCP dogfood character and CI test; the target move stays the in-game M1a exit.
 - 2026-10-26: Plan v0.1 reviewed (24 findings, 3 blockers), all accepted → plan v0.2; spec → v0.2.1 (FR-GD-03 game-driven playback, FR-DOC-05 cell ranges, M1a tools, `png` package).
-- 2026-10-26: Effort level per card added (plan v0.3). Repo will be PUBLIC under a new GitHub org `pixel-forge` (the user creates it on the web), MIT, pseudonymous commit identity `pixel-forge dev <dev@pixel-forge.invalid>`, game details kept local in `~/pf-work/GAME_NOTES.md` (new card T0.6 before the first push). CI: ubuntu+macOS on every push (free).
+- 2026-10-26: Effort level per card added (plan v0.3). Repo will be PUBLIC under a new GitHub org `pixel-anvil` (the user creates it on the web), MIT, pseudonymous commit identity `pixel-forge dev <dev@pixel-forge.invalid>`, game details kept local in `~/pf-work/GAME_NOTES.md` (new card T0.6 before the first push). CI: ubuntu+macOS on every push (free).
 
 ## Current focus / Next
 - 2026-10-26: Plan v0.3 approved. Wave 0 started: T0.1 (sonnet/medium), T0.4 (opus/high), T0.5 (haiku/low) dispatched in parallel.
 - Deviation: no git repo yet, so W0 cards share the working tree (they write to separate directories). **No commits until T0.6 has scrubbed game references**, so the public history stays clean.
 - ☑ T0.5 (CC0 Hero Swordsman; the orchestrator fixed sheet.json). ☑ T0.1 (ADRs + agent docs). ☑ T0.2 (scaffold; `pnpm verify` passes; repo-local pseudonymous identity; no commits). ☑ T0.6 (game refs moved to `~/pf-work/GAME_NOTES.md`; privacy hook + denylist; LICENSE/README/SECURITY/CONTRIBUTING).
 - In flight: T0.4 RotSprite spike (opus/high).
-- Next: T0.4 done → show the user the spike sheets. **O-1 is blocked on the user creating the `pixel-forge` GitHub org** (asked 2026-10-26). Then T1.8 → T0.3 → Wave 1 (T1.1 is the next Opus card, so the orchestrator should be on Opus/high).
+- Next: T0.4 done → show the user the spike sheets. O-1: the user created the org **`pixel-anvil`** (repo `pixel-anvil/pixel-forge`). Then T1.8 → T0.3 → Wave 1 (T1.1 is the next Opus card, so the orchestrator should be on Opus/high).
 
 ## Open questions for the user
 None right now.

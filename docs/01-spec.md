@@ -476,6 +476,6 @@ ADR-010 determinism rules (fixed-point trig, fflate, decoded-RGBA hash) · ADR-0
 
 ## 13. Decisions (resolved 2026-10-26)
 1. Name: **pixel-forge**, CLI `pf`.
-2. Hosting: **public** GitHub repo `pixel-forge/pixel-forge` in a new org that isn't tied to the author's name. **MIT** licence. Commits use a pseudonymous, unlinked identity. CI on GitHub Actions (free for public repos): ubuntu and macOS on every push, Windows from M3. Details of the first consumer game stay out of the repo (local `~/pf-work/GAME_NOTES.md`).
+2. Hosting: **public** GitHub repo `pixel-anvil/pixel-forge` in a new org that isn't tied to the author's name. **MIT** licence. Commits use a pseudonymous, unlinked identity. CI on GitHub Actions (free for public repos): ubuntu and macOS on every push, Windows from M3. Details of the first consumer game stay out of the repo (local `~/pf-work/GAME_NOTES.md`).
 3. AI panel: **M3 or later**. Claude Code via MCP covers it until then.
 4. M1a exit move: **the target move** (all four phases; GAME_NOTES §5). Assumed source: the licensed pack frames split into parts (this exercises W2b). Switch to newly drawn parts if splitting proves too laborious.

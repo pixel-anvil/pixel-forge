@@ -6,3 +6,6 @@ coverage
 *.tsbuildinfo
 .DS_Store
 spikes/**/out/
+
+# Claude Code local state (worktrees, settings)
+.claude/
