@@ -1,0 +1,6 @@
+{
+  "pivot": [7, 5],
+  "angles": [{ "angle": 10, "gaps": [[9, 5]] }],
+  "gapCount": 1,
+  "union": [[9, 5]]
+}

@@ -42,7 +42,7 @@ Each one becomes an automated test (harness or e2e) over fixtures in `fixtures/`
 | ID | Scenario | Passes when | M |
 |---|---|---|---|
 | W1 | **Image → sprite**: convert `fixtures/photo_ball.jpg` to 32 px tall with the PICO-8 palette, producing a 4-variant grid (2 downscale methods × dither on/off) | 4 layers are produced, lint reports 0 off-palette pixels, and the output matches golden images. The same works through MCP `image_to_sprite`. | M1b |
-| W2 | **Rig a character**: import `fixtures/hero_parts.aseprite` (layers named `part:<bone>[@variant]`), apply the humanoid-side template, auto-bind | Every part is bound, the pivots are set, and the joint check reports **exactly** the 3 seeded gaps in `fixtures/gappy` and 0 in `fixtures/clean` | M1a |
+| W2 | **Rig a character**: import `fixtures/hero_parts.aseprite` (layers named `part:<bone>[@variant]`), apply the humanoid-side template, auto-bind | Every part is bound, the pivots are set, and the joint check reports **exactly** the 3 seeded gaps (`unionCount` across `fixtures/joint/gappy_*`) and 0 across `fixtures/joint/clean_*` | M1a |
 | W2b | **Split a flat frame**: from a flat pack frame, split regions into parts and paint the hidden overlap | The split parts recomposite to the original frame pixel for pixel, and the joint check passes after the overlap is painted | M1a |
 | W3 | **Animate with prompts**: in Claude Code, "6-frame run cycle, side view, 12 fps, with anticipation" | The animation exists, lint is clean, every tool call is one undo step, and a contact sheet was rendered and inspected | M1a (manual poses) / M1b (presets) |
 | W4 | **Touch up**: fix 3 px on frame 2 (a part override), then change the torso lean by +5° on all frames | Overrides on parts that **moved but didn't rotate** follow them. Overrides on parts that **rotated** become *stale*. Nothing is silently lost. | M1a (via `pf override import`) / M2 (in the editor) |
@@ -186,7 +186,7 @@ These settle ambiguities found while writing `@pixel-forge/schema`. Its README i
 - FR-RIG-02 [M1a]: Skeleton templates: humanoid (bone names `root, pelvis, torso, neck, head, upper_arm_l/r, lower_arm_l/r, hand_l/r, thigh_l/r, shin_l/r, foot_l/r`) with a side view and a front/back view. [M1b]: quadruped.
 - FR-RIG-03 [M1a]: Bind parts to bones automatically by layer name (`part:<bone>…`) or by overlap, and set pivots (pixel-centre).
 - FR-RIG-04 [M1a]: Variants per part and view, with an optional `drawnAngle`.
-- FR-RIG-05 [M1a]: **Joint coverage check.** For each joint, sweep the child's angle over ±N° (default 30°, step 5°) while the parent stays at rest. Report the transparent pixels that open up between parent and child, with coordinates. The result is deterministic and pinned by fixtures (W2).
+- FR-RIG-05 [M1a]: **Joint coverage check.** For each joint, sweep the child's angle over ±N° (default 30°, step 5°) while the parent stays at rest. Report the pixels, within r (default 4) of the joint pivot, that were covered at rest, are transparent at θ, lie on the outer side of the bend, and are pinched between parent and child along a row, column or diagonal. The exact predicate is in `docs/contracts/JOINT_CHECK.md`. The result is deterministic and pinned by hand-written fixtures in `fixtures/joint/` (W2).
 - FR-RIG-06 [M1a]: Default z per part per view. Z can be overridden with a part key.
 - FR-RIG-07 [M1a]: **Split to parts** (for flat art):
   - select a region (rectangle, lasso, or a colour-bounded flood) and move it to a new PartLayer, leaving transparency behind;
