@@ -145,7 +145,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T2.1 | core: document store, transactions, patches, history, rig hook interface (+ review) | opus | xhigh | M | T1.1, T1.4 | ∥ |☑ |
 | T3.0 | rig: joint-gap definition + hand-written ASCII gap fixtures | opus | high | S | T1.1 | ∥ |☑ |
 | T3.1 | rig: FK, interpolation + quantisation, hierarchical snapping (+ review) | opus | xhigh | M | T1.1, T1.6 | ∥ | ☐ |
-| T2.2 | core: frame ops (§3.2) + `validate()` | sonnet | medium | M | T2.1 | ∥ | ☐ |
+| T2.2 | core: frame ops (§3.2) + `validate()` | sonnet | medium | M | T2.1 | ∥ |☑ |
 | T2.3 | core: `renderFrame` (pixel layers) + cache key | sonnet | medium | S | T2.1 | ∥ | ☐ |
 | T3.2 | rig: templates, bind by name/overlap, pivots, views | sonnet | medium | M | T3.1 | ∥ | ☐ |
 | T4.3 | io: spritesheet import (cell ranges, outline sheet), sheet + JSON export, contact sheet | sonnet | medium | M | T2.3, T1.8 | ∥ | ☐ |
@@ -413,6 +413,13 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 - **Spec** — §3.2, I1–I7.
 - **Deliverables** — `insertFrame`, `duplicateFrame`, `deleteFrame` (which materialises links into the deleted frame), `reorderFrames`, `validate`.
 - **Oracle** — one test per §3.2 rule. Property test: after random frame operations, `validate()` reports no errors.
+- **Notes (2026-10-27)** — ☑ About 170 core tests; resumed once after the usage limit. `validate()` runs the schema first, then 46 finding codes (39 errors, 7 warnings), each with a failing fixture. The property test runs 6 seeds × 40 random ops, checks validity after every step, and confirms undo-all restores the hash. Decisions:
+  - frame-op refusals use `BAD_ARGUMENT` with `details.reason`, to be promoted to codes later;
+  - part-layer names are unique document-wide, other layer names among siblings (warning);
+  - `deleteFrame` materialises links into the first linker and deletes orphaned images;
+  - `ID_COUNTER_BEHIND` is a warning.
+
+  Follow-up CORE-01: the I4 detector copies schema scramble constants, so the schema should export the decoder.
 
 #### T2.3 renderFrame (pixel layers)  [sonnet] [S] ∥
 - **Deliverables** — `renderFrame` for pixel and group layers (links, opacity, visibility, the `export` filter), calling the `RigRenderer` hook when it's present, plus the input-hash memo.

@@ -49,3 +49,16 @@ export { DocumentStore } from './store.js';
 export type { StoreOptions } from './store.js';
 export { documentCanonical, documentHash } from './hash.js';
 export type { RenderedPart, RigFrameContext, RigRenderer } from './rig-hook.js';
+
+export {
+  deleteFrame,
+  duplicateFrame,
+  insertFrame,
+  referencedImages,
+  reorderFrames,
+  resolveAnimation,
+  resolveFrame,
+} from './frames.js';
+export type { FrameOpReason, InsertFrameOptions } from './frames.js';
+export { FINDING_CODES, validate } from './validate.js';
+export type { Finding, FindingCode, Severity } from './validate.js';
