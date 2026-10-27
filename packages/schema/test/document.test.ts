@@ -2,6 +2,8 @@ import { describe, expect, expectTypeOf, it } from 'vitest';
 import type { z } from 'zod';
 import {
   AngleQuantum,
+  angleQuantumSteps,
+  isValidAngleQuantum,
   Animation,
   BoneKey,
   Cel,
@@ -298,6 +300,20 @@ describe('animations', () => {
       expect(AngleQuantum.safeParse(q).success, String(q)).toBe(true);
     }
     for (const q of [0, -1, 0.1, 0.3, 7, 100, 360, Number.NaN]) {
+      expect(AngleQuantum.safeParse(q).success, String(q)).toBe(false);
+    }
+  });
+
+  it('exposes the same rule as isValidAngleQuantum / angleQuantumSteps', () => {
+    const good = [0.25, 0.5, 0.75, 1, 1.5, 2, 2.5, 5, 7.5, 15, 22.5, 45, 90];
+    const bad = [0, -1, 0.1, 0.3, 7, 100, 360, 90.25, 0.125, Number.NaN, Infinity, -Infinity];
+    for (const q of good) {
+      expect(isValidAngleQuantum(q), String(q)).toBe(true);
+      expect(angleQuantumSteps(q), String(q)).toBe(q * 4);
+    }
+    for (const q of bad) {
+      expect(isValidAngleQuantum(q), String(q)).toBe(false);
+      expect(angleQuantumSteps(q), String(q)).toBeUndefined();
       expect(AngleQuantum.safeParse(q).success, String(q)).toBe(false);
     }
   });

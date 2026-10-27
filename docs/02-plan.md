@@ -128,25 +128,25 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | Card | Title | Model | Effort | Size | Deps | ∥ | ☐/☑ |
 |---|---|---|---|---|---|---|---|
 | T0.1 | ADRs + agent docs | sonnet | medium | M | — | ∥ | ☑ |
-| T0.4 | **RotSprite spike** on real pack art, vs Aseprite's own RotSprite | opus | high | M | — | ∥ |☑ |
+| T0.4 | **RotSprite spike** on real pack art, vs Aseprite's own RotSprite | opus | high | M | — | ∥ | ☑ |
 | T0.5 | Fetch and check a CC0 character sheet → `fixtures/cc0/` | haiku | low | S | — | ∥ | ☑ |
 | T0.2 | Monorepo scaffold, tooling, CI | sonnet | medium | M | T0.1 | | ☑ |
 | T0.6 | Public-readiness: scrub game refs → GAME_NOTES.md, LICENSE, README, SECURITY, privacy hook | sonnet | medium | S | T0.1, T0.2 | | ☑ |
-| O-1 | User creates the `pixel-anvil` org → public repo, branch protection, push, CI green | orchestrator | — | S | T0.6 | |☑ |
-| T1.8 | `png` package: deterministic PNG encode/decode | sonnet | high | S | T0.2 | |☑ |
-| T0.3 | testkit: golden helper, ASCII helpers, golden sheets, fixture runner | sonnet | medium | S | T1.8 | |☑ |
-| T1.1 | schema: domain types + zod + ids (**+ review + user look**) | opus | xhigh | M | T0.2 | |☑ |
-| T1.2 | color: OKLab/OKLCH, nearest colour, palette ops | sonnet | medium | S | T1.1 | ∥ |☑ |
-| T1.3 | color: palette presets from fetched Lospec `.hex` sources | haiku | low | S | T1.2 | ∥ |☑ |
-| T1.4 | raster: sparse tiled image, compositing, basic transforms | sonnet | high | M | T1.1, T0.3 | ∥ |☑ |
-| T1.5 | raster: primitives (line, rect, ellipse, fill, pixel-perfect) | sonnet | medium | S | T1.4 | ∥ |☑ |
-| T1.6 | raster: fixed-point trig + RotSprite (+ review) | opus | xhigh | M | T1.4, T0.4 | ∥ |☑ |
-| T1.7 | raster: orphan removal + outline pass | sonnet | medium | S | T1.4 | ∥ |☑ |
-| T2.1 | core: document store, transactions, patches, history, rig hook interface (+ review) | opus | xhigh | M | T1.1, T1.4 | ∥ |☑ |
-| T3.0 | rig: joint-gap definition + hand-written ASCII gap fixtures | opus | high | S | T1.1 | ∥ |☑ |
-| T3.1 | rig: FK, interpolation + quantisation, hierarchical snapping (+ review) | opus | xhigh | M | T1.1, T1.6 | ∥ | ☐ |
-| T2.2 | core: frame ops (§3.2) + `validate()` | sonnet | medium | M | T2.1 | ∥ |☑ |
-| T2.3 | core: `renderFrame` (pixel layers) + cache key | sonnet | medium | S | T2.1 | ∥ |☑ |
+| O-1 | User creates the `pixel-anvil` org → public repo, branch protection, push, CI green | orchestrator | — | S | T0.6 | | ☑ |
+| T1.8 | `png` package: deterministic PNG encode/decode | sonnet | high | S | T0.2 | | ☑ |
+| T0.3 | testkit: golden helper, ASCII helpers, golden sheets, fixture runner | sonnet | medium | S | T1.8 | | ☑ |
+| T1.1 | schema: domain types + zod + ids (**+ review + user look**) | opus | xhigh | M | T0.2 | | ☑ |
+| T1.2 | color: OKLab/OKLCH, nearest colour, palette ops | sonnet | medium | S | T1.1 | ∥ | ☑ |
+| T1.3 | color: palette presets from fetched Lospec `.hex` sources | haiku | low | S | T1.2 | ∥ | ☑ |
+| T1.4 | raster: sparse tiled image, compositing, basic transforms | sonnet | high | M | T1.1, T0.3 | ∥ | ☑ |
+| T1.5 | raster: primitives (line, rect, ellipse, fill, pixel-perfect) | sonnet | medium | S | T1.4 | ∥ | ☑ |
+| T1.6 | raster: fixed-point trig + RotSprite (+ review) | opus | xhigh | M | T1.4, T0.4 | ∥ | ☑ |
+| T1.7 | raster: orphan removal + outline pass | sonnet | medium | S | T1.4 | ∥ | ☑ |
+| T2.1 | core: document store, transactions, patches, history, rig hook interface (+ review) | opus | xhigh | M | T1.1, T1.4 | ∥ | ☑ |
+| T3.0 | rig: joint-gap definition + hand-written ASCII gap fixtures | opus | high | S | T1.1 | ∥ | ☑ |
+| T3.1 | rig: FK, interpolation + quantisation, hierarchical snapping (+ review) | opus | xhigh | M | T1.1, T1.6 | ∥ | ☑ |
+| T2.2 | core: frame ops (§3.2) + `validate()` | sonnet | medium | M | T2.1 | ∥ | ☑ |
+| T2.3 | core: `renderFrame` (pixel layers) + cache key | sonnet | medium | S | T2.1 | ∥ | ☑ |
 | T3.2 | rig: templates, bind by name/overlap, pivots, views | sonnet | medium | M | T3.1 | ∥ | ☐ |
 | T4.3 | io: spritesheet import (cell ranges, outline sheet), sheet + JSON export, contact sheet | sonnet | medium | M | T2.3, T1.8 | ∥ | ☐ |
 | T4.2 | io: `.pxf` read/write, migrations, render cache, atomic save, pack/unpack | sonnet | high | M | T4.3, T2.2 | | ☐ |
@@ -163,7 +163,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T3.7 | core: bake | sonnet | medium | S | T3.3 | ∥ | ☐ |
 | T3.9 | fixtures: synthetic humanoid "hero" (TS doc + `.aseprite` via Lua) | sonnet | medium | M | T3.2, T0.3 | ∥ | ☐ |
 | G1 | **Gate: core + rig** | opus | high | — | W1–W3 rig track | | ☐ |
-| T4.6 | fixtures: synthetic `.aseprite` files via Aseprite Lua | sonnet | medium | S | T0.3 | ∥ |☑ |
+| T4.6 | fixtures: synthetic `.aseprite` files via Aseprite Lua | sonnet | medium | S | T0.3 | ∥ | ☑ |
 | T4.4 | io: `.aseprite` binary parser (Aseprite CLI as oracle) | sonnet | high | M | T4.6 | | ☐ |
 | T4.5 | io: `.aseprite` → document mapping + in-place re-import (explicit rules) | sonnet | high | M | T4.4, T4.2 | ∥ | ☐ |
 | T4.1 | lint: rules + structured findings | sonnet | medium | M | T3.4, T3.3 | ∥ | ☐ |
@@ -408,6 +408,17 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - interpolation tables written by hand;
   - results identical across runs.
 - **Acceptance** — then the review.
+- **Notes (2026-10-27)** — ☑ Opus/xhigh (about 305k tokens, resumed once after the usage limit).
+  - **ADR-012 (accepted by the orchestrator):** a child's rest (x, y) is its canvas offset from the parent at rest, rotated by the parent's rotation away from rest. The rest pose reproduces the art exactly at any quantum.
+  - **Interpolation:** by frame index, with exact BigInt rational arithmetic, smoothstep ease, hold outside the keys and wrap for loops.
+  - **Card oracle (e) was flawed:** independent rounding never exceeds `ceil(L·Δθ)+1`. It was replaced with the tighter `ceil(L·Δθ)` plus an exact rigid-vector check, which do catch the jitter bug.
+  - **Code review (high):** 9 issues, fixed by Sonnet/high (about 159k tokens):
+    - every key is validated up front (`prepareAnimation`);
+    - an independent reference compares all 42,881 bones exactly, with 29 genuinely float-ambiguous roundings checked as one of two legal values;
+    - oracles derive their inputs from the keys, not from outputs;
+    - the arm-swing table is independently derived;
+    - `interpWeight` validates its inputs;
+    - `isValidAngleQuantum` is shared from schema.
 
 #### T2.2 frame ops + validate  [sonnet] [M] ∥
 - **Spec** — §3.2, I1–I7.

@@ -117,7 +117,7 @@ These settle ambiguities found while writing `@pixel-forge/schema`. Its README i
    - An undirected animation uses `views[0]`.
    - A part missing from `partVisibility` is visible, and one missing from `defaultZ` has z 0.
 
-   T3.1 may refine these with an ADR.
+   T3.1 may refine these with an ADR. **[ADR-012](adr/ADR-012.md) (Accepted, T3.1)** reads "in the parent's rotated frame" as: the child's rest offset is a canvas offset measured at rest, and it turns with the parent's rotation away from rest (not with its rest angle), so the rest pose is exactly the authored canvas positions at any quantum. Interpolation is by frame index, and `loop` animations wrap from the last key to the first.
 8. **Indexed mode:** transparency is any palette entry with alpha 0. **Erase masks** are always 8-bit masks (0 or 255), whatever the colour mode.
 9. **Markers** are stored in canvas pixels. Consumers (Godot) subtract `origin`.
 10. **Hashes** (`baseHash`, frame hashes) are lower-case hex SHA-256, using the testkit layout (u32be width, u32be height, RGBA). Manifest timestamps are UTC ISO 8601 with `Z`.

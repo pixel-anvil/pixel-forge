@@ -15,6 +15,7 @@ One decision per file, at most one page. Numbering is stable; supersede rather t
 | [ADR-009](ADR-009.md) | Godot: engine-neutral baked output plus a driver | Accepted |
 | [ADR-010](ADR-010.md) | Determinism rules | Proposed (pending T1.6) |
 | [ADR-011](ADR-011.md) | Views and mirroring model | Accepted |
+| [ADR-012](ADR-012.md) | Rig maths conventions (refines spec §3.4.7) | Accepted (T3.1) |
 
 ## Template
 

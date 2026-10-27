@@ -131,10 +131,27 @@ export const Override = z
 /** A pixel touch-up on one frame of a rig render. */
 export type Override = z.infer<typeof Override>;
 
-const quarterDegrees = (q: number): boolean => {
-  const quarters = q * 4;
-  return Number.isInteger(quarters) && 1440 % quarters === 0;
-};
+/**
+ * The angle quantum `q` in quarter-degree table steps (`4q`), or `undefined` when `q` is not a valid
+ * {@link AngleQuantum}: a finite multiple of 0.25 in `(0, 90]` that divides 360 (so `4q` is an integer
+ * in `1..360` dividing the 1440 steps of a full turn). Multiplying by 4 is exact in binary floating
+ * point, so the test is exact. This is the single definition of the rule: the {@link AngleQuantum}
+ * schema and `@pixel-forge/rig` both use it.
+ */
+export function angleQuantumSteps(q: number): number | undefined {
+  const steps = q * 4;
+  return Number.isInteger(steps) && steps >= 1 && steps <= 360 && 1440 % steps === 0
+    ? steps
+    : undefined;
+}
+
+/**
+ * Whether `q` is a valid {@link AngleQuantum}: a multiple of 0.25 in `(0, 90]` that divides 360
+ * (e.g. 0.25, 0.5, 0.75, 1, 1.5, 2, 5, 22.5, 45, 90). `NaN`, infinities, zero and negatives are not.
+ */
+export function isValidAngleQuantum(q: number): boolean {
+  return angleQuantumSteps(q) !== undefined;
+}
 
 /**
  * Angle quantum in degrees, `0 < q ≤ 90`: a multiple of 0.25 that divides 360 (e.g. 0.25, 0.5, 1,
@@ -144,7 +161,7 @@ export const AngleQuantum = z
   .number()
   .gt(0)
   .max(90)
-  .refine(quarterDegrees, 'angleQuantum must be a multiple of 0.25 that divides 360');
+  .refine(isValidAngleQuantum, 'angleQuantum must be a multiple of 0.25 that divides 360');
 
 /** Outline post-pass options (T1.7 `outline`). */
 export const OutlinePass = z.strictObject({
