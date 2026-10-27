@@ -27,7 +27,7 @@ User wants to review the spec and the plan before proceeding past each.
 - ☑ O-1: https://github.com/pixel-anvil/pixel-forge (public, CI green, `main` protected). **From now on, work goes on phase branches and PRs to `main`**: wave branch `m1a-wave1`.
 - ☑ T0.4 RotSprite spike (verified; recommendations added to T1.6, T3.0 and ADR-008). ☑ T1.8 png codec (merged into `m1a-wave1`).
 - ☑ T0.3 testkit. ☑ T1.1 schema (the user signed off on the domain summary on 2026-10-27).
-- ☑ T1.5 primitives (clean-room ellipse after a licensing catch). ☑ T1.7 post-passes. ☑ T1.2 color. ☑ T1.3 presets (no licence stated on Lospec; see PAL-01). ☑ T1.4 raster. ☑ T3.0 joint-gap contract. In flight: T1.6 RotSprite (opus/xhigh), T2.1 document store (opus/xhigh).
+- ☑ T1.5 primitives (clean-room ellipse after a licensing catch). ☑ T1.7 post-passes. ☑ T1.2 color. ☑ T1.3 presets (no licence stated on Lospec; see PAL-01). ☑ T1.4 raster. ☑ T3.0 joint-gap contract. In flight: T1.6 RotSprite (opus/xhigh) and T2.1 document store (opus/xhigh). Both hit the usage limit on 2026-10-27 and were resumed; their WIP is uncommitted in worktrees `agent-a1ac226ef43dac77e` (T1.6) and `agent-aff554ee1445bb56c` (T2.1). If a session ends, resume those agents or re-dispatch with "continue from the worktree state".
 - Next: Wave 1 fan-out: T1.2 color ∥ T1.4 raster (sonnet), then T1.3 ∥ T1.5 ∥ T1.6 (opus/xhigh) ∥ T1.7; also T3.0 (opus/high) and T2.1 (opus/xhigh) once T1.4 is in. Worktrees: tell agents to `git merge --ff-only m1a-wave1` first.
 
 ## Open questions for the user
