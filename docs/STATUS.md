@@ -26,8 +26,9 @@ User wants to review the spec and the plan before proceeding past each.
 - In flight: T0.4 RotSprite spike (opus/high).
 - ☑ O-1: https://github.com/pixel-anvil/pixel-forge (public, CI green, `main` protected). **From now on, work goes on phase branches and PRs to `main`**: wave branch `m1a-wave1`.
 - ☑ T0.4 RotSprite spike (verified; recommendations added to T1.6, T3.0 and ADR-008). ☑ T1.8 png codec (merged into `m1a-wave1`).
-- ☑ T0.3 testkit. T1.1 schema implemented, reviewed and fixed, and committed on `m1a-wave1`. **Waiting for the user's look at the domain summary** (`packages/schema/README.md` → "Domain types summary"). Note: worktrees branch from `main`, so integrate as a patch.
-- Next: after the user signs off the domain summary → tick T1.1 → Wave 1 fan-out: T1.2 color ∥ T1.4 raster (sonnet), then T1.3 ∥ T1.5 ∥ T1.6 (opus/xhigh) ∥ T1.7; also T3.0 (opus/high) and T2.1 (opus/xhigh) once T1.4 is in. Worktrees: tell agents to `git merge --ff-only m1a-wave1` first.
+- ☑ T0.3 testkit. ☑ T1.1 schema (the user signed off on the domain summary on 2026-10-27).
+- In flight: T1.2 color (sonnet/medium), T1.4 raster (sonnet/high), T3.0 joint-gap definition (opus/high).
+- Next: Wave 1 fan-out: T1.2 color ∥ T1.4 raster (sonnet), then T1.3 ∥ T1.5 ∥ T1.6 (opus/xhigh) ∥ T1.7; also T3.0 (opus/high) and T2.1 (opus/xhigh) once T1.4 is in. Worktrees: tell agents to `git merge --ff-only m1a-wave1` first.
 
 ## Open questions for the user
 None right now.

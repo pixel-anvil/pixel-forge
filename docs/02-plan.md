@@ -135,7 +135,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | O-1 | User creates the `pixel-anvil` org → public repo, branch protection, push, CI green | orchestrator | — | S | T0.6 | |☑ |
 | T1.8 | `png` package: deterministic PNG encode/decode | sonnet | high | S | T0.2 | |☑ |
 | T0.3 | testkit: golden helper, ASCII helpers, golden sheets, fixture runner | sonnet | medium | S | T1.8 | |☑ |
-| T1.1 | schema: domain types + zod + ids (**+ review + user look**) | opus | xhigh | M | T0.2 | | ☐ |
+| T1.1 | schema: domain types + zod + ids (**+ review + user look**) | opus | xhigh | M | T0.2 | |☑ |
 | T1.2 | color: OKLab/OKLCH, nearest colour, palette ops | sonnet | medium | S | T1.1 | ∥ | ☐ |
 | T1.3 | color: palette presets from fetched Lospec `.hex` sources | haiku | low | S | T1.2 | ∥ | ☐ |
 | T1.4 | raster: sparse tiled image, compositing, basic transforms | sonnet | high | M | T1.1, T0.3 | ∥ | ☐ |
@@ -301,7 +301,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - `__proto__` record keys were silently dropped by zod → a `record()` helper now rejects reserved keys;
   - a 5000-deep layer tree crashed `safeParse` → `MAX_LAYER_DEPTH` 32 with an iterative pre-check.
 
-  Also: frozen v1 fixture at `fixtures/frozen/v1/minimal-document.json`. 89 tests, 100 % line coverage. **Waiting for the user's look at the domain summary before ☑.**
+  Also: frozen v1 fixture at `fixtures/frozen/v1/minimal-document.json`. 89 tests, 100 % line coverage. The user signed off on the domain summary on 2026-10-27 → ☑.
 
 #### T1.2 color basics  [sonnet] [S] ∥
 - **Deliverables** — sRGB ↔ linear ↔ OKLab/OKLCH conversion; `nearestIndex` (OKLab, cached, ties go to the lower index); palette operations.
