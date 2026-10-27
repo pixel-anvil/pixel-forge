@@ -36,6 +36,11 @@ Headless core shared by a CLI (`pf`), an MCP server, a later web editor and a Go
 - Never commit game-specific identifiers, art-pack names or absolute home-directory paths. The first consumer game's details live only in the untracked `~/pf-work/GAME_NOTES.md`. Public docs say "the first consumer game".
 - `scripts/privacy-check.sh` runs as a pre-commit hook and rejects absolute home paths and terms in a local denylist.
 
+## Licensing of code
+
+- Never copy or port code from non-permissive sources. That includes Aseprite (proprietary EULA), GPL projects such as LibreSprite, and anything without a licence. Comparing *outputs* against such tools is fine.
+- Implement algorithms from papers or permissively licensed or public-domain references, and name the source in TSDoc. If in doubt, ask the orchestrator.
+
 ## Oracles and goldens
 
 - Prefer independent oracles: hand-written ASCII expectations, property tests, external tools (Aseprite CLI, pngjs, sips, Godot).
