@@ -46,6 +46,7 @@ export default tseslint.config(
       'node_modules/**',
       'spikes/**',
       'fixtures/**',
+      '.claude/**',
     ],
   },
   js.configs.recommended,
