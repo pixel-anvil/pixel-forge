@@ -368,7 +368,7 @@ export const setPose = defineOp({
 ### 6.4 State, transactions & history
 - Immutable JSON structure plus **sparse copy-on-write tile stores**.
 - A transaction records patches: structural (JSON-patch style) and tile before/after. Undo applies the inverses. Each document has one linear stack.
-- Every committed transaction increments `doc.version`.
+- `store.version` is a **runtime** counter, not saved in the document. It increases by 1 on every commit, undo and redo, so it is monotonic and is used for sync gap detection and proposal checks.
 
 ### 6.5 Process model, ownership & sync
 ```

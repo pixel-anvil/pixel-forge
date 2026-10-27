@@ -3,7 +3,28 @@
 Step-by-step recipes for recurring patterns. Each section is filled in by the card that creates the pattern.
 
 ## How mutations work
-Filled in by card T2.1.
+Every change goes through one transaction on a `DocumentStore` (`packages/core/README.md`). An operation is a function that takes the transaction:
+
+```ts
+export function setFrameDuration(tx: Transaction, animId: AnimationId, frameId: FrameId, ms: number): void {
+  if (!Number.isInteger(ms) || ms < 1) throw new CoreError('BAD_ARGUMENT', 'durationMs must be an integer >= 1');
+  tx.update((d) => {
+    const anim = d.animations.find((a) => a.id === animId);
+    const frame = anim && 'frames' in anim ? anim.frames.find((f) => f.id === frameId) : undefined;
+    if (frame) frame.durationMs = ms; // plain JS on a draft; only the touched path is copied
+  });
+}
+store.transact('Set duration', (tx) => { setFrameDuration(tx, animId, frameId, 120); }); // MCP: `AI: <tool>`
+```
+
+1. Validate inputs first: any error thrown by a `tx` method aborts the whole transaction.
+2. Never `begin` inside an operation; take `tx` and pass it to helpers (transactions do not nest).
+3. Edit JSON with `tx.update(draft => …)`. Remove optional fields with `delete d.x` and record entries with `Reflect.deleteProperty(layer.cels, frameId)` (lint forbids `delete rec[key]`); never assign `undefined`; values must be plain JSON.
+4. New ids: `tx.newId('frame')` (also inside a recipe). Never invent ids or use randomness.
+5. Pixels: `tx.writeImage(id, img => …)`; new images: `const id = tx.createImage(img)`, then reference it; `tx.deleteImage(id)` after removing its references. Inside a `writeImage` callback touch only the image (any other `tx` or store call throws `TX_BUSY` and aborts). Change listeners must not change the store (`TX_BUSY`); schedule follow-ups asynchronously.
+6. Never mutate `store.doc` or an image from `store.image()` (frozen / `IMAGE_MUTATED`).
+7. Read the working state through `tx.doc`, `tx.image(id)`; pure helpers take a `DocumentView`.
+8. Test: commit, check the result, `store.undo()` restores `documentHash(store)`, `redo()` gives it back; a no-op returns `undefined`.
 
 ## Add an op
 Filled in by card T5.1.

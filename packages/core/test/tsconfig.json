@@ -4,7 +4,8 @@
     "rootDir": "..",
     "outDir": "../.check/test",
     "emitDeclarationOnly": true,
-    "tsBuildInfoFile": "../.check/test/.tsbuildinfo"
+    "tsBuildInfoFile": "../.check/test/.tsbuildinfo",
+    "types": ["node"]
   },
   "include": [".", "../src"],
   "references": [

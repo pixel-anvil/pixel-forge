@@ -142,7 +142,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T1.5 | raster: primitives (line, rect, ellipse, fill, pixel-perfect) | sonnet | medium | S | T1.4 | ∥ |☑ |
 | T1.6 | raster: fixed-point trig + RotSprite (+ review) | opus | xhigh | M | T1.4, T0.4 | ∥ |☑ |
 | T1.7 | raster: orphan removal + outline pass | sonnet | medium | S | T1.4 | ∥ |☑ |
-| T2.1 | core: document store, transactions, patches, history, rig hook interface (+ review) | opus | xhigh | M | T1.1, T1.4 | ∥ | ☐ |
+| T2.1 | core: document store, transactions, patches, history, rig hook interface (+ review) | opus | xhigh | M | T1.1, T1.4 | ∥ |☑ |
 | T3.0 | rig: joint-gap definition + hand-written ASCII gap fixtures | opus | high | S | T1.1 | ∥ |☑ |
 | T3.1 | rig: FK, interpolation + quantisation, hierarchical snapping (+ review) | opus | xhigh | M | T1.1, T1.6 | ∥ | ☐ |
 | T2.2 | core: frame ops (§3.2) + `validate()` | sonnet | medium | M | T2.1 | ∥ | ☐ |
@@ -370,6 +370,21 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - the **`RigRenderer` hook interface**, which `renderFrame` will call and `rig` will implement.
 - **Oracle** — property test: random operations, then undo all, give the initial hash; redo all gives the final hash.
 - **Acceptance** — a PLAYBOOKS entry, "how mutations work". Then the review.
+- **Notes (2026-10-27)** — ☑ Opus/xhigh, about 335k tokens, interrupted by the usage limit and resumed.
+  - **API:** `DocumentStore` with frozen JSON plus copy-on-write images, and `transact`/`begin`. Transactions offer `update` (Proxy draft), `set`/`insert`/`remove`, `newId`, and `createImage`/`writeImage`/`deleteImage`.
+  - **Patches:** produced by one deterministic diff at commit (RFC 6902 style, with before/after) plus tile snapshots. Undo is strict (`PATCH_CONFLICT`).
+  - **Other:** reference-counted tile-byte accounting; `documentHash`; the `RigRenderer` hook is passed as a `renderFrame` option; no nested transactions.
+  - **Review:** code review (high) found 10 issues, fixed by Sonnet/high (about 150k tokens; 30 regression tests fail on the old code):
+    - writeImage busy guard;
+    - read-only snapshot image view;
+    - explicit edits of the id counter now commit;
+    - root must be an object;
+    - eviction from the end farthest from the cursor;
+    - commit-time IMAGE_MUTATED check, and copies-on-access for event tile buffers;
+    - store mutations from listeners throw TX_BUSY;
+    - no image-map copies on pure JSON edits;
+    - read-only draft scans don't copy.
+  - **Docs:** the orchestrator fixed spec §6.4 and ADR-007, because `version` is runtime state that also advances on undo and redo.
 
 #### T3.0 joint-gap definition  [opus] [S] ∥
 - **Deliverables** — `docs/contracts/JOINT_CHECK.md`, which defines:
