@@ -119,3 +119,86 @@ Pure, integer-only drawing on `TiledImage` (colour `[r,g,b,a]`) and `IndexedImag
 **Line symmetry rule.** `line(A, B)` and `line(B, A)` set exactly the same pixels. Plain Bresenham is not symmetric when the ideal line crosses a pixel-edge midpoint, so the endpoints are ordered lexicographically (smaller x first, then smaller y) before walking, and ties go to the diagonal step (`2*err >= dy` and `2*err <= dx` are both taken). With a brush the stamp is placed at each centre-line pixel, so brush lines are symmetric too.
 
 **Aseprite oracle.** `test/oracle/aseprite-primitives.lua` draws 12 cases (5 lines, 5 ellipse outlines, 2 filled ellipses) with Aseprite's own tools through `app.useTool`; the PNGs are checked in and `test/primitives-oracle.test.ts` asserts pixel-for-pixel equality (all 12 equal). Known difference: Aseprite's line is not symmetric (its result depends on the drawing direction), so equality is only guaranteed when the line is given in the canonical order (left to right, then top to bottom) - the oracle cases are. Ellipse is identical in both directions. All 7 ellipse oracle cases (5 outlines, 2 fills) are pixel-identical to Aseprite. The ellipse is Zingl's published algorithm and not a copy of Aseprite's (proprietary) code, so other sizes may intentionally differ from Aseprite by a few pixels (licensing-driven, not a bug); symmetry and bounding box are guaranteed and tested for all sizes up to 24x24.
+
+## Rotation
+
+Fixed-point trigonometry and pixel-art rotation about a pivot pixel (T1.6; FR-RIG-20 steps 2-3, FR-RIG-21, NFR-02), ported from the T0.4 spike (`spikes/rotsprite/REPORT.md`, `spikes/rotsprite/reference/rot.mjs`). Angles are degrees, 0° along +x, clockwise on screen (y down), and must be multiples of **0.25°** (any sign; `RasterError('BAD_VALUE')` otherwise). Nothing calls `Math.sin`/`Math.cos` at runtime; every decision is integer maths.
+
+| Export                                                     | Purpose                                                                                                                                                                                                                                   |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sinQ16(deg)`, `cosQ16(deg)`                               | `round(sin · 65536)` from the committed table                                                                                                                                                                                             |
+| `rotatePoint(dx, dy, deg)`                                 | integer vector rotated clockwise, each coordinate rounded **half away from zero** (the FR-RIG-20 snapping primitive)                                                                                                                      |
+| `rotatePointQ16(dx, dy, deg)`                              | the same, unrounded: the exact `[C·dx − S·dy, S·dx + C·dy]` in Q16 (sub-pixel work, T3.1)                                                                                                                                                 |
+| `roundQ16(v)`, `angleToStep(deg)`                          | half-away-from-zero rounding of a Q16 value (`                                                                                                                                                                                            | v   | ≤ MAX_ROUND_Q16`, else `BAD_VALUE`); angle to table step `0..1439`                            |
+| `Q16`, `ANGLE_STEP_DEG`, `ANGLE_STEPS`, `MAX_ROTATE_COORD` | 65536, 0.25, 1440, 2^31 (largest offset accepted; keeps products below 2^53)                                                                                                                                                              |
+| `MAX_ROUND_Q16`                                            | 2^53 − 32768: largest `                                                                                                                                                                                                                   | v   | ` `roundQ16` accepts (`v + 32768` must stay an exact double, so one more would round wrongly) |
+| `rotateAbout(img, pivot, deg, algo = 'rotsprite')`         | `{ img, pivotOut }` for `TiledImage` / `IndexedImage` or a prepared handle; `algo` is the schema's `RotationAlgorithm` (`rotsprite`, `nearest`, `none`)                                                                                   |
+| `prepareRotSprite(img)`, `PreparedRotSprite`               | reusable handle; its ×8 image is built lazily on the first RotSprite use that is not a multiple of 90° (`byteSize` for cache budgets)                                                                                                     |
+| `ROTSPRITE_MAX_AREA`                                       | 2^18 px of opaque bounding box; above it `rotateAbout(..., 'rotsprite')` throws `BAD_SIZE` **at every angle**, quarter turns included (the ×8 image costs 256 B per source pixel); `nearest`, `none` and `prepareRotSprite` have no limit |
+
+### Trig table
+
+`src/trig-table.ts` holds the quarter wave (361 entries, 0° to 90°) of `sin · 65536`, rounded half away from zero. It is generated by `node packages/raster/scripts/gen-trig-table.mjs` (`--check` reports a stale file; `pnpm gen` runs it and `pnpm gen:check`, part of `pnpm verify`, fails if the committed file is stale) with exact BigInt arithmetic: 256 fractional bits, pi from Machin's formula, sin from its Taylor series. `trig.ts` expands it to all 1440 entries with `sin(180° − x) = sin(x)` and `sin(180° + x) = −sin(x)`, and `cos(x) = sin(x + 90°)`. Consequences, all asserted by tests:
+
+- exact at 0/90/180/270° (0, ±65536) and 30/150/210/330° (±32768); `sin 45° = 46341`;
+- `sin(−x) = −sin(x)`, `sin(180° − x) = sin(x)` and `cos(−x) = cos(x)` hold exactly for every entry;
+- no entry is a rounding tie (the closest fractional part is 0.0018 from .5), so the rounding rule never decides a table value. A float64 `Math.round(Math.sin(r) · 65536)` gives the same 1440 values; the tests check that and a direct BigInt evaluation of each of the 1440 angles;
+- `|sin² + cos² − 65536²| ≤ |sin| + |cos| + ½ ≤ 92683` (2.2e-5 relative; measured worst 89466).
+
+`rotatePoint` agrees with a float64 `roundHalfAway(dx·cos θ − dy·sin θ)` except where the true value is within the table's quantisation error, `(|dx| + |dy|) / 131072`, of a `.5` boundary. Over all 1440 angles and `|dx|, |dy| ≤ 24` that is 648 of 6.9 M coordinates. 136 of them are exact Q16 ties, such as `(1, 0)` at 30°: `(56756, 32768)` rounds to `[1, 1]`, while float64 `sin 30° = 0.49999999999999994` rounds to 0.
+
+### `rotateAbout`
+
+**Pivot convention.** `pivot` is an integer pixel inside the image, and the rotation centre is its centre `(x + ½, y + ½)`. The result carries `pivotOut`, the output pixel the pivot pixel landed on. Draw `img` at `dst = snappedPivot − pivotOut` and the pivot pixel sits exactly on the snapped pivot (FR-RIG-20 step 3). The pivot pixel's own colour is copied onto `pivotOut`, a cheap invariant: the sample there already is that colour.
+
+**Canvas.** For `rotsprite` and `nearest` the output is cropped to its non-empty pixels **plus the pivot pixel**, so `pivotOut` is always inside it. An empty input gives a 1×1 empty image with `pivotOut = (0, 0)`. `none` returns a copy of the whole input canvas with `pivotOut = pivot`. Outputs are new images; the input is never modified.
+
+**Multiples of 90°** use the exact pixel permutation `d → R·d`, so they equal `rot90` / `rot180` / `rot270` / identity, cropped as above. This is tested against `transform.ts` for both image kinds. The general formula gives the same pixels there; the shortcut guarantees it.
+
+**Colours.** Both algorithms only copy source values, so output colours ⊆ input colours (FR-RIG-21: RotSprite adds no colours; property-tested). RGBA pixels compare by exact RGBA equality. Any alpha-0 pixel counts as transparent and comes out as `(0,0,0,0)`, so partial alpha is kept, but invisible colour under alpha 0 is dropped. Indexed images compare indices; `transparentIndex` is empty and carries over to the output. Other alpha-0 palette entries are ordinary indices (raster does not know palettes).
+
+**`nearest`.** The output pixel at offset `d` from `pivotOut` copies source pixel `pivot + roundHalfAway(Rᵀ·d / 65536)`, where `Rᵀ` is the transposed Q16 rotation. Ties go away from the pivot, so it is exactly mirror-symmetric.
+
+**`rotsprite`.**
+
+1. `big = scale2x³(source)`: Scale2x (Andrea Mazzoleni's public description, scale2x.it; the EPX rule of Eric Johnston) three times, with exact equality, on the opaque bounding box. RotSprite itself is Xenowhirl's 2007 algorithm (Scale2x upscale, nearest-neighbour rotation, downscale); only its public description was used. **Outside the image counts as transparent** (the spike replicated edge pixels instead). The result therefore does not depend on how much transparent margin an image has, so a part renders the same whether its variant is stored trimmed or canvas-sized. Scale2x rounds convex corners of the art wherever they are; see the area note below.
+2. Fused rotate + sample: the output pixel `d` reads `big[8·py + 4 + sfloor(C·dy − S·dx, 8192)][8·px + 4 + sfloor(C·dx + S·dy, 8192)]` (box-relative), with `sfloor(n, q) = n ≥ 0 ? floor(n/q) : ceil(n/q) − 1`. That is a nearest-neighbour rotation of the ×8 image about the pivot block's centre (a ×8 pixel corner), sampled once at each output pixel's centre. A sample on a ×8 pixel edge goes to the pixel farther from the pivot, the same on both sides. There is no majority-colour downsample (the spike found it erodes thin limbs).
+3. **Centre-line tie (new).** A sample with `C·dx + S·dy = 0` (or `C·dy − S·dx = 0`) and `d ≠ 0` lies exactly between two ×8 pixels of one source pixel, and neither is farther from the pivot. With `|C| = |S|` this happens on a diagonal through the pivot at 45° + k·90°. The spike took the +x/+y pixel, which breaks mirror symmetry there: 8 of 240 random palette cases in the tests, worst mask IoU 0.94. The port chooses mirror-invariantly: the shared colour, else the source pixel's own colour, else the opaque one, else the smaller packed value. With it, `flipH(rotate(I, θ)) = rotate(flipH(I), −θ)` holds **exactly** (colours and mask) at all 1440 angles on the test subjects and at every 1° on random palette images. It holds for `nearest` too.
+
+**Caching.** The ×8 image depends only on the source. Build the handle once per variant with `prepareRotSprite(img)` and pass it to `rotateAbout` for every angle; the ×8 image is built on the first RotSprite call that is not a multiple of 90° and cached in the handle (so a handle used only with `nearest` / `none`, or only at quarter turns, never builds it or hits `ROTSPRITE_MAX_AREA`); results are cached per `(variantId, quantisedAngle)` above this layer (FR-RIG-20). The handle snapshots the image (copy-on-write clone), so later edits to the original do not leak in; prepare again after editing. Once the ×8 image exists a handle costs 260 B per pixel of the opaque box: 260 KiB for a full 32×32 box, 190 KiB for the 25×30 torso test subject.
+
+### Evidence and differences from the spike reference
+
+The tests are `test/trig.test.ts`, `test/rotsprite.test.ts` and `test/rotsprite-reference.test.ts`, which imports the spike's `rot.mjs` as-is. The subjects are hand-drawn ASCII in `test/rotsprite-fixtures.ts`: a 2-px upper arm, a forearm with a 1-px hook, a 4-px outlined shin and boot with six colours, and a 32×32 head and torso with twelve colours. No third-party art.
+
+- **Sentinel:** a unique colour on the pivot lands on `pivotOut` at every 1° for all four subjects with the pin disabled (sampling alone). The same holds with every opaque pixel of the limbs, and every 9th of the torso, as the pivot, every 7.25°.
+- **Agreement:** with the spike's conventions the port is pixel-identical to `rot.mjs`, including canvas and `pivotOut`, for RotSprite and nearest at every 1° on the subjects and 8 random images. The spike conventions are: edge pixels replicated (emulated by giving the reference a 1-px transparent border), no exact quarter-turn shortcut, the +x/+y centre tie, and no pin. With the production defaults the only differing pixels are centre-line ties at 45° + k·90°. Without the border, the reference differs only where the art touches its image edge.
+- **Determinism:** `test/rotsprite-hashes.json` commits the SHA-256 of the decoded RGBA and `pivotOut` of RotSprite and nearest output for the four subjects at 10 angles (0.25° to 315°); update only with `UPDATE_GOLDEN=1` and a card note. Another test stubs `Math.sin`/`cos`/`tan`/`atan2` to throw while rotating at 206 angles.
+- **Placement:** `nearest` matches an independent float64 nearest rotation except at near-ties (≤ 0.02 % of pixels). The RotSprite output centroid stays within 0.62 px (limbs) and 0.18 px (torso) of the float64-rotated input centroid.
+- **Area:** measured over every 1° (RotSprite, production), the worst |change| in opaque pixels and the signed extremes are:
+
+  | Subject (opaque px) | worst \|Δ\| | loss / gain | mean \|Δ\| | spike edge replication, worst \|Δ\| | `nearest`, worst \|Δ\| |
+  | ------------------- | ----------- | ----------- | ---------- | ----------------------------------- | ---------------------- |
+  | upper-arm (12)      | 3           | −3 / 0      | 1.22       | 3                                   | 2                      |
+  | forearm (9)         | 2           | −2 / +2     | 0.74       | 3                                   | 2                      |
+  | shin (37)           | 3           | −3 / +1     | 1.38       | 3                                   | 2                      |
+  | torso (552)         | 10          | −10 / +3    | 3.36       | 10                                  | 9                      |
+
+  The test asserts exactly these numbers as upper bounds per subject (worst, loss, gain and the sum of |Δ| over the 360 angles), so any regression that erodes the thin limbs fails; larger parts (37 px, 552 px) are additionally held to ±10 % (3.7 px, 55 px). The earlier generic "≤ 3 px for parts under 30 px" was too loose to catch a one-pixel erosion on the 9-px forearm. Edge replication is **not** a way to ±1 px: on the unpadded subjects the spike's Scale2x swings by 3 px on both thin limbs, the same as or more than the production transparent edge (3 and 2), so the swing is inherent to 2-px-wide art at this size. The transparent edge is chosen because it makes the output independent of the transparent margin around the art (a trimmed and a canvas-sized variant render identically), not because it preserves area; it rounds outer corners where the art touches its bounding box, and RotSprite loses area more often than it gains.
+
+### Benchmark
+
+`node packages/raster/bench/rotsprite.bench.mjs` (after `pnpm exec tsc -b packages/raster`). Medians on an Apple M5 with Node 26:
+
+| Case                                      | Time        | NFR-01 target                   |
+| ----------------------------------------- | ----------- | ------------------------------- |
+| Cold 32×32 (snapshot, Scale2x ×3, rotate) | **0.09 ms** | < 10 ms                         |
+| First call in a fresh process             | 1.9 ms      | < 10 ms                         |
+| Warm 32×32                                | 0.010 ms    | —                               |
+| 16 parts of 16×16, warm                   | **0.07 ms** | < 2 ms for the whole rig render |
+| 16 parts of 16×16, cold                   | 0.52 ms     | —                               |
+| `nearest` 32×32                           | 0.01 ms     | —                               |
+
+### Review sheet
+
+`PF_REVIEW_SHEET=1 pnpm exec vitest run --project raster packages/raster/test/rotsprite-sheet.test.ts` writes `.golden-diff/rotsprite-review-<subject>.png` at ×8. Each sheet shows one subject at 0–135° with RotSprite, plus `nearest` at 30° and 45°. The pivot pixel is magenta, and every cell is drawn at `centre − pivotOut`. No goldens are committed.

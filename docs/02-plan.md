@@ -140,7 +140,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T1.3 | color: palette presets from fetched Lospec `.hex` sources | haiku | low | S | T1.2 | ∥ |☑ |
 | T1.4 | raster: sparse tiled image, compositing, basic transforms | sonnet | high | M | T1.1, T0.3 | ∥ |☑ |
 | T1.5 | raster: primitives (line, rect, ellipse, fill, pixel-perfect) | sonnet | medium | S | T1.4 | ∥ |☑ |
-| T1.6 | raster: fixed-point trig + RotSprite (+ review) | opus | xhigh | M | T1.4, T0.4 | ∥ | ☐ |
+| T1.6 | raster: fixed-point trig + RotSprite (+ review) | opus | xhigh | M | T1.4, T0.4 | ∥ |☑ |
 | T1.7 | raster: orphan removal + outline pass | sonnet | medium | S | T1.4 | ∥ |☑ |
 | T2.1 | core: document store, transactions, patches, history, rig hook interface (+ review) | opus | xhigh | M | T1.1, T1.4 | ∥ | ☐ |
 | T3.0 | rig: joint-gap definition + hand-written ASCII gap fixtures | opus | high | S | T1.1 | ∥ |☑ |
@@ -346,6 +346,14 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - the alpha area stays within ±10 %;
   - a metric comparison with Aseprite's RotSprite (from the spike).
 - **Acceptance** — a cold 32×32 rotation takes < 10 ms (record it on the card). Then the review.
+- **Notes (2026-10-27)** — ☑ Opus/xhigh, about 314k tokens, interrupted once by the usage limit and resumed. The orchestrator viewed the torso review sheet (pivot fixed, clean outline to 135°; copies in `~/pf-work/review/`). Cold 32×32 0.09 ms; 16 warm parts 0.07–0.11 ms. Quarter-wave Q16 table from exact BigInt maths, committed and checked by `pnpm gen:check`. Production adds a symmetric centre-line tie rule, so mirror IoU = 1 at every angle (the spike's rule gave a worst of 0.9375). Code review (high) found 9 issues, fixed by Sonnet/high (about 135k tokens):
+  - 80 committed output hashes in `test/rotsprite-hashes.json`;
+  - a Math-trig stub test;
+  - exact per-subject area bounds — edge replication does **not** give ±1 px (3 px on thin limbs, like production);
+  - an angle-independent size limit and lazy `prepareRotSprite`;
+  - the `roundQ16` range bound;
+  - Mazzoleni and Xenowhirl provenance;
+  - schema constants, deduplicated rounding, and `gen`/`gen:check` wired into `verify`.
 - **Input from T0.4** — port `spikes/rotsprite/reference/rot.mjs`: Scale2x×3 with a cached ×8 image, then the fused integer pass `sx8 = 8px+4 + sfloor(C·dx+S·dy, 8192)` with C and S = cos/sin×65536, symmetric ties away from the pivot (plain `floor` breaks mirror symmetry at 30° and 60°), the pivot colour forced, and `(ox, oy)` returned. Don't use the majority-colour downsample. Keep the spike's sentinel, mirror-IoU and colour-subset tests as oracles.
 
 #### T1.7 orphan removal + outline  [sonnet] [S] ∥

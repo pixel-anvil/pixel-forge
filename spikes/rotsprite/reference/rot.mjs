@@ -48,7 +48,7 @@ export const rnd = (n, d) => (n >= 0 ? Math.floor((2 * n + d) / (2 * d)) : -Math
 export const sfloor = (n, d) => (n >= 0 ? Math.floor(n / d) : Math.ceil(n / d) - 1);
 
 // ---------------------------------------------------------------- Scale2x
-// EPX/Scale2x, edges replicated (same as Aseprite's image_scale2x).
+// Standard Scale2x (Mazzoleni), edges replicated.
 export function scale2x(src) {
   const { w, h, p } = src;
   const W = w * 2, o = new Uint32Array(W * h * 2);

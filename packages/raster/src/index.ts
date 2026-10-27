@@ -16,3 +16,17 @@ export type { BlitOptions, CompositeOptions } from './composite.js';
 export { crop, flipH, flipV, rot180, rot270, rot90, scaleInt, translate } from './transform.js';
 export * from './postpass/index.js';
 export * from './primitives/index.js';
+export {
+  ANGLE_STEP_DEG,
+  ANGLE_STEPS,
+  MAX_ROTATE_COORD,
+  MAX_ROUND_Q16,
+  Q16,
+  angleToStep,
+  cosQ16,
+  rotatePoint,
+  rotatePointQ16,
+  roundQ16,
+  sinQ16,
+} from './trig.js';
+export * from './rotsprite/index.js';
