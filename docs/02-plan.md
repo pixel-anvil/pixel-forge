@@ -163,7 +163,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T3.7 | core: bake | sonnet | medium | S | T3.3 | ∥ | ☐ |
 | T3.9 | fixtures: synthetic humanoid "hero" (TS doc + `.aseprite` via Lua) | sonnet | medium | M | T3.2, T0.3 | ∥ | ☐ |
 | G1 | **Gate: core + rig** | opus | high | — | W1–W3 rig track | | ☐ |
-| T4.6 | fixtures: synthetic `.aseprite` files via Aseprite Lua | sonnet | medium | S | T0.3 | ∥ | ☐ |
+| T4.6 | fixtures: synthetic `.aseprite` files via Aseprite Lua | sonnet | medium | S | T0.3 | ∥ |☑ |
 | T4.4 | io: `.aseprite` binary parser (Aseprite CLI as oracle) | sonnet | high | M | T4.6 | | ☐ |
 | T4.5 | io: `.aseprite` → document mapping + in-place re-import (explicit rules) | sonnet | high | M | T4.4, T4.2 | ∥ | ☐ |
 | T4.1 | lint: rules + structured findings | sonnet | medium | M | T3.4, T3.3 | ∥ | ☐ |
@@ -590,6 +590,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - a compressed cel.
 
   The generated files (< 20 KB each) are committed. Each fixture also gets an `expected.json` from the Aseprite CLI (`--list-layers --list-tags --data`), which serves as the oracle.
+- **Notes (2026-10-27)** — ☑ 4 fixtures (`layers_parts`, `tags_overlap` with 7 frames and an untagged last frame, `linked_cels` via `app.command.LinkCels`, `indexed_palette`), each 376 B–1.8 KB, with Aseprite-CLI JSON plus per-layer PNG oracles. Aseprite always compresses cels, so there are no raw-cel fixtures. Layer hidden flags appear only in the binary, not in the JSON. The orchestrator sanitised oracle PNG names (`:#@` → `~`, invalid on Windows). About 51k subagent tokens.
 
 #### T4.4 `.aseprite` parser  [sonnet] [M]
 - **Context** — `~/code/aseprite/docs/ase-file-specs.md`.
