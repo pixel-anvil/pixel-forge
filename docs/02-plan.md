@@ -148,7 +148,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T2.2 | core: frame ops (§3.2) + `validate()` | sonnet | medium | M | T2.1 | ∥ | ☑ |
 | T2.3 | core: `renderFrame` (pixel layers) + cache key | sonnet | medium | S | T2.1 | ∥ | ☑ |
 | T3.2 | rig: templates, bind by name/overlap, pivots, views | sonnet | medium | M | T3.1 | ∥ | ☐ |
-| T4.3 | io: spritesheet import (cell ranges, outline sheet), sheet + JSON export, contact sheet | sonnet | medium | M | T2.3, T1.8 | ∥ | ☐ |
+| T4.3 | io: spritesheet import (cell ranges, outline sheet), sheet + JSON export, contact sheet | sonnet | medium | M | T2.3, T1.8 | ∥ |☑ |
 | T4.2 | io: `.pxf` read/write, migrations, render cache, atomic save, pack/unpack | sonnet | high | M | T4.3, T2.2 | | ☐ |
 | T6.0 | Godot integration contract with the first consumer game (spec addendum) | opus | high | S | T4.2 | | ☐ |
 | T6.1 | Godot: `.pxf` reader + import plugin + test harness + fixture `.pxf` generator | sonnet | high | M | T6.0 | | ☐ |
@@ -468,6 +468,13 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - spritesheet + JSON export (Aseprite hash format);
   - `contactSheet(frames, {scale, labels})`, keeping the long edge ≤ 1568 px.
 - **Oracle** — compare the JSON with Aseprite's own `--sheet --data` output for the same frames. Labels checked by golden, after review.
+- **Notes (2026-10-27)** — ☑ About 169k tokens.
+  - `importSpritesheetTx`/`createDocumentFromSpritesheet`, plus a CC0 `sheet.json` adapter. Default origin is the bottom-centre pixel of the cell.
+  - `exportSpritesheet`: JSON deep-equals Aseprite's at ×1 and ×2, and the PNG is pixel-identical.
+  - `contactSheet`: long edge ≤ 1568.
+  - **Golden reviewed:** the orchestrator viewed the hero contact sheet.
+  - The orchestrator removed two fully transparent CC0 cells from `sheet.json` (attack [0,2], slide [1,1]), giving 22 frames.
+  - Depcruise now lets io import schema and raster directly; spec §6.2 is updated.
 
 #### T4.2 `.pxf` io  [sonnet] [M]
 - **Spec** — §7, NFR-03, FR-DOC-01.

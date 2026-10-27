@@ -1,11 +1,122 @@
 {
-  "cell": [64, 64],
-  "note": "frames are [row, col] cells in playback order (reading order), verified visually 2026-10-26",
+  "cell": [
+    64,
+    64
+  ],
+  "note": "frames are [row, col] cells in playback order (reading order), verified visually 2026-10-26; fully transparent cells (attack [0,2], slide [1,1]) excluded 2026-10-27",
   "animations": {
-    "idle": { "file": "idle.png", "frames": [[0, 0], [1, 0]] },
-    "run": { "file": "run.png", "frames": [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2], [2, 0], [2, 1]] },
-    "jump_and_fall": { "file": "jump_and_fall.png", "frames": [[0, 0], [0, 1], [1, 0], [1, 1]] },
-    "attack": { "file": "attack.png", "frames": [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5]] },
-    "slide": { "file": "slide.png", "frames": [[0, 0], [0, 1], [1, 0], [1, 1]] }
+    "idle": {
+      "file": "idle.png",
+      "frames": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ]
+      ]
+    },
+    "run": {
+      "file": "run.png",
+      "frames": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          2,
+          1
+        ]
+      ]
+    },
+    "jump_and_fall": {
+      "file": "jump_and_fall.png",
+      "frames": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          1,
+          1
+        ]
+      ]
+    },
+    "attack": {
+      "file": "attack.png",
+      "frames": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          0,
+          4
+        ],
+        [
+          0,
+          5
+        ]
+      ]
+    },
+    "slide": {
+      "file": "slide.png",
+      "frames": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ]
+    }
   }
 }

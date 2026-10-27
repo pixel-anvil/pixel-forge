@@ -16,6 +16,12 @@
     },
     {
       "path": "../png"
+    },
+    {
+      "path": "../schema"
+    },
+    {
+      "path": "../raster"
     }
   ]
 }

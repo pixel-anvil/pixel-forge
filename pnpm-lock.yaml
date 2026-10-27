@@ -254,6 +254,16 @@ importers:
       '@pixel-forge/png':
         specifier: workspace:*
         version: link:../png
+      '@pixel-forge/raster':
+        specifier: workspace:*
+        version: link:../raster
+      '@pixel-forge/schema':
+        specifier: workspace:*
+        version: link:../schema
+    devDependencies:
+      '@pixel-forge/testkit':
+        specifier: workspace:*
+        version: link:../testkit
 
   packages/lint:
     dependencies:
