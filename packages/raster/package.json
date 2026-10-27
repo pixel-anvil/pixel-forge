@@ -16,7 +16,7 @@
   ],
   "scripts": {
     "build": "tsc -b",
-    "test": "vitest run --project raster"
+    "test": "vitest run --root ../.. --project raster"
   },
   "dependencies": {
     "@pixel-forge/schema": "workspace:*",

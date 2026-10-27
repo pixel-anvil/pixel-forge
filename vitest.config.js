@@ -17,7 +17,7 @@ const packages = [
 ];
 
 // Core packages (NFR-04) are held to 85% line coverage. To enforce another package, add it to this list.
-const COVERED = ['schema', 'color', 'raster', 'rig', 'core'];
+const COVERED = ['png', 'schema', 'color', 'raster', 'rig', 'core'];
 const LINES = 85;
 
 export default defineConfig({

@@ -16,7 +16,7 @@
   ],
   "scripts": {
     "build": "tsc -b",
-    "test": "vitest run --project ops"
+    "test": "vitest run --root ../.. --project ops"
   },
   "dependencies": {
     "@pixel-forge/core": "workspace:*",

@@ -16,7 +16,7 @@
   ],
   "scripts": {
     "build": "tsc -b",
-    "test": "vitest run --project color"
+    "test": "vitest run --root ../.. --project color"
   },
   "dependencies": {
     "@pixel-forge/schema": "workspace:*"

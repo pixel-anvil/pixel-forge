@@ -17,7 +17,7 @@
   ],
   "scripts": {
     "build": "tsc -b",
-    "test": "vitest run --project testkit"
+    "test": "vitest run --root ../.. --project testkit"
   },
   "dependencies": {
     "@pixel-forge/png": "workspace:*"

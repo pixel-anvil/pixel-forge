@@ -16,7 +16,7 @@
   ],
   "scripts": {
     "build": "tsc -b",
-    "test": "vitest run --project convert"
+    "test": "vitest run --root ../.. --project convert"
   },
   "dependencies": {
     "@pixel-forge/schema": "workspace:*",

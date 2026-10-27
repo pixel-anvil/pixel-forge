@@ -132,7 +132,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T0.2 | Monorepo scaffold, tooling, CI | sonnet | medium | M | T0.1 | | ☑ |
 | T0.6 | Public-readiness: scrub game refs → GAME_NOTES.md, LICENSE, README, SECURITY, privacy hook | sonnet | medium | S | T0.1, T0.2 | | ☑ |
 | O-1 | User creates the `pixel-anvil` org → public repo, branch protection, push, CI green | orchestrator | — | S | T0.6 | |☑ |
-| T1.8 | `png` package: deterministic PNG encode/decode | sonnet | high | S | T0.2 | | ☐ |
+| T1.8 | `png` package: deterministic PNG encode/decode | sonnet | high | S | T0.2 | |☑ |
 | T0.3 | testkit: golden helper, ASCII helpers, golden sheets, fixture runner | sonnet | medium | S | T1.8 | | ☐ |
 | T1.1 | schema: domain types + zod + ids (**+ review + user look**) | opus | xhigh | M | T0.2 | | ☐ |
 | T1.2 | color: OKLab/OKLCH, nearest colour, palette ops | sonnet | medium | S | T1.1 | ∥ | ☐ |
@@ -275,6 +275,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - `decodePng`, which supports colour types 0/2/3/4/6 at 8-bit, plus palette PNGs.
 - **Oracle** — decode our output with `pngjs` and `sips`. Decode PNGs written by `pngjs`.
 - **Acceptance** — byte-stable: the same input gives the same bytes on repeated runs. Decoding matches pngjs on a corpus of 10 PNGs, which includes Aseprite exports.
+- **Notes (2026-10-26)** — ☑ Verified (`pnpm verify` passes in the worktree and on `m1a-wave1`). fflate `zlibSync` at level 9, mem 8. Per-row filter chosen by the minimum sum of absolute residuals, ties to the lowest type. SHA-256 pins on two reference encodings. A 23-file corpus (CC0 sheets, pngjs, handmade low-bit/tRNS/multi-IDAT, sips, Aseprite) decodes the same as pngjs. 99 tests, 98 % line coverage. The orchestrator fixed every package's `test` script (`--root ../..`, so `pnpm --filter` works), added `png` to the coverage-enforced list, and logged KNOWN_ISSUES PNG-01 and PNG-02. Cost: about 124k subagent tokens.
 
 #### T0.3 testkit  [sonnet] [S]
 - **Deliverables** — `packages/testkit` (private):

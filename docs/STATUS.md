@@ -25,8 +25,8 @@ User wants to review the spec and the plan before proceeding past each.
 - ☑ T0.5 (CC0 Hero Swordsman; the orchestrator fixed sheet.json). ☑ T0.1 (ADRs + agent docs). ☑ T0.2 (scaffold; `pnpm verify` passes; repo-local pseudonymous identity; no commits). ☑ T0.6 (game refs moved to `~/pf-work/GAME_NOTES.md`; privacy hook + denylist; LICENSE/README/SECURITY/CONTRIBUTING).
 - In flight: T0.4 RotSprite spike (opus/high).
 - ☑ O-1: https://github.com/pixel-anvil/pixel-forge (public, CI green, `main` protected). **From now on, work goes on phase branches and PRs to `main`**: wave branch `m1a-wave1`.
-- ☑ T0.4 RotSprite spike (verified; recommendations added to T1.6, T3.0 and ADR-008). In flight: T1.8 png codec (worktree).
-- Next: T1.8 → T0.3 → Wave 1 (T1.1 schema, opus/xhigh; the orchestrator should be on Opus/high). Then T1.8 → T0.3 → Wave 1 (T1.1 is the next Opus card, so the orchestrator should be on Opus/high).
+- ☑ T0.4 RotSprite spike (verified; recommendations added to T1.6, T3.0 and ADR-008). ☑ T1.8 png codec (merged into `m1a-wave1`).
+- Next: T0.3 testkit (sonnet/medium) → Wave 1 (T1.1 schema, opus/xhigh; the orchestrator should be on Opus/high). Then T1.8 → T0.3 → Wave 1 (T1.1 is the next Opus card, so the orchestrator should be on Opus/high).
 
 ## Open questions for the user
 None right now.

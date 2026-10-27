@@ -16,7 +16,7 @@
   ],
   "scripts": {
     "build": "tsc -b",
-    "test": "vitest run --project lint"
+    "test": "vitest run --root ../.. --project lint"
   },
   "dependencies": {
     "@pixel-forge/core": "workspace:*",

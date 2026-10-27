@@ -16,6 +16,6 @@
   ],
   "scripts": {
     "build": "tsc -b",
-    "test": "vitest run --project schema"
+    "test": "vitest run --root ../.. --project schema"
   }
 }
