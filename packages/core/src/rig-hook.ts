@@ -1,6 +1,6 @@
 /**
  * The rig render hook: the contract between `renderFrame` (core, T2.3) and the part render pipeline
- * (rig `renderParts` plus its core adapter, T3.3). Types only.
+ * (rig `renderParts` plus its core adapter, T3.3), which supplies the parts only. Types only.
  *
  * `renderFrame` takes the renderer as an option (`renderFrame(view, anim, frame, { rig })`) rather
  * than a store registration: it stays a pure function of a {@link DocumentView} (the store, a snapshot
@@ -26,7 +26,8 @@ export interface RigFrameContext {
   readonly view: DocumentView;
   /**
    * The authored animation that owns the frame. For a mirror animation this is its source (the
-   * mirror's flip and extra overrides are applied by `renderFrame`, T3.6).
+   * mirror's flip and its own final overrides are applied by `renderFrame`; its part overrides are
+   * T3.6).
    */
   readonly animation: DeepReadonly<AuthoredAnimation>;
   /** Index of `frame` in `animation.frames`. */
@@ -39,12 +40,12 @@ export interface RigFrameContext {
   readonly partLayers: readonly DeepReadonly<PartLayer>[];
 }
 
-/** One rendered part: FR-RIG-20 steps 3 and 4 (variant, rotation, pivot alignment, part overrides). */
+/** One rendered part: FR-RIG-20 steps 1 to 4 (pose, snapping, variant, rotation, part overrides). */
 export interface RenderedPart {
   /** The part layer this part draws into (one of `ctx.partLayers`). */
   readonly layerId: LayerId;
   readonly partId: PartId;
-  /** Composite order (step 5): ascending `z`, ties in `ctx.partLayers` order. */
+  /** Composite order within the rig block (step 5): ascending `z`, ties in `ctx.partLayers` order. */
   readonly z: number;
   /**
    * The part's pixels, in the document's colour mode (`TiledImage` for RGBA, `IndexedImage` for
@@ -57,22 +58,28 @@ export interface RenderedPart {
 
 /**
  * Implemented by the rig pipeline (T3.3), called by `renderFrame` (T2.3) for frames that include at
- * least one part layer. Contract:
+ * least one part layer. The renderer is parts-only: core owns the rest of FR-RIG-20 (steps 5 to 8).
+ *
+ * Contract:
  *
  * - **Pure and deterministic**: the result depends only on `ctx` (no clock, no randomness, integer
  *   maths, NFR-02). Caches are allowed if they key on immutable inputs: published images and frozen
  *   document nodes never change, so `WeakMap`s keyed by them stay valid across versions.
  * - **Read-only**: never mutate `ctx`, the document or any image from `ctx.view`; return new images.
- * - `renderParts` covers FR-RIG-20 steps 1 to 4 and returns the visible parts (an invisible part, by
- *   view visibility or part key, is omitted). `renderFrame` composites them in `z` order with the
- *   pixel layers (step 5).
- * - `finishFrame`, if present, covers steps 6 and 7 (post-passes, then final overrides) on the full
- *   frame composite and returns the result; it may return a new image or `composite` itself, but must
- *   not keep a reference to it. `renderFrame` then applies the skin (step 8).
+ * - `renderParts` covers FR-RIG-20 steps 1 to 4: pose evaluation, hierarchical snapping, variant
+ *   choice with RotSprite and pivot alignment, and the animation's **part** overrides (targets
+ *   `{partId}`, applied to each part's own render). It returns the visible parts; an invisible part
+ *   (by view visibility or part key) is omitted. It does not apply post-passes, final overrides or
+ *   the skin.
+ * - `renderFrame` then does steps 5 to 8 itself: it composites the parts as one block (ascending `z`,
+ *   ties in tree order) at the tree position of the first part layer among the pixel layers (step
+ *   5), runs the animation's post-passes (6), applies its `'final'` overrides (7), flips mirrors and
+ *   applies the mirror's own final overrides, and applies the skin by colour (8). Part layers keep
+ *   their layer opacity, which `renderFrame` applies when compositing.
+ * - Mirror animations: `ctx.animation` is the mirror's source. A mirror's own part overrides are not
+ *   passed to the renderer yet; that belongs to T3.6.
  */
 export interface RigRenderer {
   /** FR-RIG-20 steps 1 to 4: the visible rendered parts of `ctx.frame`. */
   renderParts(ctx: RigFrameContext): readonly RenderedPart[];
-  /** FR-RIG-20 steps 6 and 7 on the whole composite (after parts and pixel layers). */
-  finishFrame?(ctx: RigFrameContext, composite: StoredImage): StoredImage;
 }

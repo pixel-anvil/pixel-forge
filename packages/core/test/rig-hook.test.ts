@@ -2,10 +2,10 @@ import { TiledImage } from '@pixel-forge/raster';
 import { makeId } from '@pixel-forge/schema';
 import { describe, expect, it } from 'vitest';
 import { corePackage } from '../src/index.js';
-import type { RenderedPart, RigFrameContext, RigRenderer, StoredImage } from '../src/index.js';
+import type { RenderedPart, RigFrameContext, RigRenderer } from '../src/index.js';
 import { authored, ids, makeStore } from './helpers.js';
 
-/** A fake renderer of the kind T2.3 tests renderFrame with: one red pixel per part layer. */
+/** A parts-only fake renderer of the kind T2.3 tests renderFrame with: one red pixel per part layer. */
 class FakeRig implements RigRenderer {
   calls = 0;
   renderParts(ctx: RigFrameContext): readonly RenderedPart[] {
@@ -21,9 +21,6 @@ class FakeRig implements RigRenderer {
         offset: { x: i, y: 0 },
       };
     });
-  }
-  finishFrame(_ctx: RigFrameContext, composite: StoredImage): StoredImage {
-    return composite;
   }
 }
 
@@ -45,8 +42,6 @@ describe('RigRenderer hook (types)', () => {
     };
     const parts = rig.renderParts(ctx);
     expect(parts.map((p) => [p.layerId, p.z, p.offset])).toEqual([[ids.layBg, -0, { x: 0, y: 0 }]]);
-    const img = new TiledImage(2, 2);
-    expect(rig.finishFrame(ctx, img)).toBe(img);
     expect(rig.calls).toBe(1);
     expect(corePackage).toBe('@pixel-forge/core');
   });

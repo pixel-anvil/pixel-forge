@@ -18,6 +18,9 @@
     "build": "tsc -b",
     "test": "vitest run --root ../.. --project core"
   },
+  "devDependencies": {
+    "@pixel-forge/testkit": "workspace:*"
+  },
   "dependencies": {
     "@pixel-forge/schema": "workspace:*",
     "@pixel-forge/raster": "workspace:*",

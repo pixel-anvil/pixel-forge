@@ -4,7 +4,7 @@ Document store, transactions, patches, history, frame operations, validate() and
 
 **Depends on:** `schema`, `raster`, `rig` (rig: not used yet; the rig hook is defined here). Pure: no DOM, no Node built-ins, no `Math.random`, no `Date.now`.
 
-**Status:** store, transactions, patches, history, events, `documentHash` and the `RigRenderer` hook interface (T2.1). Frame operations and `validate()` (T2.2) and `renderFrame` (T2.3) come next.
+**Status:** store, transactions, patches, history, events, `documentHash` and the `RigRenderer` hook interface (T2.1). Frame operations and `validate()` (T2.2); `renderFrame` with post-passes, final overrides, mirror and skin (T2.3).
 
 ## Use
 
@@ -114,14 +114,13 @@ A `Patch` is `{ ops, images }`, frozen:
 
 ```ts
 interface RigRenderer {
-  renderParts(ctx: RigFrameContext): readonly RenderedPart[]; // FR-RIG-20 steps 1-4
-  finishFrame?(ctx: RigFrameContext, composite: StoredImage): StoredImage; // steps 6-7
+  renderParts(ctx: RigFrameContext): readonly RenderedPart[]; // FR-RIG-20 steps 1-4, parts only
 }
 // ctx: { view, animation (authored; a mirror's source), frameIndex, frame, partLayers (filtered, tree order) }
 // RenderedPart: { layerId, partId, z, image (doc colour mode, no layer opacity), offset (canvas px) }
 ```
 
-- `renderFrame` (T2.3) calls `renderParts` once per frame that includes at least one part layer, composites the parts in ascending `z` (ties in tree order) and the pixel layers (step 5), applying layer and group visibility and opacity, then calls `finishFrame` on the whole composite (post-passes, then final overrides) and applies the skin (step 8). When part layers are needed and no renderer is given, throw `CoreError('NO_RIG_RENDERER')` (T3.3 may then make the core adapter the default).
+- The renderer is **parts-only**: `renderParts` covers steps 1 to 4 (pose, hierarchical snapping, variant choice with RotSprite and pivot alignment, the animation's **part** overrides) and returns the visible parts. Core owns steps 5 to 8 (see `renderFrame`). `renderFrame` (T2.3) calls `renderParts` once per frame that includes at least one part layer. When part layers are needed and no renderer is given, throw `CoreError('NO_RIG_RENDERER')` (T3.3 may then make the core adapter the default).
 - The renderer (T3.3: rig's pure `renderParts` plus a core adapter) must be deterministic and read-only. Caches may key on published images and frozen document nodes (`WeakMap`), which never change; that is how the `(variant, angle)` cache stays valid across versions. The renderFrame memo can key on `doc.rig`, the animation object and image instances by identity.
 
 ## Notes for later cards
@@ -151,3 +150,34 @@ All frame operations take the open `Transaction` (`store.transact('Insert frame'
 - I6: `ANIM_KEY_DUPLICATE`, `MIRROR_SOURCE_MISSING`, `MIRROR_OF_MIRROR`, `MIRROR_GROUP_MISMATCH`.
 - I7 uniqueness (the spec only fixes the grammar, so this is a decision): part-layer names unique document-wide (`PART_LAYER_NAME_DUPLICATE`, error: ops address part layers by name); other layer names unique among siblings (`LAYER_NAME_DUPLICATE`, warning); bone, view, skin, marker-def, event-def names and ramp names per palette unique (errors); variant names unique per part and view (`VARIANT_NAME_DUPLICATE`, warning). Animations are identified by `(group, direction)` (I6).
 - Images: every stored image should be referenced (`IMAGE_ORPHAN`, warning), kind should match the colour mode (`IMAGE_KIND_MISMATCH`, warning; erase masks are exempt, they are 8-bit masks in every mode), `PART_LAYER_UNBOUND` (warning).
+
+## `renderFrame` (T2.3)
+
+```ts
+renderFrame(view: DocumentView, anim: AnimRef, frame: FrameRef, opts?: {
+  skin?: SkinRef | 'base';   // SkinRef = {id: SkinId} | {name: string}
+  includeReference?: boolean; exportOnly?: boolean; rig?: RigRenderer; layers?: LayerId[];
+}) → TiledImage            // meta.canvas size, RGBA, a fresh image each call
+```
+
+Pure; works on a store, snapshot or open transaction. The anim is found by id, or by exact `(group, direction)` (a missing direction means the undirected animation; `directionFallback` is not applied). The frame is an index or a `FrameId` of the (source) animation.
+
+- **Pipeline** (FR-RIG-20 steps 5 to 8; the rig only does 1 to 4):
+  1. _Composite (step 5)._ Pixel and reference layers in tree order, with the rig output drawn as ONE block at the tree position of the lowest (first-drawn) part layer, see below.
+  2. _Post-passes (step 6)_ from the authored animation's `postPasses`, for any authored animation that declares them, with or without part layers: `removeOrphans` (raster defaults: 1 neighbour, 8-connected), then `outline` (colour from the schema field, `outsideOnly` default true, `corners: true` -> raster `'square'`, else `'round'`). The outline grows the canvas by 1 px, which is cropped back with the returned offset, so the outline is drawn only within the document canvas. An invalid outline colour (alpha 0) is `BAD_VALUE` with `details.reason: 'BAD_POSTPASS'`.
+  3. _Final overrides (step 7)_: the animation's overrides with `target: 'final'` and `frameId` equal to the frame, in array order; per override `erase` first (8-bit 0/255 mask, 255 clears the pixel), then `set` painted over the result (normal "over" blend, so opaque pixels replace and transparent pixels leave the target), both at `anchor` (a canvas position), clipped to the canvas. Part overrides (`target: {partId}`) are not applied here (they are the rig's, step 4). An erase mask is read from an `IndexedImage` (its index) or, if stored as RGBA, from its alpha; a `set` image is in the document's colour mode (indexed images resolve through the base palette). A missing image is `IMAGE_MISSING`.
+  4. _Mirror animations_: the source frame goes through 1 to 3 (with the source's post-passes and final overrides), then is flipped, then the mirror animation's own final overrides for that frame are applied (they are positioned on the flipped canvas). A mirror's part overrides are the rig's concern: the rig receives `ctx.animation` = the source only, so they are handled in T3.6.
+  5. _Skin (step 8)_, last, always by colour on the RGBA composite for both colour modes (see Skin).
+- **Layer order with a rig.** `doc.layers` and every group's `children` are ordered bottom to top: index 0 is drawn first. The rig's output (all parts, ascending `z`, ties in tree order, each with its part layer's effective opacity) is composited as one block at the tree position of the first part layer that is drawn (after the visibility, export and `layers` filters). Pixel and reference layers before that position draw below the whole block, those after it draw above it, even if they sit between two part layers in the tree. Example, tree `[bg (pixel), arm (part, z 1), fx (pixel), leg (part, z 0)]`: the block sits at `arm`, so the draw order is `bg`, then `leg` (z 0), `arm` (z 1), then `fx`; `fx` covers `leg` although `leg` is later in the tree. With no part layers the order is simply the tree order.
+- **Visibility, opacity.** `visible: false` hides the whole subtree. Groups are pass-through: no isolated group compositing; a group's opacity is multiplied into its children, `eff = div255(parent * own)` per level (integer, `composite` rounding), and a leaf draws with `div255(eff * cel.opacity)` through raster `composite`.
+- **Export flag.** With `exportOnly` a node is drawn only if its own `export` and all ancestors' are true (clarification 13). Reference layers need `includeReference` and are never drawn with `exportOnly`. `layers` restricts drawing: a leaf is drawn if it or an ancestor group is listed (ancestor visibility/opacity/export still apply); an unknown id throws `BAD_ARGUMENT`.
+- **Cels.** Links resolve in one hop; a link to a missing cel or to another link throws `BAD_VALUE` with `details.reason: 'BROKEN_LINK'`. A missing cel draws nothing; a missing image throws `IMAGE_MISSING`.
+- **Indexed images** convert through the active (base) palette (`transparentIndex` always transparent; index outside the palette: `BAD_VALUE`/`BAD_INDEX`; no palette: `NO_PALETTE`). The skin is not applied at conversion.
+- **Part layers**: `rig.renderParts` is called once with the filtered part layers; a part for a layer that was not handed over is `BAD_RIG`. Part images take the part layer's effective opacity. No `rig` with part layers: `NO_RIG_RENDERER`.
+- **Mirror flip**: `x' = 2*origin.x - x` (pixel-centre convention: the origin column stays, as for markers); pixels pushed off canvas are lost. Bad source: `BAD_VALUE`/`BAD_MIRROR`.
+- **Skin** (last; `'base'`/none = unskinned), identical for both colour modes: a pixel of the RGBA composite whose RGB equals that of an active-palette entry with alpha > 0 takes the RGB of the skin colour for that index (remap: `palette[remap(i)]`; palette skin: `skinPalette[i]`), alpha kept. With duplicate colours in the palette the lowest index wins (even if the skin has no entry for it, then the pixel stays). Non-matching pixels (blended ones, colours outside the palette) and indices the skin palette lacks stay unchanged. Consequence: a post-pass outline colour or a final-override pixel that equals a palette colour is skinned too, and in an indexed document an authored colour that duplicates a palette entry is skinned like it. **TODO (T4.1 lint):** duplicate colours in a palette that a skin touches should be a lint warning (the skin acts by colour, so duplicates are ambiguous); not implemented here.
+
+### Memo and cache key
+
+- `createFrameRenderer(capacity = 64)` returns a `renderFrame`-like function with its own LRU memo (no global state; `.stats`, `.clear()`). Key: WeakMap-numbered identities of `meta`, skin, palettes, the draw list (layer, image instance + `version`, offset, final opacity), the rig block position, the post-passes node, the final overrides (node identity, anchor, set and erase image instances + `version`; the mirror's separately) and, with part layers, the rig instance, source animation node, `doc.rig` and all image instances. A hit returns a copy-on-write clone.
+- `renderInputKey(view, anim, frame, opts)` is the `.pxf` per-frame hash: SHA-256 hex of canonical JSON of `{v: 1, canvas, colorMode, mirror ({origin, finals: the mirror's own final overrides} for mirrors), items [{layer, image kind + imageHash, x, y, opacity}], rigAt (part layers only), postPasses (config or null), finals [{id, anchor, set, erase image kind + hash}] of the frame, rig (part layers only: layers + opacity, source animation, frame index, doc.rig, all image hashes, renderer present), palette (indexed or skinned), skin or 'base', skin palette}`. It changes iff something reaching the pixels changes (layer names, hidden/filtered layers, durations, markers, overrides of other frames, part overrides on a frame without part layers, `baseHash` do not). The rig part is a placeholder for T3.3 to extend; a mirror's part overrides are not in the key yet (T3.6).

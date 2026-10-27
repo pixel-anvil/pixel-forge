@@ -146,7 +146,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T3.0 | rig: joint-gap definition + hand-written ASCII gap fixtures | opus | high | S | T1.1 | ∥ |☑ |
 | T3.1 | rig: FK, interpolation + quantisation, hierarchical snapping (+ review) | opus | xhigh | M | T1.1, T1.6 | ∥ | ☐ |
 | T2.2 | core: frame ops (§3.2) + `validate()` | sonnet | medium | M | T2.1 | ∥ |☑ |
-| T2.3 | core: `renderFrame` (pixel layers) + cache key | sonnet | medium | S | T2.1 | ∥ | ☐ |
+| T2.3 | core: `renderFrame` (pixel layers) + cache key | sonnet | medium | S | T2.1 | ∥ |☑ |
 | T3.2 | rig: templates, bind by name/overlap, pivots, views | sonnet | medium | M | T3.1 | ∥ | ☐ |
 | T4.3 | io: spritesheet import (cell ranges, outline sheet), sheet + JSON export, contact sheet | sonnet | medium | M | T2.3, T1.8 | ∥ | ☐ |
 | T4.2 | io: `.pxf` read/write, migrations, render cache, atomic save, pack/unpack | sonnet | high | M | T4.3, T2.2 | | ☐ |
@@ -424,6 +424,18 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 #### T2.3 renderFrame (pixel layers)  [sonnet] [S] ∥
 - **Deliverables** — `renderFrame` for pixel and group layers (links, opacity, visibility, the `export` filter), calling the `RigRenderer` hook when it's present, plus the input-hash memo.
 - **Oracle** — ASCII expectations. The cache key changes only when its inputs change.
+- **Notes (2026-10-27)** — ☑ Sonnet; about 164k + 151k tokens for the revision; resumed once after the usage limit. The orchestrator changed the pipeline contract after reading the doubts list:
+  - **Rig block:** all parts sorted by z are drawn as one block at the tree position of the lowest part layer, so pixel layers interleave correctly.
+  - **Core owns FR-RIG-20 steps 5–8:**
+    - composite;
+    - post-passes for any authored animation;
+    - final overrides (erase where mask = 255, then set with an "over" blend);
+    - mirror: source steps 1–7, then flip `x' = 2·origin.x − x`, then the mirror's own finals;
+    - skin last, by colour, in both modes.
+  - **RigRenderer is now parts-only** (`finishFrame` removed).
+  - **`renderInputKey`** (SHA-256 over a canonical description) covers post-passes, final overrides and the rig-block position.
+
+  Doubts for T3.3/T3.6: erase masks are read as 8-bit value or alpha, and only 255 clears; a mirror's part overrides are T3.6. Spec FR-RIG-20 is updated.
 
 #### T3.2 templates, binding, pivots, views  [sonnet] [M] ∥
 - **Package** — `rig` (pure) and `core` (the transaction wrappers).
