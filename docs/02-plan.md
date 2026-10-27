@@ -137,7 +137,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T0.3 | testkit: golden helper, ASCII helpers, golden sheets, fixture runner | sonnet | medium | S | T1.8 | |☑ |
 | T1.1 | schema: domain types + zod + ids (**+ review + user look**) | opus | xhigh | M | T0.2 | |☑ |
 | T1.2 | color: OKLab/OKLCH, nearest colour, palette ops | sonnet | medium | S | T1.1 | ∥ |☑ |
-| T1.3 | color: palette presets from fetched Lospec `.hex` sources | haiku | low | S | T1.2 | ∥ | ☐ |
+| T1.3 | color: palette presets from fetched Lospec `.hex` sources | haiku | low | S | T1.2 | ∥ |☑ |
 | T1.4 | raster: sparse tiled image, compositing, basic transforms | sonnet | high | M | T1.1, T0.3 | ∥ | ☐ |
 | T1.5 | raster: primitives (line, rect, ellipse, fill, pixel-perfect) | sonnet | medium | S | T1.4 | ∥ | ☐ |
 | T1.6 | raster: fixed-point trig + RotSprite (+ review) | opus | xhigh | M | T1.4, T0.4 | ∥ | ☐ |
@@ -315,6 +315,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - write each preset module to **load from the committed `.hex`** (exemplar: write PICO-8 first, following the format in `presets/README.md`);
   - record each preset's source URL and licence.
 - **Acceptance** — a test compares each preset with its `.hex` file byte for byte. The colour counts are as published.
+- **Notes (2026-10-27)** — ☑ Verified: PICO-8 matches its canonical 16 colours, and the counts are 16, 55, 4, 32, 64, 64, 16. Game Boy uses Lospec slug `nintendo-gameboy-bgb`. **No Lospec page states a licence.** Authors are credited in each preset (Lexaloffle, ENDESGA, Kerrie Lake, Adigun A. Polack, GrafxKid). Decision (orchestrator): keep them; a list of colour values is generally treated as unprotectable data, and attribution is kept. See KNOWN_ISSUES PAL-01. About 63k subagent tokens.
 
 #### T1.4 raster core  [sonnet] [M] ∥
 - **Deliverables**:

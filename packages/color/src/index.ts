@@ -10,3 +10,4 @@ export const colorPackage = '@pixel-forge/color' as const;
 export * from './convert.js';
 export * from './nearest.js';
 export * from './palette-ops.js';
+export * from './presets/index.js';
