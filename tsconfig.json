@@ -1,0 +1,83 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "packages/png"
+    },
+    {
+      "path": "packages/png/test"
+    },
+    {
+      "path": "packages/testkit"
+    },
+    {
+      "path": "packages/testkit/test"
+    },
+    {
+      "path": "packages/schema"
+    },
+    {
+      "path": "packages/schema/test"
+    },
+    {
+      "path": "packages/color"
+    },
+    {
+      "path": "packages/color/test"
+    },
+    {
+      "path": "packages/raster"
+    },
+    {
+      "path": "packages/raster/test"
+    },
+    {
+      "path": "packages/rig"
+    },
+    {
+      "path": "packages/rig/test"
+    },
+    {
+      "path": "packages/convert"
+    },
+    {
+      "path": "packages/convert/test"
+    },
+    {
+      "path": "packages/core"
+    },
+    {
+      "path": "packages/core/test"
+    },
+    {
+      "path": "packages/lint"
+    },
+    {
+      "path": "packages/lint/test"
+    },
+    {
+      "path": "packages/io"
+    },
+    {
+      "path": "packages/io/test"
+    },
+    {
+      "path": "packages/ops"
+    },
+    {
+      "path": "packages/ops/test"
+    },
+    {
+      "path": "packages/server"
+    },
+    {
+      "path": "packages/server/test"
+    },
+    {
+      "path": "packages/cli"
+    },
+    {
+      "path": "packages/cli/test"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "name": "@pixel-forge/testkit",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared test helpers: ASCII fixtures, golden comparison, PNG helpers (private, not published).",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run --project testkit"
+  },
+  "dependencies": {
+    "@pixel-forge/png": "workspace:*"
+  }
+}

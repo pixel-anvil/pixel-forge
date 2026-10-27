@@ -1,0 +1,25 @@
+{
+  "name": "@pixel-forge/rig",
+  "version": "0.0.0",
+  "description": "FK/IK, key interpolation and quantisation, snapping, variant selection, part render, overrides and staleness, joint check, presets and templates.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run --project rig"
+  },
+  "dependencies": {
+    "@pixel-forge/schema": "workspace:*",
+    "@pixel-forge/raster": "workspace:*"
+  }
+}

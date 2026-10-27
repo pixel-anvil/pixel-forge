@@ -1,0 +1,26 @@
+{
+  "name": "@pixel-forge/convert",
+  "version": "0.0.0",
+  "description": "Image-to-sprite steps and ConvertRecipe.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run --project convert"
+  },
+  "dependencies": {
+    "@pixel-forge/schema": "workspace:*",
+    "@pixel-forge/color": "workspace:*",
+    "@pixel-forge/raster": "workspace:*"
+  }
+}

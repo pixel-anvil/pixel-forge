@@ -1,0 +1,25 @@
+{
+  "name": "@pixel-forge/raster",
+  "version": "0.0.0",
+  "description": "Sparse tiled images, compositing, primitives, transforms, RotSprite, dithering and fixed-point trig.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run --project raster"
+  },
+  "dependencies": {
+    "@pixel-forge/schema": "workspace:*",
+    "@pixel-forge/color": "workspace:*"
+  }
+}

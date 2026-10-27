@@ -1,0 +1,8 @@
+node_modules
+dist
+coverage
+.golden-diff
+.check
+*.tsbuildinfo
+.DS_Store
+spikes/**/out/

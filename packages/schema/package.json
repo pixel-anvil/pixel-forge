@@ -1,0 +1,21 @@
+{
+  "name": "@pixel-forge/schema",
+  "version": "0.0.0",
+  "description": "Domain types, zod schemas, ids and constants (angle quantum, tile size). No logic.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run --project schema"
+  }
+}

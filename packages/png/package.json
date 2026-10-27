@@ -1,0 +1,21 @@
+{
+  "name": "@pixel-forge/png",
+  "version": "0.0.0",
+  "description": "Pure, deterministic PNG encode/decode on fflate. Used by testkit and io.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run --project png"
+  }
+}

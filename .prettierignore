@@ -1,0 +1,13 @@
+node_modules
+dist
+coverage
+.check
+.golden-diff
+pnpm-lock.yaml
+spikes
+fixtures
+docs
+.changeset/*.md
+CHANGELOG.md
+AGENTS.md
+CLAUDE.md

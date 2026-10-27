@@ -1,0 +1,26 @@
+{
+  "name": "@pixel-forge/core",
+  "version": "0.0.0",
+  "description": "Document store, transactions, patches, history, frame operations, validate() and renderFrame.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run --project core"
+  },
+  "dependencies": {
+    "@pixel-forge/schema": "workspace:*",
+    "@pixel-forge/raster": "workspace:*",
+    "@pixel-forge/rig": "workspace:*"
+  }
+}
