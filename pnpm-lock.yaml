@@ -260,6 +260,9 @@ importers:
       '@pixel-forge/schema':
         specifier: workspace:*
         version: link:../schema
+      fflate:
+        specifier: ^0.8.3
+        version: 0.8.3
     devDependencies:
       '@pixel-forge/testkit':
         specifier: workspace:*

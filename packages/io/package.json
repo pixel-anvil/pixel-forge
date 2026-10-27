@@ -19,11 +19,12 @@
     "test": "vitest run --root ../.. --project io"
   },
   "dependencies": {
-    "@pixel-forge/core": "workspace:*",
     "@pixel-forge/convert": "workspace:*",
+    "@pixel-forge/core": "workspace:*",
     "@pixel-forge/png": "workspace:*",
+    "@pixel-forge/raster": "workspace:*",
     "@pixel-forge/schema": "workspace:*",
-    "@pixel-forge/raster": "workspace:*"
+    "fflate": "^0.8.3"
   },
   "devDependencies": {
     "@pixel-forge/testkit": "workspace:*"

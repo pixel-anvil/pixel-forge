@@ -21,7 +21,7 @@ Oracles per fixture `<name>`:
 | `layers_parts` | 16x16 RGBA, 3 frames of 100 ms. Layers: `body`; group `arm` with `part:upper_arm_r`, `part:lower_arm_r@45` (opacity 128), `part:hand_r#side`; `hidden_guide` (hidden). | header, frame, layer 0x2004 (normal + group type 1, child level, hidden flag, opacity), cel 0x2005 compressed (type 2), color profile 0x2007, old palette 0x0004 |
 | `tags_overlap` | 8x8 RGBA, 7 frames, durations 50/80/100/120/200/250/500 ms. `run` frames 1-4 forward, `turn` frames 4-6 pingpong (overlap on frame 4). Frame 7 is untagged (so 7 frames, not 6). | header, frame (varied durations), layer, cel compressed, tags 0x2018, user data 0x2020 (tag colors) |
 | `linked_cels` | 8x8 RGBA, 4 frames, one layer. Frame 1 cel (orange) is source; frames 2 and 4 are linked cels to frame 1; frame 3 has its own distinct cel. | layer, cel 0x2005 compressed (frames 1, 3) and linked (type 1, frames 2, 4) |
-| `indexed_palette` | 8x8 indexed (depth 8), 1 frame, transparent index 0, 16-entry palette (entry 0 fully transparent), image uses indices 0-15. | header (color depth 8, transparent index), palette 0x2019, layer, cel compressed (Aseprite compresses cels by default) |
+| `indexed_palette` | 8x8 indexed (depth 8), 1 frame, transparent index 0, 16-entry palette (entry 0 fully transparent), image uses indices 0–14 ((x+y) mod 16 on 8×8). | header (color depth 8, transparent index), palette 0x2019, layer, cel compressed (Aseprite compresses cels by default) |
 
 Not covered: raw cels (type 0; Aseprite always writes compressed), compressed
 tilemap cels (type 3), slices, external files, user data on layers/cels.

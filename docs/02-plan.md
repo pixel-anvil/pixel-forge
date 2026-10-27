@@ -164,7 +164,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T3.9 | fixtures: synthetic humanoid "hero" (TS doc + `.aseprite` via Lua) | sonnet | medium | M | T3.2, T0.3 | ∥ | ☐ |
 | G1 | **Gate: core + rig** | opus | high | — | W1–W3 rig track | | ☐ |
 | T4.6 | fixtures: synthetic `.aseprite` files via Aseprite Lua | sonnet | medium | S | T0.3 | ∥ | ☑ |
-| T4.4 | io: `.aseprite` binary parser (Aseprite CLI as oracle) | sonnet | high | M | T4.6 | | ☐ |
+| T4.4 | io: `.aseprite` binary parser (Aseprite CLI as oracle) | sonnet | high | M | T4.6 | |☑ |
 | T4.5 | io: `.aseprite` → document mapping + in-place re-import (explicit rules) | sonnet | high | M | T4.4, T4.2 | ∥ | ☐ |
 | T4.1 | lint: rules + structured findings | sonnet | medium | M | T3.4, T3.3 | ∥ | ☐ |
 | T5.1 | ops: registry framework + generators + 3 exemplar ops (+ review) | opus | xhigh | M | T4.1, T4.2 | | ☐ |
@@ -614,6 +614,11 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 - **Context** — `~/code/aseprite/docs/ase-file-specs.md`.
 - **Deliverables** — a parser for the header, frames, layer, cel (raw, linked, compressed), tag, palette 0x2019 and user-data chunks. Unknown chunks are skipped. Typed errors.
 - **Oracle** — matches `expected.json`. Each cel's pixels equal Aseprite's per-frame `--save-as` PNGs.
+- **Notes (2026-10-27)** — ☑ Implemented from `ase-file-specs.md` only (no Aseprite source); about 149k tokens.
+  - Decodes header, frames, layers, cels (raw, linked, zlib, tilemap header), cel extra, colour profile, tags, new and old palettes, user data and slices. External files, mask, path and tileset chunks are skipped with a note.
+  - All 4 fixtures match the CLI oracles pixel for pixel.
+  - Truncation at every chunk, frame and byte boundary gives `TRUNCATED`, never a crash. Bomb and size limits are enforced.
+  - Indexed transparency applies only to non-background layers.
 
 #### T4.5 `.aseprite` mapping + re-import  [sonnet] [M] ∥
 - **Mapping rules**:

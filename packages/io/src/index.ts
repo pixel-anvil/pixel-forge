@@ -34,3 +34,4 @@ export type {
 } from './sheet-export.js';
 export { DEFAULT_MAX_LONG_EDGE, contactSheet, contactSheetPlan } from './contact-sheet.js';
 export type { ContactSheetOptions, ContactSheetPlan, ContactSheetTile } from './contact-sheet.js';
+export * from './aseprite/index.js';
