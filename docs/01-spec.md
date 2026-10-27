@@ -98,7 +98,33 @@ Document
 - I4: IDs are unique, stable and deterministic (seeded generator, never `Math.random`).
 - I5: Pivots, offsets and origin are integers. Angles are finite.
 - I6: `(group, direction)` is unique. `mirrorOf` targets a non-mirrored animation with the same group.
-- I7: Animation, group and layer names match `^[a-z0-9_\-]{1,48}$`, so they're safe in paths and Godot names.
+- I7: Animation, group and layer names match `^[a-z0-9_\-]{1,48}$` and are not reserved JavaScript property names (§3.4.14), so they're safe in paths, records and Godot names.
+
+### 3.4 Clarifications from implementing the schema (T1.1, 2026-10-27)
+These settle ambiguities found while writing `@pixel-forge/schema`. Its README is the code-level reference.
+1. **A mirror with overrides** (FR-RIG-16 allows extra overrides) is written to the render cache as a **normal, fully rendered entry**. Only a mirror *without* overrides is emitted as `mirrorOf` and flipped at runtime.
+2. **Cel links** are same-layer only: `linkTo: FrameId`. A link across animations means the same layer in another animation's frame.
+3. **An undirected animation** uses the reserved direction key `default` in the render cache and its paths. **The unskinned render** uses the reserved skin name `base`.
+4. **`render/index.json` frame `image`** is a path relative to `render/<skin>/`, so frames with equal hashes may share one PNG.
+5. **Variants belong to views.** A part's default variant *for a view* is its first variant with that `viewId`. **Views have a `name`**, used by `#<view>` layer naming, and a `directions[]` list. Front and back are **two views**.
+6. **PartName** (in ops) is the part layer's name. Animations are addressed by `(group, direction)` or id. There is no separate animation name.
+7. **Rig maths conventions:**
+   - 0° points along +x, and angles grow clockwise (y down).
+   - `BoneKey.angle` is **relative to the bone's rest angle**.
+   - A root bone's rest `x, y` is a canvas position. A child's rest position is an offset from its parent's pivot, in the parent's rotated frame.
+   - `flipX` flips **only the bone's own parts**, not its subtree.
+   - A missing `interp` means linear. A missing `drawnAngle` means the rest angle.
+   - An undirected animation uses `views[0]`.
+   - A part missing from `partVisibility` is visible, and one missing from `defaultZ` has z 0.
+
+   T3.1 may refine these with an ADR.
+8. **Indexed mode:** transparency is any palette entry with alpha 0. **Erase masks** are always 8-bit masks (0 or 255), whatever the colour mode.
+9. **Markers** are stored in canvas pixels. Consumers (Godot) subtract `origin`.
+10. **Hashes** (`baseHash`, frame hashes) are lower-case hex SHA-256, using the testkit layout (u32be width, u32be height, RGBA). Manifest timestamps are UTC ISO 8601 with `Z`.
+11. **Override order:** within one override, `erase` applies first, then `set`, both at the same anchor.
+12. **IDs** look like `lay_7k2m9q`: a kind prefix plus base32. They come from a seeded counter stored in `meta.ids`, so undo and redo replay the same IDs.
+13. **Group `export`** is ANDed with the ancestor groups. Reference layers are never exported or cached.
+14. **Reserved names:** names and record keys may not be JavaScript `Object.prototype` member names (`__proto__`, `constructor`, `prototype`, `toString`, …). They are rejected, never silently dropped (code review of T1.1). Layer trees nest at most 32 levels (`MAX_LAYER_DEPTH`).
 
 ---
 

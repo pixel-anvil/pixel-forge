@@ -297,6 +297,11 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - `constants.ts`;
   - `refs.ts`.
 - **Acceptance** — `fixtures/src/minimal-doc.ts` round-trips through the schema. Invalid names are rejected. JSON Schema export works. **Review: the code-review skill (high), then show the user the domain types summary** before the wave fans out.
+- **Notes (2026-10-27)** — Implemented (Opus/xhigh; interrupted once by the usage limit and resumed; about 268k subagent tokens). The spec ambiguities it raised are settled in spec §3.4. Code review (high) found 10 issues, all fixed by Sonnet/high (about 128k tokens), and the orchestrator re-checked the worst two:
+  - `__proto__` record keys were silently dropped by zod → a `record()` helper now rejects reserved keys;
+  - a 5000-deep layer tree crashed `safeParse` → `MAX_LAYER_DEPTH` 32 with an iterative pre-check.
+
+  Also: frozen v1 fixture at `fixtures/frozen/v1/minimal-document.json`. 89 tests, 100 % line coverage. **Waiting for the user's look at the domain summary before ☑.**
 
 #### T1.2 color basics  [sonnet] [S] ∥
 - **Deliverables** — sRGB ↔ linear ↔ OKLab/OKLCH conversion; `nearestIndex` (OKLab, cached, ties go to the lower index); palette operations.

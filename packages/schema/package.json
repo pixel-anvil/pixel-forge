@@ -1,7 +1,7 @@
 {
   "name": "@pixel-forge/schema",
   "version": "0.0.0",
-  "description": "Domain types, zod schemas, ids and constants (angle quantum, tile size). No logic.",
+  "description": "Domain types, zod schemas, constants, the deterministic id generator and JSON Schema export for the pixel-forge document and .pxf file contracts.",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -17,5 +17,8 @@
   "scripts": {
     "build": "tsc -b",
     "test": "vitest run --root ../.. --project schema"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
   }
 }
