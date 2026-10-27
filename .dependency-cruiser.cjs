@@ -60,7 +60,8 @@ module.exports = {
       comment: 'Packages must not reach into a sibling package by relative path.',
       severity: 'error',
       from: { path: '^packages/([^/]+)/' },
-      to: { path: '^packages/([^/]+)/', pathNot: '^packages/$1/' },
+      // A sibling's built output (dist/) is how `@pixel-forge/<pkg>` resolves through the workspace symlink.
+      to: { path: '^packages/([^/]+)/', pathNot: ['^packages/$1/', '^packages/[^/]+/dist/'] },
     },
     {
       name: 'no-editor-or-godot-internals',

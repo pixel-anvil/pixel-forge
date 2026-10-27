@@ -322,6 +322,10 @@ importers:
       '@pixel-forge/png':
         specifier: workspace:*
         version: link:../png
+    devDependencies:
+      vitest:
+        specifier: ^5.0.5
+        version: 5.0.5(@types/node@26.6.5)(@vitest/coverage-v8@5.0.5)(vite@8.3.5(@types/node@26.6.5)(yaml@2.9.1))
 
 packages:
 

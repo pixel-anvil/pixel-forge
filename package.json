@@ -20,7 +20,9 @@
     "gen": "node scripts/placeholder.mjs gen",
     "gen:check": "node scripts/placeholder.mjs gen:check",
     "bench": "node scripts/placeholder.mjs bench",
-    "fixtures": "node scripts/placeholder.mjs fixtures",
+    "fixtures": "tsc -b && node packages/testkit/bin/fixtures.mjs",
+    "fixtures:check": "tsc -b && node packages/testkit/bin/fixtures.mjs --check",
+    "golden:sheet": "tsc -b && node packages/testkit/bin/golden-sheet.mjs",
     "privacy-check": "sh scripts/privacy-check.sh --all",
     "license-check": "node scripts/license-check.mjs",
     "changeset": "changeset"

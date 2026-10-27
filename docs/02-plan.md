@@ -17,6 +17,7 @@
 3. **Dispatch**: send each card to a subagent with the card's **model and effort** (`Agent` `model: haiku|sonnet|opus`, `effort: low|medium|high|xhigh`). **Every ∥ card runs with `isolation: "worktree"`.** The brief contains:
    - the card text;
    - the **standard context pack** (§0.3).
+   - **Worktree base**: `isolation: "worktree"` branches from the default branch (`main`), not from the current wave branch. Each brief must tell the subagent to run `git merge --ff-only <wave-branch>` first. The orchestrator integrates the subagent's uncommitted diff as a patch (`git diff --cached --binary` → `git apply --3way`).
 4. **Subagents don't commit.** They leave changes in their worktree and report: the files they changed, the commands they ran, and anything they're unsure about.
 5. **Verify** as the orchestrator, inside the worktree:
    - run the acceptance commands;
@@ -133,7 +134,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T0.6 | Public-readiness: scrub game refs → GAME_NOTES.md, LICENSE, README, SECURITY, privacy hook | sonnet | medium | S | T0.1, T0.2 | | ☑ |
 | O-1 | User creates the `pixel-anvil` org → public repo, branch protection, push, CI green | orchestrator | — | S | T0.6 | |☑ |
 | T1.8 | `png` package: deterministic PNG encode/decode | sonnet | high | S | T0.2 | |☑ |
-| T0.3 | testkit: golden helper, ASCII helpers, golden sheets, fixture runner | sonnet | medium | S | T1.8 | | ☐ |
+| T0.3 | testkit: golden helper, ASCII helpers, golden sheets, fixture runner | sonnet | medium | S | T1.8 | |☑ |
 | T1.1 | schema: domain types + zod + ids (**+ review + user look**) | opus | xhigh | M | T0.2 | | ☐ |
 | T1.2 | color: OKLab/OKLCH, nearest colour, palette ops | sonnet | medium | S | T1.1 | ∥ | ☐ |
 | T1.3 | color: palette presets from fetched Lospec `.hex` sources | haiku | low | S | T1.2 | ∥ | ☐ |
@@ -284,6 +285,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - `pnpm golden:sheet` (×8 upscale with a grid, for review);
   - the `pnpm fixtures` runner.
 - **Acceptance** — self-tests pass. A golden mismatch writes the diff files.
+- **Notes (2026-10-26)** — ☑ Verified (`pnpm verify` passes, `fixtures:check` is up to date). Goldens live in `<test dir>/__golden__/<name>.png`. The hash is SHA-256 over u32be width, u32be height and RGBA. Diff: magenta for differing pixels, cyan for alpha-only differences. 3×5 bitmap font. The fixtures runner uses `default async generate(ctx)` with `fixtures:check`, and the CLIs need `tsc -b` first. The orchestrator added `vitest` as a peer and dev dependency of testkit. PLAYBOOKS "add a golden/ASCII test" is filled in. Cost: about 121k subagent tokens.
 
 ### Wave 1 — schema / color / raster
 

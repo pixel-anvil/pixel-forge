@@ -87,6 +87,11 @@ export default tseslint.config(
     },
   },
   {
+    // testkit indexes pixel buffers in tight loops; noUncheckedIndexedAccess makes `!` the readable choice.
+    files: ['packages/testkit/**/*.ts'],
+    rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
+  },
+  {
     files: ['**/*.js', '**/*.mjs', '**/*.cjs'],
     extends: [tseslint.configs.disableTypeChecked],
     languageOptions: {
