@@ -136,7 +136,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T1.8 | `png` package: deterministic PNG encode/decode | sonnet | high | S | T0.2 | |☑ |
 | T0.3 | testkit: golden helper, ASCII helpers, golden sheets, fixture runner | sonnet | medium | S | T1.8 | |☑ |
 | T1.1 | schema: domain types + zod + ids (**+ review + user look**) | opus | xhigh | M | T0.2 | |☑ |
-| T1.2 | color: OKLab/OKLCH, nearest colour, palette ops | sonnet | medium | S | T1.1 | ∥ | ☐ |
+| T1.2 | color: OKLab/OKLCH, nearest colour, palette ops | sonnet | medium | S | T1.1 | ∥ |☑ |
 | T1.3 | color: palette presets from fetched Lospec `.hex` sources | haiku | low | S | T1.2 | ∥ | ☐ |
 | T1.4 | raster: sparse tiled image, compositing, basic transforms | sonnet | high | M | T1.1, T0.3 | ∥ | ☐ |
 | T1.5 | raster: primitives (line, rect, ellipse, fill, pixel-perfect) | sonnet | medium | S | T1.4 | ∥ | ☐ |
@@ -306,6 +306,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 #### T1.2 color basics  [sonnet] [S] ∥
 - **Deliverables** — sRGB ↔ linear ↔ OKLab/OKLCH conversion; `nearestIndex` (OKLab, cached, ties go to the lower index); palette operations.
 - **Oracle** — the reference values published with Björn Ottosson's OKLab, to 1e-4.
+- **Notes (2026-10-27)** — ☑ Verified: `verify` passes, and the orchestrator independently checked red → OKLab (0.62796, 0.22486, 0.12585). Conversions use only + − × ÷ and `sqrt`, with roots by fixed-iteration Newton, so there's no `Math.pow` or `cbrt` variance. OKLCH hue uses trig and is documented as not cross-platform safe (it only affects `sortBy('hue')`). `nearestIndex`: alpha-0 input → the first alpha-0 entry; ties → the lower index; a FIFO cache tied to palette identity, so palettes must be treated as immutable. Palette ops return `{palette, remap}` and remap ramps. About 89k subagent tokens.
 
 #### T1.3 palette presets  [haiku] [S] ∥
 - **Do**:
