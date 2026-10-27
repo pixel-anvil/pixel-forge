@@ -217,10 +217,12 @@ These settle ambiguities found while writing `@pixel-forge/schema`. Its README i
   2. **Hierarchical snapping**: start with the root at its integer position. For each child, rotate the rest offset to its parent attach point with fixed-point trig, round it, and add it to the parent's **snapped** pivot. A child pivot is never rounded independently of its parent.
   3. For each part, choose the variant and render it rotated by the residual with RotSprite. Then align it so the variant's pivot pixel lands exactly on the snapped pivot. Results are cached by `(variantId, quantisedAngle)`.
   4. Apply **part overrides**, anchored to the snapped pivot, to each part's own render.
-  5. Composite the parts in z order (per view default, then the part keys), then the pixel layers.
-  6. **Post-passes** (opt-in per animation): orphan removal, outline.
-  7. Apply **final overrides**.
-  8. Apply the skin remap.
+  5. Composite: the parts, in z order (per view default, then the part keys), form **one rig block**. It's drawn at the tree position of the lowest part layer, so pixel layers before it in the tree are below the character and later ones are above.
+  6. **Post-passes** (opt-in per animation, for any authored animation, rig or not): orphan removal, outline (cropped to the canvas).
+  7. Apply **final overrides** (erase, then set).
+  8. Apply the skin last, by colour on the RGBA composite, in both colour modes.
+
+  Steps 1–4 belong to the rig (the `RigRenderer.renderParts` hook). Steps 5–8 belong to core's `renderFrame`. A mirror animation renders its source through steps 1–7, flips about `origin.x`, applies its own final overrides, then the skin. (T2.3 review, 2026-10-27.)
 - FR-RIG-21 [M1a]: Rotation algorithm per part: RotSprite (default), nearest, or none. **RotSprite introduces no new colours**, and a test asserts it.
 - FR-RIG-22 [M1a] **Overrides**:
   - drawing on a rig frame writes a part override if the stroke falls within one part's area, otherwise a final override;
