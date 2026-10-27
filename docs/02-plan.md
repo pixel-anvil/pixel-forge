@@ -139,7 +139,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T1.2 | color: OKLab/OKLCH, nearest colour, palette ops | sonnet | medium | S | T1.1 | ∥ |☑ |
 | T1.3 | color: palette presets from fetched Lospec `.hex` sources | haiku | low | S | T1.2 | ∥ |☑ |
 | T1.4 | raster: sparse tiled image, compositing, basic transforms | sonnet | high | M | T1.1, T0.3 | ∥ |☑ |
-| T1.5 | raster: primitives (line, rect, ellipse, fill, pixel-perfect) | sonnet | medium | S | T1.4 | ∥ | ☐ |
+| T1.5 | raster: primitives (line, rect, ellipse, fill, pixel-perfect) | sonnet | medium | S | T1.4 | ∥ |☑ |
 | T1.6 | raster: fixed-point trig + RotSprite (+ review) | opus | xhigh | M | T1.4, T0.4 | ∥ | ☐ |
 | T1.7 | raster: orphan removal + outline pass | sonnet | medium | S | T1.4 | ∥ |☑ |
 | T2.1 | core: document store, transactions, patches, history, rig hook interface (+ review) | opus | xhigh | M | T1.1, T1.4 | ∥ | ☐ |
@@ -330,6 +330,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 #### T1.5 primitives  [sonnet] [S] ∥
 - **Deliverables** — Bresenham line, rectangle, midpoint ellipse, flood fill (4- or 8-connected, contiguous or global), and the pixel-perfect stroke filter.
 - **Oracle** — hand-written ASCII expectations, plus compare against Aseprite's line and ellipse via Lua on 5 cases.
+- **Notes (2026-10-27)** — ☑ Symmetric Zingl Bresenham (endpoints ordered so A→B = B→A), square and round brushes 1–8, iterative flood fill (4/8-connected, global, tolerance), and the pixel-perfect L-corner filter. All 12 oracle cases (5 lines, 7 ellipses) match Aseprite's own tools rendered via Lua `app.useTool`. **Licensing incident:** the first version *ported* Aseprite's proprietary ellipse code. The orchestrator caught it in verification, before any commit. A fresh Sonnet agent rewrote the ellipse clean-room from Zingl's published `plotEllipseRect`, without reading Aseprite or the old bodies. The AGENTS.md rule "Licensing of code" was added. About 116k + 51k subagent tokens.
 
 #### T1.6 fixed-point trig + RotSprite  [opus] [M] ∥
 - **Spec** — FR-RIG-20/21, NFR-02, `spikes/rotsprite/REPORT.md`.

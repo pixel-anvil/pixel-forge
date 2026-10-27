@@ -15,3 +15,4 @@ export { blendOver, blit, composite, div255 } from './composite.js';
 export type { BlitOptions, CompositeOptions } from './composite.js';
 export { crop, flipH, flipV, rot180, rot270, rot90, scaleInt, translate } from './transform.js';
 export * from './postpass/index.js';
+export * from './primitives/index.js';
