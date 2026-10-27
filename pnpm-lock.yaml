@@ -299,6 +299,10 @@ importers:
       '@pixel-forge/schema':
         specifier: workspace:*
         version: link:../schema
+    devDependencies:
+      '@pixel-forge/testkit':
+        specifier: workspace:*
+        version: link:../testkit
 
   packages/rig:
     dependencies:

@@ -21,5 +21,8 @@
   "dependencies": {
     "@pixel-forge/schema": "workspace:*",
     "@pixel-forge/color": "workspace:*"
+  },
+  "devDependencies": {
+    "@pixel-forge/testkit": "workspace:*"
   }
 }

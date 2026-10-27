@@ -138,7 +138,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T1.1 | schema: domain types + zod + ids (**+ review + user look**) | opus | xhigh | M | T0.2 | |☑ |
 | T1.2 | color: OKLab/OKLCH, nearest colour, palette ops | sonnet | medium | S | T1.1 | ∥ |☑ |
 | T1.3 | color: palette presets from fetched Lospec `.hex` sources | haiku | low | S | T1.2 | ∥ |☑ |
-| T1.4 | raster: sparse tiled image, compositing, basic transforms | sonnet | high | M | T1.1, T0.3 | ∥ | ☐ |
+| T1.4 | raster: sparse tiled image, compositing, basic transforms | sonnet | high | M | T1.1, T0.3 | ∥ |☑ |
 | T1.5 | raster: primitives (line, rect, ellipse, fill, pixel-perfect) | sonnet | medium | S | T1.4 | ∥ | ☐ |
 | T1.6 | raster: fixed-point trig + RotSprite (+ review) | opus | xhigh | M | T1.4, T0.4 | ∥ | ☐ |
 | T1.7 | raster: orphan removal + outline pass | sonnet | medium | S | T1.4 | ∥ | ☐ |
@@ -325,6 +325,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - `hashRGBA`.
 - **Oracle** — property tests (involutions). ASCII expectations for compositing.
 - **Acceptance** — a 256² image with 10 % fill uses ≤ 30 tiles.
+- **Notes (2026-10-27)** — ☑ Verified: `verify` passes in the worktree and on the branch. The orchestrator checked half-transparent red over blue → (128, 0, 127, 255), and that a clone is independent. **Dirty-tile contract for T2.1** (in the README): `version` +1 per mutating call; `tilesChanged(since)`; `captureTiles` / `restoreTiles` with shared, immutable snapshot buffers; transaction recipe base-clone → ops → before/after capture. `IndexedImage` has an explicit `transparentIndex` (default 0) and core must validate that it has alpha 0. Out-of-bounds `get` returns transparent and `set` is a no-op. Pure SHA-256 checked against node:crypto. Composite uses exact rational rounding with a BigInt oracle. Bench: 0.07 ms per 64×64 composite. Notes for T1.5: tuple get/set allocates, so consider a packed-u32 path for hot loops. About 147k subagent tokens.
 
 #### T1.5 primitives  [sonnet] [S] ∥
 - **Deliverables** — Bresenham line, rectangle, midpoint ellipse, flood fill (4- or 8-connected, contiguous or global), and the pixel-perfect stroke filter.
