@@ -154,7 +154,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T3.2 | rig: templates, bind by name/overlap, pivots, views | sonnet | medium | M | T3.1 | ∥ |☑ |
 | T4.3 | io: spritesheet import (cell ranges, outline sheet), sheet + JSON export, contact sheet | sonnet | medium | M | T2.3, T1.8 | ∥ |☑ |
 | T4.2 | io: `.pxf` read/write, migrations, render cache, atomic save, pack/unpack | sonnet | high | M | T4.3, T2.2 | |☑ |
-| T6.0 | Godot integration contract with the first consumer game (spec addendum) | opus | high | S | T4.2 | | ☐ |
+| T6.0 | Godot integration contract with the first consumer game (spec addendum) | opus | high | S | T4.2 | | ☑ |
 | T6.1 | Godot: `.pxf` reader + import plugin + test harness + fixture `.pxf` generator | sonnet | high | M | T6.0 | | ☐ |
 | T6.2 | Godot: PixelForgeDriver (clock + game-driven playback), adapters, mirroring, markers/events | sonnet | high | M | T6.1 | | ☐ |
 | T6.3 | Godot: demo scene + CI job (ubuntu, 4.6.1 headless) | haiku | low | S | T6.2 | | ☐ |
@@ -517,6 +517,12 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 
   If the spec needs an addendum to FR-GD-03, write it.
 - **Acceptance** — a mapping table from every character-art and sprite-sheet field the shot controller uses to a source in the PixelForgeAsset.
+- **Notes (2026-10-28)** — ☑ Opus/high; about 162k tokens; resumed once after the usage limit. `docs/contracts/GODOT_INTEGRATION.md` plus FR-GD-02/03 addenda. The private game names and line refs are in GAME_NOTES §7.
+  - Origin point = bottom-centre of the origin pixel (ox+0.5, oy+1), so origin.y = the game's feet row − 1. Markers and the adapter offset are measured from it; the offset is already mirrored.
+  - The per-frame rise is baked into pixels and markers (D1 moves cels by (0, −rise)), not root motion or an offset channel. A per-frame "art draws the prop" flag becomes a `ball_drawn`-style event.
+  - The driver gains `mirror` (XOR mirrorOf), `clock_mode`/`advance()`, `play()` and query methods. Event rules: events never drop on a long tick; seek/set_frame fire only the target frame; `hold_last` works in every loop mode.
+  - Required additions: T6.1 (canvas_size, a shared atlas layout across skins, asset helpers), T6.2 (driver API). Nothing new in the `.pxf`.
+  - Check in D1: prop heights are 0.5 px lower and the sprite moves 0.5 px sideways against the game's current maths (a game test pins a release height). T6.2 must test that flip_h leaves `offset` unmirrored.
 
 #### T6.1 Godot importer + harness  [sonnet] [M]
 - **Deliverables**:
