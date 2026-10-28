@@ -12,7 +12,7 @@ const ALLOWED = {
   convert: ['schema', 'color', 'raster'],
   core: ['schema', 'raster', 'rig'],
   lint: ['core', 'rig'],
-  io: ['core', 'convert', 'png', 'schema', 'raster'],
+  io: ['core', 'convert', 'png', 'schema', 'raster', 'rig'],
   ops: ['core', 'lint', 'io', 'rig', 'convert'],
   server: ['ops'],
   cli: ['server', 'ops'],

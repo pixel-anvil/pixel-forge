@@ -27,6 +27,7 @@
     "@pixel-forge/core": "workspace:*",
     "@pixel-forge/png": "workspace:*",
     "@pixel-forge/raster": "workspace:*",
+    "@pixel-forge/rig": "workspace:*",
     "@pixel-forge/schema": "workspace:*",
     "fflate": "^0.8.3"
   },

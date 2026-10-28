@@ -125,6 +125,7 @@ These settle ambiguities found while writing `@pixel-forge/schema`. Its README i
 12. **IDs** look like `lay_7k2m9q`: a kind prefix plus base32. They come from a seeded counter stored in `meta.ids`, so undo and redo replay the same IDs.
 13. **Group `export`** is ANDed with the ancestor groups. Reference layers are never exported or cached.
 14. **Reserved names:** names and record keys may not be JavaScript `Object.prototype` member names (`__proto__`, `constructor`, `prototype`, `toString`, …). They are rejected, never silently dropped (code review of T1.1). Layer trees nest at most 32 levels (`MAX_LAYER_DEPTH`).
+15. **`.aseprite` import (T4.5)**: a `part:` layer is one drawing (the first frame's cel, composed onto a canvas-sized image, so a variant pivot is a canvas coordinate). Re-import writes pixels into the existing image id where the size allows, so a pixel edit of a part leaves the rig data unchanged. Frames match by `(tag, index)`; removed frames are reported with the keys and overrides they lost. See the `io` README for the full rules.
 
 ---
 
@@ -340,7 +341,7 @@ schema   ← color ← raster ← rig ─┐
 | `convert` | Image→sprite steps + ConvertRecipe | schema, color, raster |
 | `core` | Document store, transactions, patches, history, frame operations (§3.2), `validate()`, **`renderFrame`** | schema, raster, rig |
 | `lint` | Findings: palette, orphans, joints, stale overrides, rotation residual, opacity | core, rig |
-| `io` | `.pxf` read/write + migrations + render cache, PNG/GIF/JPEG/WebP codecs, spritesheet JSON, `.aseprite` import (+ re-import) | core, convert (for import remaps), png, schema, raster |
+| `io` | `.pxf` read/write + migrations + render cache, PNG/GIF/JPEG/WebP codecs, spritesheet JSON, `.aseprite` import (+ re-import) | core, convert (for import remaps), png, schema, raster, rig (part-layer names for import) |
 | `ops` | Op registry, definitions, handlers, error types, generators (MCP tool JSON, CLI, docs) | core, lint, io, rig, convert |
 | `server` | DocumentHost, lockfiles and discovery, WS sync, HTTP, MCP transports, providers, keychain, workspace roots | ops |
 | `cli` | `pf` binary: `serve`, `mcp`, `check` (harness), `convert`, `render`, `export`, `lint`, `override import`, `pack/unpack` | server, ops |

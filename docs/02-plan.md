@@ -169,7 +169,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | G1 | **Gate: core + rig** | opus | high | — | W1–W3 rig track | | ☐ |
 | T4.6 | fixtures: synthetic `.aseprite` files via Aseprite Lua | sonnet | medium | S | T0.3 | ∥ | ☑ |
 | T4.4 | io: `.aseprite` binary parser (Aseprite CLI as oracle) | sonnet | high | M | T4.6 | |☑ |
-| T4.5 | io: `.aseprite` → document mapping + in-place re-import (explicit rules) | sonnet | high | M | T4.4, T4.2 | ∥ | ☐ |
+| T4.5 | io: `.aseprite` → document mapping + in-place re-import (explicit rules) | sonnet | high | M | T4.4, T4.2 | ∥ | ☑ |
 | T4.1 | lint: rules + structured findings | sonnet | medium | M | T3.4, T3.3 | ∥ | ☐ |
 | T5.1 | ops: registry framework + generators + 3 exemplar ops (+ review) | opus | high | M | T4.1, T4.2 | | ☐ |
 | T5.2a | ops (no logic, from table) | haiku | medium | S | T5.1 | ∥ | ☐ |
@@ -648,6 +648,11 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - **added frames are appended without keys; removed frames drop their keys and overrides, and these appear in the returned report**;
   - bindings, pivots and keys of matched items are kept.
 - **Acceptance** — one test per rule. Re-importing after a part edit leaves the hash of the rig data unchanged.
+- **Notes (2026-10-27)** — ☑ Sonnet/high; about 244k tokens. `createDocumentFromAseprite`, `importAsepriteTx`, `reimportAsepriteTx`, `reimportAseprite` returning an `AsepriteImportReport`; 26 tests (one per rule plus edge cases).
+  - io now depends on rig (for `parsePartLayerName`/`bindParts`), same precedent as T4.3; spec §6.2 and §3.4 clarification 15 updated.
+  - A part variant is one canvas-sized image at (0,0), taken from the first frame's cel (later differing cels warn). Pivots stay valid and re-import rewrites pixels under the same image id, so the rig hash is unchanged.
+  - Tag direction: reverse reverses the list, pingpong* → pingpong, repeat 1 → once. Names sanitised and reported. Canvas must match; indexed docs take only indexed files; identical palettes are reused.
+  - Follow-ups: IO-03 (re-import overwrites durations), IO-04 (canvas-sized variants vs RotSprite cost; check in G1 bench), and splitting the ~600-line `run()`.
 
 #### T4.1 lint  [sonnet] [M] ∥
 - **Deliverables** — `lint(doc, opts) → Finding[]` with the rules:

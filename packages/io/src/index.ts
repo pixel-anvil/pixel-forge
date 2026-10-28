@@ -65,3 +65,21 @@ export { saveAtomic } from './pxf/atomic.js';
 export type { SaveAtomicOptions } from './pxf/atomic.js';
 export { GDIGNORE, pack, unpack } from './pxf/pack.js';
 export type { UnpackOptions } from './pxf/pack.js';
+export {
+  DEFAULT_ANIMATION,
+  createDocumentFromAseprite,
+  importAsepriteTx,
+  reimportAseprite,
+  reimportAsepriteTx,
+} from './aseprite-import.js';
+export type {
+  AddedFrameReport,
+  AsepriteImportOptions,
+  AsepriteImportReport,
+  AsepritePaletteReport,
+  AsepriteRename,
+  CreateFromAsepriteOptions,
+  RemovedFrameReport,
+  UnboundPartReport,
+  UpdatedVariantReport,
+} from './aseprite-import.js';

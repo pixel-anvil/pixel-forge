@@ -2,9 +2,9 @@
 
 .pxf read/write and migrations, render cache, PNG/GIF/JPEG/WebP codecs, spritesheet JSON and .aseprite import. Takes a FileSystem port.
 
-**Depends on:** `core`, `convert`, `png`, plus `schema` and `raster` (types and images; the dependency-cruiser table was extended for this in T4.3)
+**Depends on:** `core`, `convert`, `png`, plus `schema` and `raster` (types and images; the dependency-cruiser table was extended for this in T4.3) and `rig` (part-layer name parsing, T4.5)
 
-**Status:** spritesheet import/export and contact sheet (T4.3); `.aseprite` parser (T4.4); `.pxf` read/write, migrations, render cache, atomic save, pack/unpack and the `FileSystem` / `Clock` ports (T4.2).
+**Status:** spritesheet import/export and contact sheet (T4.3); `.aseprite` parser (T4.4); `.aseprite` to document mapping and in-place re-import (T4.5); `.pxf` read/write, migrations, render cache, atomic save, pack/unpack and the `FileSystem` / `Clock` ports (T4.2).
 
 The T4.3 functions are pure byte-in/byte-out (PNG bytes, objects, `TiledImage`); no Node built-ins, no port needed.
 
@@ -48,7 +48,7 @@ Frames on a grey checkerboard, integer scale (default: the largest 1..16 that fi
 
 ## `.aseprite` parser (`aseprite/`)
 
-`parseAseprite(bytes: Uint8Array): AseFile` is a pure parser (no Node built-ins, little-endian `DataView`, zlib via fflate) written from the published file-format specification only. It produces the header, frames (`durationMs`, decoded `chunks`, `cels`, effective `palette`), `layers`, `tags`, `slices`, the palette and the colour profile. Mapping to a pixel-forge document is a separate step (T4.5).
+`parseAseprite(bytes: Uint8Array): AseFile` is a pure parser (no Node built-ins, little-endian `DataView`, zlib via fflate) written from the published file-format specification only. It produces the header, frames (`durationMs`, decoded `chunks`, `cels`, effective `palette`), `layers`, `tags`, `slices`, the palette and the colour profile. Mapping to a pixel-forge document is `aseprite-import.ts` (next section).
 
 - **Decoded chunks:** layer 0x2004, cel 0x2005 (raw, linked, compressed image, compressed tilemap as header only), cel extra 0x2006, colour profile 0x2007, tags 0x2018, palette 0x2019, old palettes 0x0004 and 0x0011 (used only when no 0x2019 exists), user data 0x2020, slice 0x2022. Recognised but skipped with a note: external files 0x2008, mask 0x2016, path 0x2017, tileset 0x2023. Any other chunk type is skipped by its size (`kind: 'unknown'`).
 - **Layers:** `opacity` is the effective value. The header flag "layer opacity valid" (1) is honoured, and for groups also flag 2; `opacityRaw` keeps the stored byte. `parentIndex` is derived from the child level. `visible` is the layer's own flag (a hidden group also hides its children).
@@ -56,6 +56,37 @@ Frames on a grey checkerboard, integer scale (default: the largest 1..16 that fi
 - **Pixels:** cels keep their raw form (`AseImage`: RGBA 4 bytes, grayscale value+alpha 2 bytes, or palette indices 1 byte). `aseImageToRgba` and `aseCelToRgba` convert to straight-alpha RGBA8 (grayscale to gray RGBA; indexed through the frame's palette). **Indexed transparency:** the header's transparent index is transparent only on non-background layers; on a background layer (layer flag 8) it is an ordinary colour. Indices beyond the palette render transparent. A linked cel resolves to its source cel, and position and opacity come from the source. Cel and layer opacity are reported, not baked into the pixels.
 - **Errors:** every failure is an `AseError` with a `code`: `BAD_MAGIC`, `TRUNCATED` (input ends early, including fewer frames than the header says), `BAD_HEADER`, `BAD_CHUNK`, `DECOMPRESS_FAILED`, `UNSUPPORTED`, `TOO_LARGE`. Reads are bounds-checked per chunk. Limits: canvas up to 16384 x 16384, 65535 frames, 512 MiB of decoded cel pixels in total. A cel's inflated size must equal `width * height * bytes-per-pixel`, and inflation never allocates more than that plus one byte.
 - **Oracles:** tests compare against the Aseprite CLI output in `fixtures/aseprite/` (`*.expected.json` and one PNG per layer and frame).
+
+## `.aseprite` import and re-import (T4.5, FR-DOC-04)
+
+```ts
+import { createDocumentFromAseprite, reimportAseprite, importAsepriteTx } from '@pixel-forge/io';
+
+const { store, report } = createDocumentFromAseprite(bytes); // new document, one undoable transaction
+store.transact('Import', (tx) => importAsepriteTx(tx, other)); // add to an existing document
+const r = reimportAseprite(store, editedBytes); // update in place, one undoable transaction
+```
+
+Functions: `createDocumentFromAseprite(input, opts)`, `importAsepriteTx(tx, input, opts)`, `reimportAsepriteTx(tx, input, opts)`, `reimportAseprite(store, input, opts)`. `input` is bytes or a parsed `AseFile`. All return an `AsepriteImportReport`. Options: `viewId` and `zByBone` (passed to `bindParts`), `paletteName`; `create...` also takes `name`, `origin`, `pixelsPerUnit`, `idSeed`. Errors: `IoError` (`SIZE_MISMATCH` canvas differs from the document, `BAD_INPUT`, `DUPLICATE_ANIMATION`), `AseError` for a bad file. The canvas of the file must equal the document canvas, and an indexed document only takes an indexed file (an indexed file into an RGBA document is converted through its palette).
+
+**Mapping rules**
+
+- **Tags.** Each tag is an animation (`group` = the tag name made a schema `Name`: lower case, other characters `_`, unique, at most 48 characters; renames are in `report.renamed`). Untagged frames, in file order, go to `default`. `reverse` and `pingpong_reverse` list the frames reversed; `pingpong*` give loop `pingpong`; repeat 1 on a forward or reverse tag gives `once`. Frame durations come from the file.
+- **Overlapping tags.** A frame in several tags is one frame per animation (frame ids are unique in the document). On every layer the first occurrence (animation order: tags in file order) owns the cel; the other occurrences are `{ linkTo: <first occurrence> }`, one hop, possibly into another animation.
+- **Aseprite linked cels** resolve to their source cel: the cel links to the first occurrence of the source frame (never to a link), or is the image cel itself when it is that frame.
+- **Layers.** Groups, image and reference layers keep their tree, visibility and opacity; `export` = visible (reference layers: false). Cels keep the Aseprite cel bounds as image and offset. Tilemap layers are skipped (`report.skippedLayers`). Names are made schema `Name`s and unique in the file (and against the document, on import).
+- **`part:` layers** (`part:<bone>[.<part>][@<variant>][#<view>]`, parsed by `rig`'s `parsePartLayerName`) become parts and variants through `core`'s `bindParts` with the raw names as `rawNames` (never overlap binding). A variant is **one drawing**: the first frame's cel, composed onto a canvas-sized image at offset (0, 0), so a pivot in image coordinates is a canvas coordinate and a re-import can rewrite the pixels under the same image id. If the cels differ between frames there is a warning and frame 0 is used. A part layer whose bone or view the rig lacks (a new document has no rig) stays a pixel layer, listed in `report.parts.unbound` with its raw name; run `bindParts` later with `rawNames` built from it, or re-import after adding the rig (matching by name rebinds it).
+- **Palette.** The file palette becomes the active palette when the document has none; otherwise it is added, not active (`report.palette.action = 'added'`). An identical palette is reused (`existing`). More than 256 colours are cut with a warning. For an indexed document the transparent index entry is made fully transparent (the schema rule).
+- **Ids** come from the document's seeded generator, so the same file gives the same document.
+
+**Re-import rules** (`reimport*`): the same mapping, but against what the document has.
+
+- Layers are matched **by name** (the sanitised name; a different kind under that name is skipped and reported). Parts are matched by bone, part, variant and view. Animations by `group`, frames by `(tag, index)`, where `index` is the position in the animation as imported (reversed for `reverse` tags).
+- Matched items keep their ids, position, visibility, opacity and export flag; bindings, pivots, bone keys, part keys, markers, events, root motion and overrides of matched frames are untouched. Only pixels (cels, variant images) and frame durations come from the file; the animation's loop mode is kept.
+- Pixels are written into the existing image (same image id) when it has the same size and nothing else references it; unchanged pixels are not touched. A pixel-only edit of a part therefore leaves the rig data (`document.rig` and all keys) byte-identical. Otherwise a new image replaces the old one (a variant keeps its pivot) and the orphaned image is deleted.
+- **Added frames** (a tag grew, a new tag) are appended without keys and listed in `report.addedFrames`. **Removed frames** (a tag shrank) drop their keys, overrides (in any animation, mirrors included) and cels, and are listed in `report.removedFrames` with the number of bone keys, part keys and overrides lost. Links from layers outside the file to a removed cel are materialised first (spec 3.2); links that still lose their target are dropped with a warning.
+- Document layers and animations that the file does not mention are left alone (`layersNotInSource`, `animationsNotInSource`). New layers go on top of their parent (new `part:` layers are bound, folding into an existing part as a new variant).
+- Re-importing an unchanged file changes nothing (the transaction records no history entry).
 
 ## `.pxf` read/write, render cache, atomic save, pack/unpack (T4.2)
 

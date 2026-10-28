@@ -257,6 +257,9 @@ importers:
       '@pixel-forge/raster':
         specifier: workspace:*
         version: link:../raster
+      '@pixel-forge/rig':
+        specifier: workspace:*
+        version: link:../rig
       '@pixel-forge/schema':
         specifier: workspace:*
         version: link:../schema
