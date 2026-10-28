@@ -153,7 +153,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T2.3 | core: `renderFrame` (pixel layers) + cache key | sonnet | medium | S | T2.1 | ∥ | ☑ |
 | T3.2 | rig: templates, bind by name/overlap, pivots, views | sonnet | medium | M | T3.1 | ∥ |☑ |
 | T4.3 | io: spritesheet import (cell ranges, outline sheet), sheet + JSON export, contact sheet | sonnet | medium | M | T2.3, T1.8 | ∥ |☑ |
-| T4.2 | io: `.pxf` read/write, migrations, render cache, atomic save, pack/unpack | sonnet | high | M | T4.3, T2.2 | | ☐ |
+| T4.2 | io: `.pxf` read/write, migrations, render cache, atomic save, pack/unpack | sonnet | high | M | T4.3, T2.2 | |☑ |
 | T6.0 | Godot integration contract with the first consumer game (spec addendum) | opus | high | S | T4.2 | | ☐ |
 | T6.1 | Godot: `.pxf` reader + import plugin + test harness + fixture `.pxf` generator | sonnet | high | M | T6.0 | | ☐ |
 | T6.2 | Godot: PixelForgeDriver (clock + game-driven playback), adapters, mirroring, markers/events | sonnet | high | M | T6.1 | | ☐ |
@@ -499,6 +499,11 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - a no-op save leaves `modified` unchanged;
   - the render cache equals `renderFrame`;
   - a fake FS failure midway through a write leaves the original intact.
+- **Notes (2026-10-27)** — ☑ Sonnet/high (about 235k tokens, resumed once).
+  - `readPxf`, `buildPxf` (pass the returned `file` as `previous` for incremental saves), `saveAtomic`, `pack`/`unpack` with `.gdignore`; FileSystem and Clock ports plus `@pixel-forge/io/node`.
+  - ZIP: fixed order; JSON deflated, PNGs stored; DOS mtime from `manifest.modified` in UTC (bytes are timezone-independent); checked with the system `unzip`.
+  - Render cache: `render/<skin>/<group>/<dir>/<n>.png`, with frames of equal hash sharing a PNG; mirrors without overrides use `mirrorOf`; `RIG_REQUIRED` when part layers exist and no rig is given.
+  - Known: IO-01 (an IndexedImage's transparentIndex isn't stored).
 
 #### T6.0 Godot integration contract  [opus] [S]
 - **Context** — the first consumer game's shot controller, character-art and sprite-sheet records, prop-anchor script, lit billboard script, and pipeline doc (file list: GAME_NOTES §4, local). Read only.

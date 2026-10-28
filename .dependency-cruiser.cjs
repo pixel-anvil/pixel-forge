@@ -71,6 +71,14 @@ module.exports = {
       to: { path: '(^packages/editor/|@pixel-forge/editor|^godot/)' },
     },
     {
+      name: 'io-no-node-builtins-outside-node-entry',
+      comment:
+        'io is pure except src/node.ts (the @pixel-forge/io/node entry point): no Node built-ins elsewhere in src.',
+      severity: 'error',
+      from: { path: '^packages/io/src/', pathNot: '^packages/io/src/node\\.ts$' },
+      to: { dependencyTypes: ['core'] },
+    },
+    {
       name: 'no-circular',
       severity: 'error',
       from: {},

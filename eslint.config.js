@@ -37,6 +37,29 @@ const nodeBuiltins = [
   'zlib',
 ];
 
+/** Rules shared by the pure packages and by `io`'s pure files. */
+const PURE_RULES = {
+  'no-restricted-properties': [
+    'error',
+    {
+      object: 'Math',
+      property: 'random',
+      message: 'Non-deterministic: pure packages must not use Math.random.',
+    },
+    {
+      object: 'Date',
+      property: 'now',
+      message: 'Non-deterministic: pure packages must not use Date.now.',
+    },
+  ],
+  'no-restricted-imports': [
+    'error',
+    {
+      patterns: [{ group: nodeBuiltins, message: 'Pure packages must not import Node built-ins.' }],
+    },
+  ],
+};
+
 export default tseslint.config(
   {
     ignores: [
@@ -63,27 +86,19 @@ export default tseslint.config(
   },
   {
     files: PURE.map((p) => `packages/${p}/src/**/*.ts`),
+    rules: PURE_RULES,
+  },
+  {
+    // io is pure except its Node entry point (`@pixel-forge/io/node`, src/node.ts).
+    files: ['packages/io/src/**/*.ts'],
+    ignores: ['packages/io/src/node.ts'],
     rules: {
-      'no-restricted-properties': [
+      'no-restricted-properties': PURE_RULES['no-restricted-properties'],
+      'no-restricted-imports': PURE_RULES['no-restricted-imports'],
+      'no-restricted-globals': [
         'error',
-        {
-          object: 'Math',
-          property: 'random',
-          message: 'Non-deterministic: pure packages must not use Math.random.',
-        },
-        {
-          object: 'Date',
-          property: 'now',
-          message: 'Non-deterministic: pure packages must not use Date.now.',
-        },
-      ],
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            { group: nodeBuiltins, message: 'Pure packages must not import Node built-ins.' },
-          ],
-        },
+        { name: 'process', message: 'io is pure: only src/node.ts may use Node globals.' },
+        { name: 'Buffer', message: 'io is pure: only src/node.ts may use Node globals.' },
       ],
     },
   },

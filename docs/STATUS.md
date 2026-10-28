@@ -21,7 +21,6 @@ User wants to review the spec and the plan before proceeding past each.
 
 ## Current focus / Next
 - **Cost mode (2026-10-27):** run the orchestrator on Sonnet/medium in fresh sessions per `docs/ai/ORCHESTRATOR.md`, with the short report contract; the remaining Opus cards run at high.
-- In flight: T4.2 .pxf io (sonnet/high, worktree `agent-a5d1ef2b995c85241`; resumed after the usage limit).
 - 2026-10-26: Plan v0.3 approved. Wave 0 started: T0.1 (sonnet/medium), T0.4 (opus/high), T0.5 (haiku/low) dispatched in parallel.
 - Deviation: no git repo yet, so W0 cards share the working tree (they write to separate directories). **No commits until T0.6 has scrubbed game references**, so the public history stays clean.
 - ☑ T0.5 (CC0 Hero Swordsman; the orchestrator fixed sheet.json). ☑ T0.1 (ADRs + agent docs). ☑ T0.2 (scaffold; `pnpm verify` passes; repo-local pseudonymous identity; no commits). ☑ T0.6 (game refs moved to `~/pf-work/GAME_NOTES.md`; privacy hook + denylist; LICENSE/README/SECURITY/CONTRIBUTING).
@@ -29,8 +28,14 @@ User wants to review the spec and the plan before proceeding past each.
 - ☑ O-1: https://github.com/pixel-anvil/pixel-forge (public, CI green, `main` protected). **From now on, work goes on phase branches and PRs to `main`**: wave branch `m1a-wave1`.
 - ☑ T0.4 RotSprite spike (verified; recommendations added to T1.6, T3.0 and ADR-008). ☑ T1.8 png codec (merged into `m1a-wave1`).
 - ☑ T0.3 testkit. ☑ T1.1 schema (the user signed off on the domain summary on 2026-10-27).
-- ☑ T3.2 rig templates + binding (multiple parts per bone). ☑ T4.4 .aseprite parser. ☑ T4.3 spritesheet I/O. ☑ T3.1 FK + snapping (ADR-012 accepted). ☑ T4.6 .aseprite fixtures. ☑ T2.3 renderFrame (pipeline: core owns steps 5–8; rig hook is parts-only). ☑ T2.2 frame ops + validate. ☑ T1.5 primitives (clean-room ellipse after a licensing catch). ☑ T1.7 post-passes. ☑ T1.2 color. ☑ T1.3 presets (no licence stated on Lospec; see PAL-01). ☑ T1.4 raster. ☑ T3.0 joint-gap contract. ☑ T1.6 RotSprite (reviewed and fixed). ☑ T2.1 document store (reviewed and fixed). 
-- Next: Wave 1 fan-out: T1.2 color ∥ T1.4 raster (sonnet), then T1.3 ∥ T1.5 ∥ T1.6 (opus/xhigh) ∥ T1.7; also T3.0 (opus/high) and T2.1 (opus/xhigh) once T1.4 is in. Worktrees: tell agents to `git merge --ff-only m1a-wave1` first.
+- ☑ T4.2 .pxf io. ☑ T3.2 rig templates + binding (multiple parts per bone). ☑ T4.4 .aseprite parser. ☑ T4.3 spritesheet I/O. ☑ T3.1 FK + snapping (ADR-012 accepted). ☑ T4.6 .aseprite fixtures. ☑ T2.3 renderFrame (pipeline: core owns steps 5–8; rig hook is parts-only). ☑ T2.2 frame ops + validate. ☑ T1.5 primitives (clean-room ellipse after a licensing catch). ☑ T1.7 post-passes. ☑ T1.2 color. ☑ T1.3 presets (no licence stated on Lospec; see PAL-01). ☑ T1.4 raster. ☑ T3.0 joint-gap contract. ☑ T1.6 RotSprite (reviewed and fixed). ☑ T2.1 document store (reviewed and fixed). 
+- **Next (for a fresh Sonnet/medium orchestrator session, per `docs/ai/ORCHESTRATOR.md`):** nothing is in flight and there are no worktrees. Ready cards:
+  - **T3.3** rig part renderer + overrides + staleness (opus/high; then code review, then a Sonnet fix pass). Run it alone on Opus.
+  - **T6.0** Godot integration contract (opus/high, small). Read GAME_NOTES §1–§5 for the game paths. Run it after T3.3, or alongside a Sonnet card.
+  - **T4.5** .aseprite → document mapping + re-import (sonnet/high). Use `parsePartLayerName` and `bindParts` `rawNames`.
+  - **T4.1** lint waits for T3.4. **T3.9** synthetic hero (sonnet) is ready, since T3.2 is done.
+
+  Max two agents at a time; at most one on Opus.
 
 ## Open questions for the user
 None right now.
