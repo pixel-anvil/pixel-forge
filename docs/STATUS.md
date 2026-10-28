@@ -20,10 +20,11 @@ User wants to review the spec and the plan before proceeding past each.
 - 2026-10-26: Effort level per card added (plan v0.3). Repo will be PUBLIC under a new GitHub org `pixel-anvil` (the user creates it on the web), MIT, pseudonymous commit identity `pixel-forge dev <dev@pixel-forge.invalid>`, game details kept local in `~/pf-work/GAME_NOTES.md` (new card T0.6 before the first push). CI: ubuntu+macOS on every push (free).
 
 ## Current focus / Next
+- In flight: T3.2 rig templates/binding (sonnet/medium, worktree `agent-af9cfe1cb5dca1f71`) and T4.2 .pxf io (sonnet/high, `agent-a5d1ef2b995c85241`). Both hit the usage limit on 2026-10-27 and were resumed. If a session ends, resume or re-dispatch them with "continue from the worktree state".
 - 2026-10-26: Plan v0.3 approved. Wave 0 started: T0.1 (sonnet/medium), T0.4 (opus/high), T0.5 (haiku/low) dispatched in parallel.
 - Deviation: no git repo yet, so W0 cards share the working tree (they write to separate directories). **No commits until T0.6 has scrubbed game references**, so the public history stays clean.
 - ☑ T0.5 (CC0 Hero Swordsman; the orchestrator fixed sheet.json). ☑ T0.1 (ADRs + agent docs). ☑ T0.2 (scaffold; `pnpm verify` passes; repo-local pseudonymous identity; no commits). ☑ T0.6 (game refs moved to `~/pf-work/GAME_NOTES.md`; privacy hook + denylist; LICENSE/README/SECURITY/CONTRIBUTING).
-- In flight: T0.4 RotSprite spike (opus/high).
+
 - ☑ O-1: https://github.com/pixel-anvil/pixel-forge (public, CI green, `main` protected). **From now on, work goes on phase branches and PRs to `main`**: wave branch `m1a-wave1`.
 - ☑ T0.4 RotSprite spike (verified; recommendations added to T1.6, T3.0 and ADR-008). ☑ T1.8 png codec (merged into `m1a-wave1`).
 - ☑ T0.3 testkit. ☑ T1.1 schema (the user signed off on the domain summary on 2026-10-27).
