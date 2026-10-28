@@ -22,3 +22,24 @@ export class RigError extends Error {
     this.code = code;
   }
 }
+
+/** Machine-readable reason of a {@link JointCheckError}. */
+export type JointCheckErrorCode =
+  | 'SIZE_MISMATCH' // the images of a joint check differ in size (or a buffer does not match its size)
+  | 'BAD_ANGLE' // a checked angle that is 0, not finite or duplicated, or a childDir that is not a multiple of 0.25
+  | 'BAD_RADIUS' // the window radius is not an integer, or is below 1
+  | 'BAD_PIVOT'; // a non-integer pivot coordinate
+
+/**
+ * Typed error of the joint check (`docs/contracts/JOINT_CHECK.md` section 3.1): invalid input of
+ * `jointGaps`. `jointCheck` also throws {@link RigError} for the rig-level inputs (`BAD_VALUE` for the sweep
+ * and canvas) and for everything `renderParts` rejects.
+ */
+export class JointCheckError extends Error {
+  readonly code: JointCheckErrorCode;
+  constructor(code: JointCheckErrorCode, message: string) {
+    super(message);
+    this.name = 'JointCheckError';
+    this.code = code;
+  }
+}

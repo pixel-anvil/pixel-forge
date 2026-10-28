@@ -161,11 +161,12 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | D1 | **Early demo**: flat target-move `.pxf` → plays in the first consumer game through the driver (user approval) | orchestrator + sonnet | medium | M | T6.3 | | ☐ |
 | T3.3 | rig: part render pipeline + overrides + staleness; core hook (+ review) | opus | high | M | T3.2, T2.3, T1.7 | ∥ | ☑ |
 | T3.8 | rig: `attributeEdit(render, edited) → overrides` (+ review) | opus | high | M | T3.3 | | ☐ |
-| T3.4 | rig: `jointCheck` (implements the T3.0 definition) | sonnet | high | M | T3.0, T3.3 | | ☐ |
+| T3.4 | rig: `jointCheck` (implements the T3.0 definition) | sonnet | high | M | T3.0, T3.3 | | ☑ |
 | T3.5 | rig `overlapMask` + core `splitRegion` transaction | sonnet | high | M | T3.4 | ∥ | ☐ |
 | T3.6 | core: derived mirror in `renderFrame`; rig: pose clipboard (mirrored) | sonnet | medium | S | T3.3 | ∥ | ☐ |
 | T3.7 | core: bake | sonnet | medium | S | T3.3 | ∥ | ☐ |
 | T3.9 | fixtures: synthetic humanoid "hero" (TS doc + `.aseprite` via Lua) | sonnet | medium | M | T3.2, T0.3 | ∥ | ☑ |
+| T3.9b | fixtures: widen hero joint caps until `jointCheck` is clean; regenerate `hero.pxf` with a render cache | sonnet | medium | S | T3.4, T3.3 | ∥ | ☐ |
 | G1 | **Gate: core + rig** | opus | high | — | W1–W3 rig track | | ☐ |
 | T4.6 | fixtures: synthetic `.aseprite` files via Aseprite Lua | sonnet | medium | S | T0.3 | ∥ | ☑ |
 | T4.4 | io: `.aseprite` binary parser (Aseprite CLI as oracle) | sonnet | high | M | T4.6 | |☑ |
@@ -595,6 +596,10 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 #### T3.4 joint check  [sonnet] [M]
 - **Deliverables** — `jointCheck(...)`, implementing `JOINT_CHECK.md`.
 - **Acceptance** — exactly matches the expected coordinates written by hand in T3.0.
+- **Notes (2026-10-28)** — ☑ Sonnet/high; about 164k tokens; resumed once after the usage limit. `jointGaps`/`jointCheck` in `rig/src/joint.ts`; all 6 `fixtures/joint` cases deep-equal their `expected.json`, and the real RotSprite path agrees.
+  - Input: `{rig, images, canvas, direction?, partKeys?, palette?, angleQuantum?, rangeDeg?, stepDeg?, radius?, cache?}`, with no animation or frame; it rasterises the pre-override part images. No core wrapper yet (MCP `rig_joint_check` may want per-frame keys).
+  - **The T3.9 hero fails it:** 20 gaps over 8 pixels in 5 of 15 joints (head, both thighs, both shins) at ±30°. Pinned in `hero-fixture.test.ts` with an `it.fails`; follow-up card T3.9b widens the caps.
+  - Perf: full-canvas masks per angle; use a window-only mask if G1's bench shows a cost.
 
 #### T3.5 overlap mask + split  [sonnet] [M] ∥
 - **Deliverables** — `rig.overlapMask(joint)` and `core.splitRegion(doc, layer, frame, selection)` (rectangle, lasso or colour-bounded flood) as one transaction.

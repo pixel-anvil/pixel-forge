@@ -7,8 +7,8 @@
  * @packageDocumentation
  */
 
-export { RigError } from './errors.js';
-export type { RigErrorCode } from './errors.js';
+export { JointCheckError, RigError } from './errors.js';
+export type { JointCheckErrorCode, RigErrorCode } from './errors.js';
 export { normalizeAngle, quantizeAngle } from './angle.js';
 export { boneOrder } from './order.js';
 export type { BoneGraph } from './order.js';
@@ -90,3 +90,15 @@ export type {
   OverrideTargetRender,
   StaleReason,
 } from './overrides.js';
+export { JOINT_RADIUS_DEFAULT, jointCheck, jointGaps } from './joint.js';
+export type {
+  JointAngleGaps,
+  JointBone,
+  JointCheckInput,
+  JointCheckJoint,
+  JointCheckReport,
+  JointGapInput,
+  JointGapResult,
+  JointRig,
+  Px,
+} from './joint.js';

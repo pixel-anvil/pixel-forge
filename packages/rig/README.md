@@ -4,7 +4,7 @@ FK/IK, key interpolation and quantisation, snapping, variant selection, part ren
 
 **Depends on:** `schema`, `raster`
 
-**Status:** T3.1: forward kinematics, key interpolation and quantisation, hierarchical snapping (FR-RIG-10/11/12, FR-RIG-20 steps 1–2). T3.2: templates, part names, overlap binding. T3.3: the part render pipeline, part overrides and staleness (FR-RIG-20 steps 3–4, FR-RIG-21/22; see "Part render and overrides"). Joint check (T3.4) and pose clipboard (T3.6) come later.
+**Status:** T3.1: forward kinematics, key interpolation and quantisation, hierarchical snapping (FR-RIG-10/11/12, FR-RIG-20 steps 1–2). T3.2: templates, part names, overlap binding. T3.3: the part render pipeline, part overrides and staleness (FR-RIG-20 steps 3–4, FR-RIG-21/22; see "Part render and overrides"). T3.4: the joint check (FR-RIG-05; see "Joint check (T3.4)"). The pose clipboard (T3.6) comes later.
 
 Pure: no Node built-ins, no clock, no randomness, and **no floating-point trig or accumulation** in any decision. Angles are exact BigInt rationals until they are rounded once; rotations use raster's committed Q16 table (NFR-02, ADR-010). The conventions are recorded in [ADR-012](../../docs/adr/ADR-012.md) (Accepted), which refines spec §3.4.7.
 
@@ -111,7 +111,7 @@ Coverage: 100 % of lines, 95 % of branches.
 
 - **T3.2 (templates, rest poses, pivots):** author rest positions as canvas offsets at rest (child pivot − parent pivot, both as drawn); no inverse rotation is needed and every pixel is reachable. Rest angles are parent-relative bone directions and do not move pivots. Use `boneOrder` for outliners and anything that walks the tree.
 - **T3.3 (part render):** done, see "Part render and overrides (T3.3)" below. Part keys use `keySpan` (hold before the first key, loop wrap).
-- **T3.4 (joint check):** the sweep is `snapSkeleton(rig, view, new Map([[B, {angle: θ}]]))`. `pivot` = B's rest pivot (B's own rotation never moves it), `childDir` = B's `restAngle` at the quantum used (0.25 gives the finest table direction).
+- **T3.4 (joint check):** done, see "Joint check (T3.4)" below. The sweep is `snapSkeleton(rig, view, new Map([[B, {angle: θ}]]))`. `pivot` = B's rest pivot (B's own rotation never moves it), `childDir` = B's `restAngle` at the quantum used (0.25 gives the finest table direction).
 - **T3.6 (pose clipboard):** key angles are relative to rest, so "paste mirrored" negates `angle` (and swaps `_l`/`_r`). Quantisation is odd, so the pasted pose evaluates to exactly the negated rotations. Whether to negate offset `x` is T3.6's call.
 
 ## Templates, part names and overlap binding (T3.2)
@@ -150,3 +150,25 @@ FR-RIG-20 steps 1–4, FR-RIG-21, FR-RIG-22. Compositing, post-passes, final ove
 **Staleness (FR-RIG-22).** A part override's `baseHash` covers its region over the part's **pre-override** render, in pivot-relative coordinates (`partTarget`). Translating a part (an offset key, a parent moving it) keeps every pixel around the pivot, so its overrides stay valid; a rotation or a variant switch changes the region and makes them stale; a part that is not drawn makes them `no-target`. The check is content-based: a rotation that leaves the region's pixels identical (a full turn, a region off the art) stays valid. Every override's region is hashed against the render before **all** of the frame's overrides of that target, not after the earlier ones. Final overrides use the same functions with the composite as target (core).
 
 Evidence (`test/render.test.ts`, `test/overrides.test.ts`): W4 as hand-written ASCII (a translated part's override follows it and stays valid, a rotated part's override stays at `pivot + anchor` and goes stale, the untouched part's override stays valid, a variant switch is stale, a hidden part is `no-target`), quarter-turn placements, `flipX`, pivot outside the drawing, `none` / `nearest`, `drawnAngle` residuals at quanta 1, 5 and 0.25, part-key hold and loop wrap, erase-then-set with 255-only masks, indexed overrides, cache hits and misses, cached = uncached, no new colours on 40 random images.
+
+## Joint check (T3.4)
+
+FR-RIG-05, implementing [`docs/contracts/JOINT_CHECK.md`](../../docs/contracts/JOINT_CHECK.md) (T3.0). Read the contract for the exact definition; this is the API.
+
+| Export                     | Purpose                                                                                                                                                                                                                                                                |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `jointGaps(input)`         | The pure predicate (contract sections 3.1, 4, 5): `{parent, childRest, frames: [{angle, child}], pivot, childDir, radius}` (RGBA8 images of one canvas, only alpha matters) gives `{pivot, angles: [{angle, gaps}], gapCount, union}`; coordinates sorted by y, then x |
+| `jointCheck(input)`        | The rig check (sections 3.2, 6.2): `{view, params, joints: [{bone, parent, pivot, angles, gapCount, union}], summary: {joints, jointsWithGaps, gapCount, unionCount}}`. A rig passes when `summary.gapCount === 0`                                                     |
+| `JOINT_RADIUS_DEFAULT`     | 4. The sweep defaults are schema's `JOINT_SWEEP_DEG_DEFAULT` (30) and `JOINT_STEP_DEG_DEFAULT` (5)                                                                                                                                                                     |
+| `JointCheckError` (`code`) | `SIZE_MISMATCH`, `BAD_ANGLE` (a frame angle of 0, non-finite or duplicated; a `childDir` that is not a multiple of 0.25), `BAD_RADIUS`, `BAD_PIVOT`                                                                                                                    |
+
+`jointCheck({rig, images, canvas, direction?, partKeys?, palette?, angleQuantum?, rangeDeg?, stepDeg?, radius?, cache?})`: `rig` is a `PartRig` whose bones and views also carry `name` (a schema `Rig` fits), `images` is the `renderParts` lookup, and `canvas` is the document canvas `{w, h}`.
+
+- **Joints**: every bone with a parent bone, when both have a visible part in the view. A bone without visible parts is skipped and its children are not re-attached to a farther ancestor. "Visible" is `renderParts`' rule (rest entry in the view, `visible` key or `partVisibility`), so a visible part that draws nothing still makes a joint.
+- **Rendering**: the rest composite is one `renderParts` call. For each joint, B's parts are rendered at each θ = k·S (k ≠ 0, |k·S| ≤ R) with only B's bone key set (relative to rest), one call per angle restricted to B's layers. The pre-override image (`PartRender.base`) is used, so overrides, post-passes, skins and other bones' parts never count. `pivot` is B's snapped rest pivot and `childDir` its `restAngle` at `angleQuantum` (default 1). A private `PartRenderCache` is used unless one is passed.
+- **`partKeys`** (variant, `visible`, `z`) apply at rest and at every θ; missing, every part uses the view's default variant. There is no frame: the check is about the rig, not an animation.
+- **Indexed variants**: with a `palette` a pixel is opaque when its entry has alpha > 0 (`BAD_VALUE` for an index outside the palette); without one, any index other than the transparent index is opaque.
+- **Sweep**: θ are key angles, so an `angleQuantum` coarser than `stepDeg` rounds the rendered rotation (the report still lists θ). `rangeDeg` and `stepDeg` must be > 0 (`RigError('BAD_VALUE')`); a step larger than the range checks no angle; at most 2880 angles. `radius` must be an integer ≥ 1 (`JointCheckError('BAD_RADIUS')`).
+- Joints are sorted by bone name in code-unit order and `view` is the view's name.
+
+Evidence (`test/joint.test.ts`): every `fixtures/joint/*.txt` runs through `jointGaps` and deep-equals its hand-written `*.expected.json` (JSON key order and frame-order independence too); the radius, window-edge, off-canvas pivot and error cases the fixtures do not pin; `jointCheck` on a rig built from the fixtures through the real RotSprite (`gappy_elbow` finds (7,6) at −30° and (7,4) at +30°; `clean_capped_elbow` is clean at all 12 angles), plus sweep parameters, skipped bones, view selection and indexed images. The synthetic hero is not clean under the definition: its test (`packages/io/test/hero-fixture.test.ts`) pins the 8 gap pixels.

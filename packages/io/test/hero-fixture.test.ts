@@ -3,8 +3,8 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { validate } from '@pixel-forge/core';
 import type { TiledImage } from '@pixel-forge/raster';
-import { HUMANOID_BONES, humanoidSide } from '@pixel-forge/rig';
-import type { Layer } from '@pixel-forge/schema';
+import { HUMANOID_BONES, humanoidSide, jointCheck } from '@pixel-forge/rig';
+import type { ImageId, Layer } from '@pixel-forge/schema';
 import { describe, expect, it } from 'vitest';
 import { createDocumentFromAseprite, pxfStore, readPxf } from '../src/index.js';
 import { need } from './helpers.js';
@@ -83,10 +83,9 @@ describe('hero.pxf', () => {
 });
 
 describe('hero joint caps (rest pose, by hand-computed coordinates)', () => {
-  // `jointCheck` (T3.4) does not exist yet. Until it does, this checks the rest-pose definition of
-  // docs/contracts/JOINT_CHECK.md by hand: every joint has a cap rectangle that parent and child
-  // both cover (condition 3 "was covered" can then hold at the outer side for any angle), and the
-  // pivot pixel lies in it.
+  // The rest-pose definition of docs/contracts/JOINT_CHECK.md checked by hand: every joint has a cap
+  // rectangle that parent and child both cover (condition 3 "was covered" can then hold at the outer
+  // side for any angle), and the pivot pixel lies in it. `jointCheck` (T3.4) is run below.
   const joints = template.bones.filter((b) => b.parent !== undefined && b.parent !== 'root');
   it('has a caps entry for every joint with parts on both sides', () => {
     expect(Object.keys(hero.HERO_CAPS).sort()).toEqual(joints.map((b) => b.name).sort());
@@ -105,7 +104,98 @@ describe('hero joint caps (rest pose, by hand-computed coordinates)', () => {
       expect(p.x >= cx && p.x < cx + cw && p.y >= cy && p.y < cy + ch).toBe(true);
     });
   }
-  it.todo('jointCheck (T3.4) reports no gaps for the hero at the default sweep');
+});
+
+describe('hero jointCheck (T3.4, docs/contracts/JOINT_CHECK.md)', () => {
+  const file = readPxf(new Uint8Array(readFileSync(`${fixtures}generated/hero.pxf`)));
+  const rig = need(file.doc.rig);
+  const images = { image: (id: ImageId) => file.images.get(id) };
+  const input = { rig, images, canvas: file.doc.meta.canvas };
+
+  const report = jointCheck(input);
+
+  it('checks one joint per bone whose parent also has parts, over the default sweep', () => {
+    expect(report.view).toBe('side');
+    expect(report.params).toEqual({ rangeDeg: 30, stepDeg: 5, radius: 4 });
+    // Every non-root bone but the pelvis (its parent, the root, has no part).
+    expect(report.joints.map((j) => j.bone)).toEqual(
+      HUMANOID_BONES.filter((b) => b !== 'root' && b !== 'pelvis').sort(),
+    );
+    for (const j of report.joints) expect(j.angles).toHaveLength(12);
+    expect(report.summary.joints).toBe(15);
+  });
+
+  // FINDING (T3.4): the hero is NOT clean under the T3.0 definition. The 3 px joint caps are narrower
+  // than the parts at the head, hips and knees. The art and the contract are unchanged. This pins the
+  // exact (joint, angle, pixel) findings until the hero's caps are widened; then summary.gapCount is 0,
+  // this test goes, and the `it.fails` below becomes a plain `it`.
+  it('reports exactly these gaps today (default sweep, radius 4)', () => {
+    const found = report.joints
+      .filter((j) => j.gapCount > 0)
+      .map((j) => [
+        j.bone,
+        j.angles.filter((a) => a.gaps.length > 0).map((a) => [a.angle, a.gaps]),
+      ]);
+    expect(found).toEqual([
+      [
+        'head',
+        [
+          [
+            -30,
+            [
+              [27, 8],
+              [26, 9],
+            ],
+          ],
+          [-25, [[26, 9]]],
+          [-20, [[26, 9]]],
+          [20, [[22, 9]]],
+          [25, [[22, 9]]],
+        ],
+      ],
+      [
+        'shin_l',
+        [
+          [-30, [[21, 37]]],
+          [-25, [[21, 37]]],
+          [-20, [[21, 37]]],
+        ],
+      ],
+      [
+        'shin_r',
+        [
+          [-30, [[22, 37]]],
+          [-25, [[22, 37]]],
+          [-20, [[22, 37]]],
+          [20, [[25, 37]]],
+          [25, [[25, 37]]],
+          [30, [[25, 37]]],
+        ],
+      ],
+      [
+        'thigh_l',
+        [
+          [10, [[25, 28]]],
+          [15, [[25, 28]]],
+          [20, [[25, 28]]],
+        ],
+      ],
+      [
+        'thigh_r',
+        [
+          [15, [[26, 28]]],
+          [20, [[26, 28]]],
+        ],
+      ],
+    ]);
+    expect(report.summary).toEqual({ joints: 15, jointsWithGaps: 5, gapCount: 20, unionCount: 8 });
+  });
+
+  // The card's acceptance: no gaps at the angles JOINT_CHECK.md requires (±30° in 5° steps). It fails
+  // until the hero's caps are fixed; `it.fails` makes the suite notice when it starts to pass.
+  it.fails('has no gaps over the default sweep (±30°, 5°, radius 4)', () => {
+    expect(report.summary.gapCount).toBe(0);
+  });
 });
 
 describe('hero_parts.aseprite', () => {
