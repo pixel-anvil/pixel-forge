@@ -66,3 +66,30 @@ export { renderFrame } from './render.js';
 export type { RenderOptions, SkinRef } from './render.js';
 export { createFrameRenderer, renderInputKey } from './render-cache.js';
 export type { FrameRenderer } from './render-cache.js';
+
+export {
+  addBone,
+  addView,
+  applySkeletonTemplate,
+  bindParts,
+  deleteBone,
+  deleteView,
+  renameBone,
+  renameView,
+  reparentBone,
+  setBoneLength,
+  setPartZ,
+  setPivot,
+  setRestPose,
+} from './rig-edit.js';
+export type {
+  AppliedTemplate,
+  ApplyTemplateOptions,
+  BindPartsOptions,
+  BindPartsResult,
+  BindSkipReason,
+  BoneRest,
+  BoundPart,
+  DeleteBoneOptions,
+  RigEditReason,
+} from './rig-edit.js';

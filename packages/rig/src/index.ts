@@ -32,3 +32,20 @@ export type {
   ViewSet,
   WorldTransform,
 } from './snap.js';
+export {
+  DEFAULT_PROPORTIONS,
+  HUMANOID_BONES,
+  humanoidBack,
+  humanoidFront,
+  humanoidSide,
+} from './templates.js';
+export type {
+  HumanoidProportions,
+  SkeletonTemplate,
+  TemplateBone,
+  TemplateOptions,
+} from './templates.js';
+export { DEFAULT_VARIANT_NAME, PART_PREFIX, parsePartLayerName, partLayerName } from './names.js';
+export type { PartLayerName } from './names.js';
+export { DEFAULT_OVERLAP, bindByOverlap } from './bind.js';
+export type { BindSkeleton, OverlapOptions, OverlapResult, PartShape } from './bind.js';

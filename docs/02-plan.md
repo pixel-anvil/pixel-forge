@@ -151,7 +151,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T3.1 | rig: FK, interpolation + quantisation, hierarchical snapping (+ review) | opus | xhigh | M | T1.1, T1.6 | ∥ | ☑ |
 | T2.2 | core: frame ops (§3.2) + `validate()` | sonnet | medium | M | T2.1 | ∥ | ☑ |
 | T2.3 | core: `renderFrame` (pixel layers) + cache key | sonnet | medium | S | T2.1 | ∥ | ☑ |
-| T3.2 | rig: templates, bind by name/overlap, pivots, views | sonnet | medium | M | T3.1 | ∥ | ☐ |
+| T3.2 | rig: templates, bind by name/overlap, pivots, views | sonnet | medium | M | T3.1 | ∥ |☑ |
 | T4.3 | io: spritesheet import (cell ranges, outline sheet), sheet + JSON export, contact sheet | sonnet | medium | M | T2.3, T1.8 | ∥ |☑ |
 | T4.2 | io: `.pxf` read/write, migrations, render cache, atomic save, pack/unpack | sonnet | high | M | T4.3, T2.2 | | ☐ |
 | T6.0 | Godot integration contract with the first consumer game (spec addendum) | opus | high | S | T4.2 | | ☐ |
@@ -462,6 +462,12 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - `setPivot`, bone CRUD, bone length, and rest pose per view;
   - view CRUD.
 - **Acceptance** — a fixture binds completely. The ambiguous case returns candidates.
+- **Notes (2026-10-27)** — ☑ Sonnet (about 185k tokens, resumed once).
+  - Humanoid side, front and back templates use the spec's bone names; rest pivots are rounded once (ADR-012).
+  - `bindByOverlap` uses nearest-segment voting with reach 4, minShare 0.5 and margin 0.2; it never guesses.
+  - Source naming is `part:<bone>[.<part>][@variant][#view]`. The orchestrator required several parts per bone (R-15), so document part layers are named `<bone>` or `<bone>_<part>`, with refusals instead of renames.
+  - Rig-edit ops in core. `deleteBone` never destroys art. Pivots may lie outside the variant image.
+  - Known: bone length is per bone, not per view; animated pixel layers are skipped by binding.
 
 ### Wave 3a — Godot track (early demo)
 
