@@ -3,7 +3,7 @@
 How the main session runs the plan cheaply and safely. Read this after `docs/STATUS.md`. The full protocol is plan §0.
 
 ## Session setup
-- **Model:** use `/model sonnet` and `/effort medium` for routine waves. Switch to Opus (`/effort high`) only for gates (G1, G2) and for integrating Opus cards (reading their reviews).
+- **Model:** run the orchestrator on **Opus at medium effort** (`/model opus`, `/effort medium`). Use `/effort high` for gates (G1, G2) and when integrating Opus cards (reading their code reviews). The saving comes mostly from short, fresh contexts. The orchestrator keeps Opus because its main value is judgment (licensing, design deviations, spec conflicts).
 - **Keep the context short.** When a session gets long, start a fresh one from `docs/STATUS.md`. Nothing is lost: all state lives in the repo, the worktrees and `~/pf-work/`.
 - **Parallelism:** at most two background agents at a time, and at most one of them on Opus. The session usage quota is the real limit.
 
@@ -34,7 +34,16 @@ How the main session runs the plan cheaply and safely. Read this after `docs/STA
 7. **Opus cards T3.3, T3.8 and T5.1**: run the `code-review` skill (high) on the staged diff, then dispatch a Sonnet/high fix agent with the findings. Accept or reject each finding explicitly.
 
 ## Report contract (paste into every brief)
-> Write your full report (files, API, decisions, test output, doubts) to `.claude/reports/<card>.md` at the root of the MAIN repo checkout, not your worktree (git-ignored). Your final message to the orchestrator must be **at most 15 lines**: status (done/blocked), whether `pnpm verify` passed, worktree path, the decisions the orchestrator must make, and the top 3 doubts. Run only the checks the card asks for. No extra mutation testing or exploratory benchmarks unless the card requests them.
+> Write your full report (files, API, decisions, test output, doubts) to `.claude/reports/<card>.md` at the root of the MAIN repo checkout, not your worktree (git-ignored). Your final message to the orchestrator must be **at most 15 lines** and must always include these labelled lines (write "none" if empty):
+> - `Status:` done/blocked; `verify:` pass/fail; `Worktree:` path
+> - `Deviations:` anything that differs from the card or the spec
+> - `External sources:` any code, algorithm or data taken from outside the repo, with its licence/provenance (papers, docs, other projects). Say explicitly if anything was ported or adapted from existing code.
+> - `Design decisions:` every choice the card or spec didn't settle
+> - `Doubts:` the top 3
+>
+> Run only the checks the card asks for. No extra mutation testing or exploratory benchmarks unless the card requests them.
+
+**The orchestrator reads the full report file** whenever `Deviations`, `External sources` or `Design decisions` is not "none", or the card has design content (contracts, algorithms, pipelines, file formats).
 
 ## Usage-limit recovery
 If an agent stops with "session limit", wait for the reset, then `SendMessage` to the same agent id ("continue from where you stopped"). Its worktree keeps the work. Record the agent id and worktree in STATUS as soon as it stops.

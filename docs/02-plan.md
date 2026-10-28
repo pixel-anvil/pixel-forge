@@ -61,10 +61,10 @@ Prices per million tokens (input/output): Opus 5.5 $4/$20, Sonnet 5.5 $2/$10, Ha
   3. Note every escalation on the card. If a class of cards keeps escalating, change the model or effort columns for similar future cards.
 - **Cost update (2026-10-27, after Wave 1, at the user's request to reduce spend):**
   - The remaining Opus cards (T3.3, T3.8, T5.1) run at **high**, not xhigh. Every xhigh card still needed a review-fix pass, so the review is the quality gate.
-  - The orchestrator runs on **Sonnet/medium** in a fresh session per wave (`docs/ai/ORCHESTRATOR.md`).
+  - The orchestrator runs on **Opus/medium** in a fresh session per wave (`docs/ai/ORCHESTRATOR.md`). The user chose Opus over Sonnet to keep review judgment.
   - Subagents follow the short **report contract** (full report to a local file, a final message of at most 15 lines) and do no unrequested extra verification.
 - **Calibration at gates**: at G1 and G2, compare what cards actually cost (the tokens in subagent results) against how often they escalated. Lower the effort where cards passed easily and raise it where they struggled.
-- **Orchestrator**: run the main session on **Sonnet at medium effort** for routine waves. Use **Opus at high effort** for waves that include Opus cards (to review their output) and for gates. Switch with `/model` and `/effort` at the start of the session.
+- **Orchestrator**: run the main session on **Opus at medium effort**, in a fresh session per wave. Use **high** effort for gates and when integrating Opus cards. Switch with `/model` and `/effort` at the start of the session.
 - **Review after Opus cards**: after T1.1, T1.6, T2.1, T3.1, T3.3, T3.8 and T5.1, run the `code-review` skill (high effort) on the card's diff before dependent cards start. T1.1 also gets a short look from the user.
 
 ### 0.3 Standard context pack (every card)
