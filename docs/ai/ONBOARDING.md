@@ -44,7 +44,7 @@ Always first: `AGENTS.md`, then `docs/STATUS.md`, then your card in `docs/02-pla
 
 **Ops / MCP / CLI**: spec 6.3, 6.5, 8 -> ADR-003, 004 -> `docs/contracts/OPERATIONS.md` (generated) -> the playbook "Add an op". Tool descriptions state the coordinate conventions.
 
-**Godot addon**: spec FR-GD-01..03, 7 -> ADR-009, 005 -> `docs/contracts/GODOT_INTEGRATION.md` (T6.0) -> GUT tests under the addon. Godot reads only the render cache.
+**Godot addon**: spec FR-GD-01..03, 7 -> ADR-009, 005 -> `docs/contracts/GODOT_INTEGRATION.md` (T6.0) -> `godot/README.md` -> GUT tests in `godot/test` (`godot/test/run_tests.sh`, fixtures from `fixtures/src/godot.ts`). Godot reads only the render cache.
 
 **Docs only**: `docs/adr/README.md` for the ADR template; keep the public-repo hygiene rules in `AGENTS.md`; update `KNOWN_ISSUES.md` and `PLAYBOOKS.md` when a change makes them stale.
 

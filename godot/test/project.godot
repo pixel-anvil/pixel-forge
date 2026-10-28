@@ -1,0 +1,11 @@
+; Engine configuration file for the pixel-forge Godot tests. Open or run it with Godot 4.6.
+config_version=5
+
+[application]
+
+config/name="Pixel Forge Tests"
+config/features=PackedStringArray("4.6")
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/gut/plugin.cfg", "res://addons/pixel_forge/plugin.cfg")

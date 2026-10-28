@@ -8,7 +8,7 @@ import {
   existsSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, relative, resolve, sep } from 'node:path';
+import { dirname, join, posix, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { encodePng } from '@pixel-forge/png';
 import type { TestImage } from './image.js';
@@ -17,7 +17,11 @@ import type { TestImage } from './image.js';
 export interface FixtureContext {
   /** Absolute path of the `fixtures/` directory (read-only reference; write through the methods). */
   readonly root: string;
-  /** Write a PNG at `relPath` (relative to `fixtures/`). */
+  /**
+   * Write a PNG at `relPath` (relative to `fixtures/`). Every `write*` method also accepts a path
+   * under `../godot/` (the Godot test project's fixtures); any other path outside `fixtures/` is
+   * refused.
+   */
   writePng(relPath: string, img: TestImage): void;
   /** Write pretty-printed JSON (2 spaces, trailing newline) at `relPath`. */
   writeJson(relPath: string, obj: unknown): void;
@@ -44,7 +48,21 @@ export function listGenerators(root: string): string[] {
     .sort();
 }
 
-function safeJoin(base: string, relPath: string): string {
+/** Repository folders (siblings of `fixtures/`) that generators may write into, as `../<dir>/...`. */
+const EXTERNAL_DIRS = ['godot'];
+
+/**
+ * Resolves `relPath` under `base` (the output directory). A path `../<dir>/...` with `<dir>` in
+ * {@link EXTERNAL_DIRS} goes to `<repoBase>/<dir>/...` instead, where `repoBase` is the repository
+ * root (or, when checking, a folder inside the temporary output).
+ */
+function safeJoin(base: string, repoBase: string, relPath: string): string {
+  const norm = posix.normalize(relPath.split(sep).join('/'));
+  const dir = norm.split('/')[1];
+  if (norm.startsWith('../') && dir !== undefined && EXTERNAL_DIRS.includes(dir)) {
+    const full = resolve(repoBase, norm.slice(3));
+    if (full.startsWith(join(repoBase, dir) + sep)) return full;
+  }
   const full = resolve(base, relPath);
   if (full !== base && !full.startsWith(base + sep)) {
     throw new Error(`fixture path escapes the fixtures directory: ${relPath}`);
@@ -59,26 +77,30 @@ function safeJoin(base: string, relPath: string): string {
 export async function runFixtures(opts: RunFixturesOptions): Promise<string[]> {
   const root = resolve(opts.root);
   const outDir = resolve(opts.outDir ?? root);
+  // Real run: external dirs are the repository's. Check run: they sit in `<outDir>/.repo`.
+  const repoBase = outDir === root ? dirname(root) : join(outDir, '.repo');
   const written = new Set<string>();
   const record = (full: string): void => {
-    written.add(relative(outDir, full).split(sep).join('/'));
+    // A real run gives `../godot/...` directly; a check run puts those files under `.repo/`.
+    const rel = relative(outDir, full).split(sep).join('/');
+    written.add(rel.startsWith('.repo/') ? `../${rel.slice('.repo/'.length)}` : rel);
   };
   const ctx: FixtureContext = {
     root,
     writePng(relPath, img) {
-      const full = safeJoin(outDir, relPath);
+      const full = safeJoin(outDir, repoBase, relPath);
       mkdirSync(dirname(full), { recursive: true });
       writeFileSync(full, encodePng({ ...img, kind: 'rgba' }));
       record(full);
     },
     writeJson(relPath, obj) {
-      const full = safeJoin(outDir, relPath);
+      const full = safeJoin(outDir, repoBase, relPath);
       mkdirSync(dirname(full), { recursive: true });
       writeFileSync(full, `${JSON.stringify(obj, null, 2)}\n`);
       record(full);
     },
     writeFile(relPath, bytes) {
-      const full = safeJoin(outDir, relPath);
+      const full = safeJoin(outDir, repoBase, relPath);
       mkdirSync(dirname(full), { recursive: true });
       writeFileSync(full, bytes);
       record(full);
@@ -118,9 +140,9 @@ export async function checkFixtures(opts: { root: string }): Promise<string[]> {
     const problems: string[] = [];
     for (const f of files) {
       const committed = join(root, f);
+      const fresh = f.startsWith('../') ? join(tmp, '.repo', f.slice(3)) : join(tmp, f);
       if (!existsSync(committed)) problems.push(`missing: ${f}`);
-      else if (!readFileSync(committed).equals(readFileSync(join(tmp, f))))
-        problems.push(`differs: ${f}`);
+      else if (!readFileSync(committed).equals(readFileSync(fresh))) problems.push(`differs: ${f}`);
     }
     return problems;
   } finally {

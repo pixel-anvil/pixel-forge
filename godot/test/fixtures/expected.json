@@ -1,0 +1,251 @@
+{
+  "walker": {
+    "canvas": [
+      24,
+      24
+    ],
+    "origin": [
+      12,
+      23
+    ],
+    "pixelsPerUnit": 16,
+    "skins": [
+      "base"
+    ],
+    "directionFallback": {
+      "down": [
+        "down",
+        "side"
+      ],
+      "up": [
+        "up",
+        "side"
+      ]
+    },
+    "mirrors": {
+      "walk/left": "side"
+    },
+    "loops": {
+      "walk/side": "loop",
+      "walk/up": "pingpong",
+      "idle/default": "once",
+      "flash/side": "once"
+    },
+    "frames": [
+      {
+        "key": "flash/side/0",
+        "durationMs": 50,
+        "box": [
+          0,
+          0,
+          24,
+          24
+        ],
+        "markers": {
+          "ball": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "events": [],
+        "rootMotion": {
+          "dx": 0,
+          "dy": 0
+        }
+      },
+      {
+        "key": "idle/default/0",
+        "durationMs": 100,
+        "box": [
+          10,
+          9,
+          4,
+          11
+        ],
+        "markers": {
+          "ball": {
+            "x": 12,
+            "y": 8
+          }
+        },
+        "events": [],
+        "rootMotion": {
+          "dx": 0,
+          "dy": 0
+        }
+      },
+      {
+        "key": "idle/default/1",
+        "durationMs": 50,
+        "box": null,
+        "markers": {},
+        "events": [],
+        "rootMotion": {
+          "dx": 0,
+          "dy": 0
+        }
+      },
+      {
+        "key": "idle/default/2",
+        "durationMs": 100,
+        "box": [
+          10,
+          9,
+          4,
+          11
+        ],
+        "markers": {},
+        "events": [
+          "release"
+        ],
+        "rootMotion": {
+          "dx": 0,
+          "dy": 0
+        }
+      },
+      {
+        "key": "walk/side/0",
+        "durationMs": 80,
+        "box": [
+          9,
+          6,
+          7,
+          14
+        ],
+        "markers": {
+          "ball": {
+            "x": 15,
+            "y": 12
+          },
+          "hand_r": {
+            "x": 14,
+            "y": 14
+          }
+        },
+        "events": [
+          "step"
+        ],
+        "rootMotion": {
+          "dx": 2,
+          "dy": 0
+        }
+      },
+      {
+        "key": "walk/side/1",
+        "durationMs": 120,
+        "box": [
+          8,
+          5,
+          9,
+          17
+        ],
+        "markers": {
+          "ball": {
+            "x": 16,
+            "y": 11
+          }
+        },
+        "events": [],
+        "rootMotion": {
+          "dx": 1,
+          "dy": -1
+        }
+      },
+      {
+        "key": "walk/side/2",
+        "durationMs": 100,
+        "box": [
+          10,
+          7,
+          6,
+          13
+        ],
+        "markers": {},
+        "events": [
+          "step",
+          "release"
+        ],
+        "rootMotion": {
+          "dx": 0,
+          "dy": 0
+        }
+      },
+      {
+        "key": "walk/up/0",
+        "durationMs": 60,
+        "box": [
+          6,
+          8,
+          12,
+          12
+        ],
+        "markers": {},
+        "events": [],
+        "rootMotion": {
+          "dx": 0,
+          "dy": 0
+        }
+      },
+      {
+        "key": "walk/up/1",
+        "durationMs": 90,
+        "box": [
+          7,
+          3,
+          10,
+          18
+        ],
+        "markers": {
+          "hand_r": {
+            "x": 7,
+            "y": 12
+          }
+        },
+        "events": [
+          "step"
+        ],
+        "rootMotion": {
+          "dx": 0,
+          "dy": 0
+        }
+      }
+    ]
+  },
+  "skins": {
+    "canvas": [
+      16,
+      16
+    ],
+    "origin": [
+      8,
+      15
+    ],
+    "skins": [
+      "base",
+      "ghost",
+      "swap"
+    ],
+    "frames": [
+      {
+        "key": "blink/default/0",
+        "durationMs": 90,
+        "box": [
+          4,
+          4,
+          10,
+          8
+        ]
+      },
+      {
+        "key": "blink/default/1",
+        "durationMs": 110,
+        "box": [
+          3,
+          3,
+          10,
+          9
+        ]
+      }
+    ]
+  }
+}

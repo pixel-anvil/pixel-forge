@@ -6,6 +6,7 @@ coverage
 pnpm-lock.yaml
 spikes
 fixtures
+godot
 docs
 .changeset/*.md
 CHANGELOG.md

@@ -155,7 +155,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T4.3 | io: spritesheet import (cell ranges, outline sheet), sheet + JSON export, contact sheet | sonnet | medium | M | T2.3, T1.8 | ∥ |☑ |
 | T4.2 | io: `.pxf` read/write, migrations, render cache, atomic save, pack/unpack | sonnet | high | M | T4.3, T2.2 | |☑ |
 | T6.0 | Godot integration contract with the first consumer game (spec addendum) | opus | high | S | T4.2 | | ☑ |
-| T6.1 | Godot: `.pxf` reader + import plugin + test harness + fixture `.pxf` generator | sonnet | high | M | T6.0 | | ☐ |
+| T6.1 | Godot: `.pxf` reader + import plugin + test harness + fixture `.pxf` generator | sonnet | high | M | T6.0 | | ☐☑ |
 | T6.2 | Godot: PixelForgeDriver (clock + game-driven playback), adapters, mirroring, markers/events | sonnet | high | M | T6.1 | | ☐ |
 | T6.3 | Godot: demo scene + CI job (ubuntu, 4.6.1 headless) | haiku | low | S | T6.2 | | ☐ |
 | D1 | **Early demo**: flat target-move `.pxf` → plays in the first consumer game through the driver (user approval) | orchestrator + sonnet | medium | M | T6.3 | | ☐ |
@@ -531,6 +531,10 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - `godot/test/`: a project with GUT vendored and pinned to 9.6.1, and `run_tests.sh` **copied from the game's runner (GAME_NOTES §1)** (it does `--import` before GUT and fails when GUT reports parse errors);
   - `fixtures/src/godot.ts`, which generates `godot/test/fixtures/*.pxf` covering two directions, a mirror, markers, events and trimmed frames. CI checks the output is up to date.
 - **Oracle** — in GUT, crop every atlas region and compare it pixel for pixel with the `render/*.png` frames in the `.pxf`.
+- **Notes (2026-10-28)** — ☑ Sonnet/high; about 258k tokens. 76 GUT tests pass headless on Godot 4.6.1 (the orchestrator re-ran them). The atlas oracle compares each region with an independent ZIPReader decode of `render/*.png`.
+  - GUT 9.6.1 (MIT) is vendored unmodified with its LICENSE. `run_tests.sh` keeps only the game runner's structure (import first, fail on script errors); nothing game-specific remains.
+  - The import logic is in `PixelForgeImport` (testable without the editor); the plugin is a thin shell. Trim = the union of opaque pixels across the imported skins; a fully transparent frame becomes a 1×1 region. Selecting a mirror imports its source.
+  - Also: CI now runs `pnpm fixtures:check`; testkit generators may write under `../godot/`; `godot/test/addons/pixel_forge` is a symlink to the addon (Windows needs `core.symlinks`, see KNOWN_ISSUES GD-01). The GUT CI job is T6.3.
 
 #### T6.2 PixelForgeDriver  [sonnet] [M]
 - **Spec** — FR-GD-03 and `GODOT_INTEGRATION.md`.

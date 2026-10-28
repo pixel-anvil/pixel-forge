@@ -64,3 +64,40 @@ describe('fixtures runner', () => {
     expect(await checkFixtures({ root })).toEqual(['differs: out/a.json']);
   });
 });
+
+describe('fixtures runner: outputs under ../godot', () => {
+  let repo: string;
+  beforeEach(() => {
+    repo = mkdtempSync(join(tmpdir(), 'pf-repo-'));
+    root = join(repo, 'fixtures');
+    mkdirSync(join(root, 'src'), { recursive: true });
+  });
+  afterEach(() => {
+    rmSync(repo, { recursive: true, force: true });
+  });
+
+  const G = `export default async function generate(ctx) {
+  ctx.writeFile('../godot/test/fixtures/a.bin', new Uint8Array([1, 2]));
+  ctx.writeJson('own.json', { n: 1 });
+}`;
+
+  it('writes into the repository folder and checks it against a fresh run', async () => {
+    gen('g.mjs', G);
+    const files = await runFixtures({ root });
+    expect(files).toEqual(['../godot/test/fixtures/a.bin', 'own.json']);
+    expect([...readFileSync(join(repo, 'godot/test/fixtures/a.bin'))]).toEqual([1, 2]);
+    expect(await checkFixtures({ root })).toEqual([]);
+    writeFileSync(join(repo, 'godot/test/fixtures/a.bin'), new Uint8Array([9]));
+    expect(await checkFixtures({ root })).toEqual(['differs: ../godot/test/fixtures/a.bin']);
+    rmSync(join(repo, 'godot/test/fixtures/a.bin'));
+    expect(await checkFixtures({ root })).toEqual(['missing: ../godot/test/fixtures/a.bin']);
+  });
+
+  it('refuses other folders outside fixtures and traversal out of godot', async () => {
+    gen('x.mjs', `export default (ctx) => ctx.writeJson('../docs/x.json', {});`);
+    await expect(runFixtures({ root })).rejects.toThrow(/escapes/);
+    rmSync(join(root, 'src', 'x.mjs'));
+    gen('y.mjs', `export default (ctx) => ctx.writeJson('../godot/../docs/y.json', {});`);
+    await expect(runFixtures({ root })).rejects.toThrow(/escapes/);
+  });
+});

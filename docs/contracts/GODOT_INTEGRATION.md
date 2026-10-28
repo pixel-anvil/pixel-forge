@@ -69,6 +69,26 @@ A `Resource` produced by the import plugin. FR-GD-02 lists the fields; this sect
   about animations that are not playing. Callers check `has_marker(frame_index, name)` first; an absent
   marker returns `Vector2.ZERO` and pushes no error.
 
+### 2.1 Importer details (T6.1)
+
+Decisions the sections above leave open; the code is `godot/addons/pixel_forge/` and `godot/README.md`.
+
+- **Entry points:** `PixelForgePxfReader` (`open`, `read_png`), `PixelForgeAsset.build(reader, options, report)` (returns
+  null and fills `report.errors` on failure; `report.warnings` lists names the options mention that the file lacks) and
+  `PixelForgeAsset.shelf_pack(sizes)`. The `EditorImportPlugin` is a thin shell over `PixelForgeImport.run()`.
+- **Options:** `animations` and `skins` are comma-separated strings (empty means all; `base` is always imported);
+  `animations` takes `group` or `group/direction`, and selecting a mirror also imports its source direction (the
+  source alone does not import the mirror). `trim` (default on) and `padding` (default 1, clamped to 0..64).
+- **Trim:** a frame's box is the union of the opaque pixels (alpha > 0) over the imported skins, so one layout serves every
+  skin. A fully transparent frame is a 1x1 region at `offset_px (0, 0)`; a `render/` PNG that is not canvas-sized is an error.
+- **Packing:** unique PNG paths are packed once (frames sharing a PNG share a `region`); tallest first, then widest, then input
+  order; width is a power of two (at most 4096 unless one region is wider), height is what the shelves use. `region` excludes
+  the padding; the padding pixels are transparent.
+- **`resolve` edge cases:** an empty `direction` resolves like `default`; a direction that has a `direction_fallback` entry
+  tries only that list, then `default`.
+- **Index checks:** the reader rejects an index with `schemaVersion` newer than 1, a missing `base` skin, a mirror whose source
+  is not an authored direction of the same group, or frames with a missing image, a non-positive duration or malformed markers.
+
 ## 3. `PixelForgeDriver` (T6.2)
 
 A `Node`. It is the only clock: nothing else picks frames. It drives one target node through an adapter

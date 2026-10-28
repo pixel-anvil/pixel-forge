@@ -44,7 +44,9 @@ alpha), the `png` `PngImage` shape without `kind`.
 
 `pnpm fixtures` builds the testkit and runs every `fixtures/src/*.ts|*.mjs` in sorted order with Node
 (type stripping). Each generator: `export default async function generate(ctx)` with
-`ctx = { root, writePng(rel, img), writeJson(rel, obj) }`, paths relative to `fixtures/`; a throwing
+`ctx = { root, writePng(rel, img), writeJson(rel, obj), writeFile(rel, bytes) }`, paths relative to `fixtures/`
+(a path `../godot/...` writes into the repository's `godot/` folder, the only place outside `fixtures/` allowed;
+`fixtures:check` compares those files too); a throwing
 generator fails the run. `pnpm fixtures:check` regenerates into a temp dir and fails if committed
 outputs are missing or differ. Generators must be deterministic and import nothing from the repo
 (use `ctx`). See `fixtures/src/example-checker.ts`.
