@@ -21,6 +21,8 @@ export interface FixtureContext {
   writePng(relPath: string, img: TestImage): void;
   /** Write pretty-printed JSON (2 spaces, trailing newline) at `relPath`. */
   writeJson(relPath: string, obj: unknown): void;
+  /** Write raw bytes (a `.pxf`, say) at `relPath` (relative to `fixtures/`). */
+  writeFile(relPath: string, bytes: Uint8Array): void;
 }
 
 /** Options for {@link runFixtures}. */
@@ -73,6 +75,12 @@ export async function runFixtures(opts: RunFixturesOptions): Promise<string[]> {
       const full = safeJoin(outDir, relPath);
       mkdirSync(dirname(full), { recursive: true });
       writeFileSync(full, `${JSON.stringify(obj, null, 2)}\n`);
+      record(full);
+    },
+    writeFile(relPath, bytes) {
+      const full = safeJoin(outDir, relPath);
+      mkdirSync(dirname(full), { recursive: true });
+      writeFileSync(full, bytes);
       record(full);
     },
   };

@@ -9,3 +9,5 @@ third-party game art. Prettier and ESLint ignore this folder.
 - `frozen/`: files frozen at a schema version (for example `frozen/v1/minimal-document.json`). Never
   regenerated; future migrations must keep them opening.
 - `src/`: the generator scripts for `generated/`.
+- `generated/hero.pxf`: the synthetic 48x48 humanoid (T3.9) from `src/hero.ts`. Its Aseprite twin is
+  `aseprite/hero_parts.aseprite` (`src/aseprite/hero_parts.lua`).

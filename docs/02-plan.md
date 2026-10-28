@@ -165,7 +165,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T3.5 | rig `overlapMask` + core `splitRegion` transaction | sonnet | high | M | T3.4 | ∥ | ☐ |
 | T3.6 | core: derived mirror in `renderFrame`; rig: pose clipboard (mirrored) | sonnet | medium | S | T3.3 | ∥ | ☐ |
 | T3.7 | core: bake | sonnet | medium | S | T3.3 | ∥ | ☐ |
-| T3.9 | fixtures: synthetic humanoid "hero" (TS doc + `.aseprite` via Lua) | sonnet | medium | M | T3.2, T0.3 | ∥ | ☐ |
+| T3.9 | fixtures: synthetic humanoid "hero" (TS doc + `.aseprite` via Lua) | sonnet | medium | M | T3.2, T0.3 | ∥ | ☑ |
 | G1 | **Gate: core + rig** | opus | high | — | W1–W3 rig track | | ☐ |
 | T4.6 | fixtures: synthetic `.aseprite` files via Aseprite Lua | sonnet | medium | S | T0.3 | ∥ | ☑ |
 | T4.4 | io: `.aseprite` binary parser (Aseprite CLI as oracle) | sonnet | high | M | T4.6 | |☑ |
@@ -603,6 +603,11 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 #### T3.9 synthetic hero  [sonnet] [M] ∥
 - **Deliverables** — `fixtures/src/hero.ts`, which builds a 48×48 humanoid side view (parts with joint caps, the template bones, and one variant on the forearm) as a `.pxf`, plus `fixtures/src/aseprite/hero_parts.lua`, which writes the same parts as `fixtures/hero_parts.aseprite` with `part:` layer names.
 - **Acceptance** — the joint check is clean. Every part binds by name. Both files regenerate deterministically.
+- **Notes (2026-10-27)** — ☑ Sonnet/medium; about 129k tokens. Golden reviewed (8× sheet of the rest pose).
+  - `fixtures/src/hero.ts` → `fixtures/generated/hero.pxf` (byte-identical regeneration); `hero_parts.lua` → `fixtures/aseprite/hero_parts.aseprite` (next to the other Aseprite fixtures, not `fixtures/`) plus CLI oracles.
+  - Pivots from `humanoidSide({height: 47})`; each child part reaches 2 px into its parent; the forearm has a `sleeve` variant. Testkit gained `FixtureContext.writeFile`.
+  - Joint check: hand-computed rest-cap rectangles per joint plus `it.todo` for T3.4 (`jointCheck` must also cover ±30°). The T4.5 import of the `.aseprite` matches the TS parts' pixels.
+  - Follow-ups: regenerate `hero.pxf` with a render cache after T3.3; the rect table is duplicated in TS and Lua (guarded by the import test).
 
 #### G1 Gate: core + rig  [opus]
 - The `code-review` skill (high) over the rig track.

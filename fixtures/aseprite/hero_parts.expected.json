@@ -1,0 +1,123 @@
+{
+  "frames": [
+    {
+      "filename": "hero_parts.aseprite",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 48,
+        "h": 48
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 48,
+        "h": 48
+      },
+      "sourceSize": {
+        "w": 48,
+        "h": 48
+      },
+      "duration": 100
+    }
+  ],
+  "meta": {
+    "app": "https://www.aseprite.org/",
+    "format": "RGBA8888",
+    "size": {
+      "w": 48,
+      "h": 48
+    },
+    "scale": "1",
+    "frameTags": [],
+    "layers": [
+      {
+        "name": "part:thigh_l",
+        "opacity": 255,
+        "blendMode": "normal"
+      },
+      {
+        "name": "part:shin_l",
+        "opacity": 255,
+        "blendMode": "normal"
+      },
+      {
+        "name": "part:foot_l",
+        "opacity": 255,
+        "blendMode": "normal"
+      },
+      {
+        "name": "part:upper_arm_l",
+        "opacity": 255,
+        "blendMode": "normal"
+      },
+      {
+        "name": "part:lower_arm_l",
+        "opacity": 255,
+        "blendMode": "normal"
+      },
+      {
+        "name": "part:hand_l",
+        "opacity": 255,
+        "blendMode": "normal"
+      },
+      {
+        "name": "part:pelvis",
+        "opacity": 255,
+        "blendMode": "normal"
+      },
+      {
+        "name": "part:torso",
+        "opacity": 255,
+        "blendMode": "normal"
+      },
+      {
+        "name": "part:neck",
+        "opacity": 255,
+        "blendMode": "normal"
+      },
+      {
+        "name": "part:thigh_r",
+        "opacity": 255,
+        "blendMode": "normal"
+      },
+      {
+        "name": "part:shin_r",
+        "opacity": 255,
+        "blendMode": "normal"
+      },
+      {
+        "name": "part:foot_r",
+        "opacity": 255,
+        "blendMode": "normal"
+      },
+      {
+        "name": "part:head",
+        "opacity": 255,
+        "blendMode": "normal"
+      },
+      {
+        "name": "part:upper_arm_r",
+        "opacity": 255,
+        "blendMode": "normal"
+      },
+      {
+        "name": "part:lower_arm_r",
+        "opacity": 255,
+        "blendMode": "normal"
+      },
+      {
+        "name": "part:lower_arm_r@sleeve",
+        "opacity": 255,
+        "blendMode": "normal"
+      },
+      {
+        "name": "part:hand_r",
+        "opacity": 255,
+        "blendMode": "normal"
+      }
+    ]
+  }
+}

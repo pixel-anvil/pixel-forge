@@ -20,6 +20,7 @@ afterEach(() => {
 const GOOD = `export default async function generate(ctx) {
   ctx.writePng('out/a.png', { width: 1, height: 1, data: new Uint8Array([1, 2, 3, 255]) });
   ctx.writeJson('out/a.json', { ok: true });
+  ctx.writeFile('out/a.bin', new Uint8Array([7, 8]));
 }`;
 
 describe('fixtures runner', () => {
@@ -31,7 +32,8 @@ describe('fixtures runner', () => {
     const seen: string[] = [];
     const files = await runFixtures({ root, onGenerator: (f) => seen.push(f) });
     expect(seen).toEqual(['a.mjs', 'b.mjs']);
-    expect(files).toEqual(['order.json', 'out/a.json', 'out/a.png']);
+    expect(files).toEqual(['order.json', 'out/a.bin', 'out/a.json', 'out/a.png']);
+    expect([...readFileSync(join(root, 'out/a.bin'))]).toEqual([7, 8]);
     expect([...decodePng(readFileSync(join(root, 'out/a.png'))).data]).toEqual([1, 2, 3, 255]);
     expect(readFileSync(join(root, 'out/a.json'), 'utf8')).toBe('{\n  "ok": true\n}\n');
   });
@@ -51,7 +53,11 @@ describe('fixtures runner', () => {
 
   it('check detects missing and differing committed outputs', async () => {
     gen('a.mjs', GOOD);
-    expect(await checkFixtures({ root })).toEqual(['missing: out/a.json', 'missing: out/a.png']);
+    expect(await checkFixtures({ root })).toEqual([
+      'missing: out/a.bin',
+      'missing: out/a.json',
+      'missing: out/a.png',
+    ]);
     await runFixtures({ root });
     expect(await checkFixtures({ root })).toEqual([]);
     writeFileSync(join(root, 'out/a.json'), '{}');

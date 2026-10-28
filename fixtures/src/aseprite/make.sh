@@ -5,7 +5,7 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 OUT="$(cd "$HERE/../../aseprite" && pwd)"
 ASE="${ASEPRITE:-$HOME/code/aseprite/build/bin/aseprite}"
-NAMES=(layers_parts tags_overlap linked_cels indexed_palette)
+NAMES=(layers_parts tags_overlap linked_cels indexed_palette hero_parts)
 
 for n in "${NAMES[@]}"; do
   rm -rf "$OUT/$n" "$OUT/$n.aseprite" "$OUT/$n.expected.json"
