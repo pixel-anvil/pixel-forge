@@ -135,7 +135,7 @@ These settle ambiguities found while writing `@pixel-forge/schema`. Its README i
 - FR-DOC-02 [M1a]: **One undo history per document** covering every change. Operations are grouped into labelled transactions. The memory cap (default 512 MB) counts tile bytes.
 - FR-DOC-03 [M2]: Autosave and a crash-recovery journal kept in the app cache dir (`~/Library/Caches/pixel-forge` or `%LOCALAPPDATA%`), never next to the file.
 - FR-DOC-04 [M1a]: **Import `.aseprite`/`.ase`**:
-  - Layers come across with their names. A layer named `part:<bone>[@<variant>][#<view>]` becomes a PartLayer variant.
+  - Layers come across with their names. A layer named `part:<bone>[.<part>][@<variant>][#<view>]` becomes a PartLayer variant. This syntax exists only in *source* (Aseprite) layer names, because document names can't contain `:.@#`. The document's part layer is named `<bone>` or `<bone>_<part>`. Several parts can share a bone (e.g. `part:upper_arm_r` and `part:upper_arm_r.sleeve`), and layers with the same bone and part become variants of one part (T3.2, 2026-10-27).
   - Each **tag maps to an animation** (`group` = tag name). Untagged frames go to an animation called `default`. Frames inside **overlapping tags** become linked cels.
   - The palette and linked cels are imported.
   - **Re-import in place**: when you update a document from an edited `.aseprite`, parts and layers are matched by name. Rig bindings, pivots and keys are kept, and the changed images are replaced.

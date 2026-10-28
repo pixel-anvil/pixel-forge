@@ -20,6 +20,7 @@ User wants to review the spec and the plan before proceeding past each.
 - 2026-10-26: Effort level per card added (plan v0.3). Repo will be PUBLIC under a new GitHub org `pixel-anvil` (the user creates it on the web), MIT, pseudonymous commit identity `pixel-forge dev <dev@pixel-forge.invalid>`, game details kept local in `~/pf-work/GAME_NOTES.md` (new card T0.6 before the first push). CI: ubuntu+macOS on every push (free).
 
 ## Current focus / Next
+- **Cost mode (2026-10-27):** run the orchestrator on Sonnet/medium in fresh sessions per `docs/ai/ORCHESTRATOR.md`, with the short report contract; the remaining Opus cards run at high.
 - In flight: T3.2 rig templates/binding (sonnet/medium, worktree `agent-af9cfe1cb5dca1f71`) and T4.2 .pxf io (sonnet/high, `agent-a5d1ef2b995c85241`). Both hit the usage limit on 2026-10-27 and were resumed. If a session ends, resume or re-dispatch them with "continue from the worktree state".
 - 2026-10-26: Plan v0.3 approved. Wave 0 started: T0.1 (sonnet/medium), T0.4 (opus/high), T0.5 (haiku/low) dispatched in parallel.
 - Deviation: no git repo yet, so W0 cards share the working tree (they write to separate directories). **No commits until T0.6 has scrubbed game references**, so the public history stays clean.

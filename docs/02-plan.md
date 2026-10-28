@@ -59,6 +59,10 @@ Prices per million tokens (input/output): Opus 5.5 $4/$20, Sonnet 5.5 $2/$10, Ha
   1. On the first failed verification, if the failure looks like a **reasoning slip** (a wrong edge case, a missed rule), retry once on the same model with effort one level higher.
   2. If the failure looks like a **capability gap** (it misunderstood the task or the architecture), or the retry also fails, move one model up at the card's original effort.
   3. Note every escalation on the card. If a class of cards keeps escalating, change the model or effort columns for similar future cards.
+- **Cost update (2026-10-27, after Wave 1, at the user's request to reduce spend):**
+  - The remaining Opus cards (T3.3, T3.8, T5.1) run at **high**, not xhigh. Every xhigh card still needed a review-fix pass, so the review is the quality gate.
+  - The orchestrator runs on **Sonnet/medium** in a fresh session per wave (`docs/ai/ORCHESTRATOR.md`).
+  - Subagents follow the short **report contract** (full report to a local file, a final message of at most 15 lines) and do no unrequested extra verification.
 - **Calibration at gates**: at G1 and G2, compare what cards actually cost (the tokens in subagent results) against how often they escalated. Lower the effort where cards passed easily and raise it where they struggled.
 - **Orchestrator**: run the main session on **Sonnet at medium effort** for routine waves. Use **Opus at high effort** for waves that include Opus cards (to review their output) and for gates. Switch with `/model` and `/effort` at the start of the session.
 - **Review after Opus cards**: after T1.1, T1.6, T2.1, T3.1, T3.3, T3.8 and T5.1, run the `code-review` skill (high effort) on the card's diff before dependent cards start. T1.1 also gets a short look from the user.
@@ -155,8 +159,8 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T6.2 | Godot: PixelForgeDriver (clock + game-driven playback), adapters, mirroring, markers/events | sonnet | high | M | T6.1 | | ☐ |
 | T6.3 | Godot: demo scene + CI job (ubuntu, 4.6.1 headless) | haiku | low | S | T6.2 | | ☐ |
 | D1 | **Early demo**: flat target-move `.pxf` → plays in the first consumer game through the driver (user approval) | orchestrator + sonnet | medium | M | T6.3 | | ☐ |
-| T3.3 | rig: part render pipeline + overrides + staleness; core hook (+ review) | opus | xhigh | M | T3.2, T2.3, T1.7 | ∥ | ☐ |
-| T3.8 | rig: `attributeEdit(render, edited) → overrides` (+ review) | opus | xhigh | M | T3.3 | | ☐ |
+| T3.3 | rig: part render pipeline + overrides + staleness; core hook (+ review) | opus | high | M | T3.2, T2.3, T1.7 | ∥ | ☐ |
+| T3.8 | rig: `attributeEdit(render, edited) → overrides` (+ review) | opus | high | M | T3.3 | | ☐ |
 | T3.4 | rig: `jointCheck` (implements the T3.0 definition) | sonnet | high | M | T3.0, T3.3 | | ☐ |
 | T3.5 | rig `overlapMask` + core `splitRegion` transaction | sonnet | high | M | T3.4 | ∥ | ☐ |
 | T3.6 | core: derived mirror in `renderFrame`; rig: pose clipboard (mirrored) | sonnet | medium | S | T3.3 | ∥ | ☐ |
@@ -167,7 +171,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T4.4 | io: `.aseprite` binary parser (Aseprite CLI as oracle) | sonnet | high | M | T4.6 | |☑ |
 | T4.5 | io: `.aseprite` → document mapping + in-place re-import (explicit rules) | sonnet | high | M | T4.4, T4.2 | ∥ | ☐ |
 | T4.1 | lint: rules + structured findings | sonnet | medium | M | T3.4, T3.3 | ∥ | ☐ |
-| T5.1 | ops: registry framework + generators + 3 exemplar ops (+ review) | opus | xhigh | M | T4.1, T4.2 | | ☐ |
+| T5.1 | ops: registry framework + generators + 3 exemplar ops (+ review) | opus | high | M | T4.1, T4.2 | | ☐ |
 | T5.2a | ops (no logic, from table) | haiku | medium | S | T5.1 | ∥ | ☐ |
 | T5.2b | ops with logic + P-06 ops | sonnet | medium | M | T5.1 | ∥ | ☐ |
 | T5.3 | ops: text grid read/write + render/contact sheet with overlays | sonnet | high | M | T5.1, T3.8, T4.3 | ∥ | ☐ |
