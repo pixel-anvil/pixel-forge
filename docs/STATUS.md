@@ -28,11 +28,11 @@ User wants to review the spec and the plan before proceeding past each.
 - ☑ O-1: https://github.com/pixel-anvil/pixel-forge (public, CI green, `main` protected). **From now on, work goes on phase branches and PRs to `main`**: wave branch `m1a-wave1`.
 - ☑ T0.4 RotSprite spike (verified; recommendations added to T1.6, T3.0 and ADR-008). ☑ T1.8 png codec (merged into `m1a-wave1`).
 - ☑ T0.3 testkit. ☑ T1.1 schema (the user signed off on the domain summary on 2026-10-27).
-- ☑ T4.2 .pxf io. ☑ T3.2 rig templates + binding (multiple parts per bone). ☑ T4.4 .aseprite parser. ☑ T4.3 spritesheet I/O. ☑ T3.1 FK + snapping (ADR-012 accepted). ☑ T4.6 .aseprite fixtures. ☑ T2.3 renderFrame (pipeline: core owns steps 5–8; rig hook is parts-only). ☑ T2.2 frame ops + validate. ☑ T1.5 primitives (clean-room ellipse after a licensing catch). ☑ T1.7 post-passes. ☑ T1.2 color. ☑ T1.3 presets (no licence stated on Lospec; see PAL-01). ☑ T1.4 raster. ☑ T3.0 joint-gap contract. ☑ T1.6 RotSprite (reviewed and fixed). ☑ T2.1 document store (reviewed and fixed). ☑ T4.5 .aseprite mapping + re-import (IO-03/IO-04 logged). ☑ T3.9 synthetic hero (golden reviewed).
-- **In flight (2026-10-27):**
-  - T3.3 is implemented and reviewed (10 findings, all accepted). A Sonnet/high fix pass is running in the same worktree, `.claude/worktrees/agent-a9b7700dee1c4a21a`. Reports: `.claude/reports/T3.3.md`, `T3.3-fix.md`. Then verify, integrate and commit.
-  - T6.0 (opus/high) is running in its own worktree. Its private game mapping goes to `<wt>/.claude/reports/T6.0-private.md`; move that into GAME_NOTES, never into the repo.
-- **Next:** after T3.3: regenerate `hero.pxf` with a render cache; then T3.8 (opus/high), T3.4, T3.6, T3.7 (sonnet); then T6.1 after T6.0. T4.1 waits for T3.4.
+- ☑ T4.2 .pxf io. ☑ T3.2 rig templates + binding (multiple parts per bone). ☑ T4.4 .aseprite parser. ☑ T4.3 spritesheet I/O. ☑ T3.1 FK + snapping (ADR-012 accepted). ☑ T4.6 .aseprite fixtures. ☑ T2.3 renderFrame (pipeline: core owns steps 5–8; rig hook is parts-only). ☑ T2.2 frame ops + validate. ☑ T1.5 primitives (clean-room ellipse after a licensing catch). ☑ T1.7 post-passes. ☑ T1.2 color. ☑ T1.3 presets (no licence stated on Lospec; see PAL-01). ☑ T1.4 raster. ☑ T3.0 joint-gap contract. ☑ T1.6 RotSprite (reviewed and fixed). ☑ T2.1 document store (reviewed and fixed). ☑ T4.5 .aseprite mapping + re-import (IO-03/IO-04 logged). ☑ T3.9 synthetic hero (golden reviewed). ☑ T3.3 part render + overrides (reviewed and fixed; RIG-03/CORE-03 logged).
+- **In flight (2026-10-28):**
+  - T6.0 (opus/high), worktree `.claude/worktrees/agent-af4c97b12a368c012`. It hit the usage limit and was resumed. Its private game mapping goes to `<wt>/.claude/reports/T6.0-private.md`; move that into GAME_NOTES, never into the repo.
+  - T3.4 jointCheck (sonnet/high), in its own worktree. It also replaces the hero's `it.todo`.
+- **Next:** regenerate `hero.pxf` with a render cache (small; fold it into T3.6/T3.7, or do it in the orchestrator); T3.8 (opus/high, after T6.0 frees the Opus slot); T3.6 and T3.7 (sonnet); T4.1 after T3.4; T6.1 after T6.0.
 
   Max two agents at a time; at most one on Opus.
 
