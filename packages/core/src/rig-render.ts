@@ -41,6 +41,12 @@ export function rigCall<R>(fn: () => R): R {
   } catch (e) {
     if (e instanceof RigError) {
       if (e.code === 'IMAGE_MISSING') throw new CoreError('IMAGE_MISSING', e.message);
+      if (e.code === 'BAD_ARGUMENT') {
+        throw new CoreError('BAD_ARGUMENT', `rig: ${e.message}`, {
+          reason: e.reason ?? 'BAD_RIG',
+          rigCode: e.code,
+        });
+      }
       throw new CoreError('BAD_VALUE', `rig: ${e.message}`, { reason: 'BAD_RIG', rigCode: e.code });
     }
     if (e instanceof RasterError) {

@@ -8,6 +8,7 @@ export type RigErrorCode =
   | 'BAD_QUANTUM' // angleQuantum is not a multiple of 0.25 in (0, 90] that divides 360
   | 'UNKNOWN_VARIANT' // a part key names a variant the part does not have
   | 'IMAGE_MISSING' // a variant or override image is not in the image lookup
+  | 'BAD_ARGUMENT' // a caller's arguments disagree with each other (see `RigError.reason`: `before-mismatch`)
   | 'BAD_VALUE'; // a non-finite angle, a non-integer or out-of-range offset or rest position, an unknown interp
 
 /**
@@ -16,10 +17,13 @@ export type RigErrorCode =
  */
 export class RigError extends Error {
   readonly code: RigErrorCode;
-  constructor(code: RigErrorCode, message: string) {
+  /** Optional finer reason for a `BAD_ARGUMENT` (e.g. `before-mismatch`, `attributeEdit`). */
+  readonly reason?: string;
+  constructor(code: RigErrorCode, message: string, reason?: string) {
     super(message);
     this.name = 'RigError';
     this.code = code;
+    if (reason !== undefined) this.reason = reason;
   }
 }
 

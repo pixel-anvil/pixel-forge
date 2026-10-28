@@ -1,12 +1,16 @@
 /**
  * Override staleness at document level (FR-RIG-22): list the overrides with their state, and the
- * "keep, discard, re-base" resolutions (`override_list` / `override_resolve`). The hashing and the
- * list edits are `rig`'s pure functions; this file finds the targets (the part renders and the
- * composite before the final overrides) and wraps the edits in the open {@link Transaction}.
+ * "keep, discard, re-base" resolutions (`override_list` / `override_resolve`); and edit attribution
+ * (FR-RIG-24, `pf override import`). The hashing, the list edits and the attribution are `rig`'s pure
+ * functions; this file finds the targets (the part renders and the composite before the final
+ * overrides) and wraps the edits in the open {@link Transaction}.
  * @packageDocumentation
  */
-import { checkOverride, discard, partTarget, rebase } from '@pixel-forge/rig';
+import type { TiledImage } from '@pixel-forge/raster';
+import { attributeEdit, checkOverride, discard, partTarget, rebase } from '@pixel-forge/rig';
 import type {
+  EditContext,
+  EditRender,
   OverrideCheck,
   OverrideTargetRender,
   PartRender,
@@ -18,6 +22,7 @@ import type {
   AnimationId,
   AuthoredAnimation,
   FrameId,
+  FrameRef,
   ImageId,
   Override,
   OverrideId,
@@ -337,4 +342,173 @@ export function discardOverrides(tx: Transaction, ids: readonly OverrideId[]): v
   for (const id of [...released].sort()) {
     if (!still.has(id) && tx.image(id) !== undefined) tx.deleteImage(id);
   }
+}
+
+/** Options of {@link attributeEditTx}: the same as {@link rebaseOverrides}. */
+export type AttributeEditOptions = Omit<OverrideCheckOptions, 'animations'>;
+
+/** What {@link attributeEditTxReport} returns. */
+export interface AttributeEditReport {
+  /** The new overrides, in the order they were appended (`[]` when nothing changed). */
+  readonly ids: OverrideId[];
+  /**
+   * Overrides that were valid before the import and are stale after it: the frame's existing
+   * overrides in the animation, and the overrides of the animation's mirrors on that frame (a mirror's
+   * finals are hashed over the flipped source render, which the import changed). Their state after
+   * the import; they are still applied. Empty when nothing changed.
+   */
+  readonly newlyStale: OverrideStatus[];
+}
+
+/**
+ * Diffs an edited copy of one rendered frame against the current render and writes the differences
+ * as overrides (FR-RIG-24, `pf override import`; FR-RIG-22): part overrides where an edit lies inside
+ * one drawn part's footprint and reproduces itself through the composite, a final override for the
+ * rest (see `rig`'s `attributeEdit` for the rules). The new overrides are appended to the animation's
+ * overrides in that order, their images created in the transaction, and their ids returned (`[]` when
+ * nothing changed).
+ *
+ * **Attribution rule.** Each 8-connected stroke of changed pixels becomes a part override if it lies
+ * inside exactly one part's footprint (and shows through the composite); otherwise it goes into the
+ * single final override. Erase masks are 8-bit `IndexedImage`s (255 clears), in every colour mode.
+ *
+ * The render compared with is the one {@link checkOverrides} hashes final overrides over:
+ * `opts.render` (default `{ exportOnly: true }`, the export render), unskinned, after the existing
+ * final overrides; so rendering the frame with the same options afterwards gives exactly `edited`
+ * (every alpha-0 pixel counting as one transparent), and {@link checkOverrides} with the same
+ * `opts.render` reports every new override valid.
+ *
+ * **Side effects on other overrides.** The import can make existing overrides stale, and they are
+ * still applied (KNOWN_ISSUES RIG-04): a new part override changes the canvas under the frame's
+ * existing final overrides, so one whose region it touches goes stale; and an import into a source
+ * animation changes the flipped source render that the final overrides of its mirror animations (on
+ * the same frame) are hashed over, so those can go stale too. {@link attributeEditTxReport} returns
+ * which ones did.
+ *
+ * The footprints are the parts this render draws (hidden or non-exported part layers have none). A
+ * mirror animation gets only final overrides, in its own list, checked against the flipped render
+ * (its part overrides are T3.6's). In an indexed document the `set` images are indexed, and an
+ * edited colour the palette lacks is refused.
+ *
+ * @throws CoreError `BAD_ARGUMENT` for an unknown animation (`details.reason: 'unknown-animation'`)
+ * or frame, or an `edited` image that is not the canvas size (`details.reason: 'bad-size'`);
+ * `BAD_VALUE` with `reason: 'BAD_RIG'` for a rig refusal (e.g. an edited colour the indexed palette
+ * lacks); the render's errors like `renderFrame`.
+ */
+export function attributeEditTx(
+  tx: Transaction,
+  animRef: AnimRef,
+  frameRef: FrameRef,
+  edited: TiledImage,
+  opts: AttributeEditOptions = {},
+): OverrideId[] {
+  return attributeEditImpl(tx, animRef, frameRef, edited, opts, false).ids;
+}
+
+/**
+ * {@link attributeEditTx} that also reports the existing overrides the import made stale (see
+ * "Side effects on other overrides" there): `{ids, newlyStale}`. It checks the frame's overrides in the
+ * animation and in its mirrors before and after the write, so it renders those overrides' targets
+ * twice more than {@link attributeEditTx}.
+ */
+export function attributeEditTxReport(
+  tx: Transaction,
+  animRef: AnimRef,
+  frameRef: FrameRef,
+  edited: TiledImage,
+  opts: AttributeEditOptions = {},
+): AttributeEditReport {
+  return attributeEditImpl(tx, animRef, frameRef, edited, opts, true);
+}
+
+function attributeEditImpl(
+  tx: Transaction,
+  animRef: AnimRef,
+  frameRef: FrameRef,
+  edited: TiledImage,
+  opts: AttributeEditOptions,
+  report: boolean,
+): AttributeEditReport {
+  const rig = opts.rig ?? createRigRenderer();
+  const ai = resolveAnimation(tx.doc, animRef);
+  const { w, h } = tx.doc.meta.canvas;
+  if (edited.width !== w || edited.height !== h) {
+    throw new CoreError(
+      'BAD_ARGUMENT',
+      `the edited image is ${String(edited.width)}×${String(edited.height)}, the canvas ${String(w)}×${String(h)}`,
+      { reason: 'bad-size' },
+    );
+  }
+  const ropts: RenderOptions = { exportOnly: true, ...(opts.render ?? {}) };
+  const plan = planFrame(tx, animRef, frameRef, ropts);
+  const drawn = new Set(plan.parts.map((p) => p.layer.id));
+  const all =
+    plan.parts.length === 0
+      ? []
+      : rig.frameParts(tx, plan.source, plan.frameIndex).filter((p) => drawn.has(p.layerId));
+  // the render of `all` is taken once for `before` and reused by attributeEdit's own first render
+  let first: EditRender | undefined;
+  const render = (parts: readonly PartRender[]): EditRender => {
+    if (parts === all && first !== undefined) return first;
+    const st = renderStages(tx, plan, { ...ropts, rig: rendererOver(() => parts) });
+    const finalTarget = plan.mirrored ? st.beforeMirrorFinals : st.beforeFinals;
+    if (finalTarget === undefined) {
+      throw new CoreError('BAD_VALUE', 'the render of a mirror has no mirror stage', {
+        reason: 'BAD_MIRROR',
+      });
+    }
+    const out = { finalTarget, result: st.result };
+    if (parts === all) first = out;
+    return out;
+  };
+  const pal = tx.doc.palettes.find((p) => p.id === tx.doc.activePaletteId);
+  const ctx: EditContext = {
+    parts: all,
+    finalOnly: plan.mirrored,
+    render,
+    colorMode: tx.doc.meta.colorMode,
+    ...(pal === undefined ? {} : { palette: pal.colors }),
+  };
+  const before = render(all).result;
+  const list = rigCall(() => attributeEdit(ctx, before, edited));
+  if (list.length === 0) return { ids: [], newlyStale: [] };
+
+  // existing overrides on this frame, in this animation and in its mirrors: valid now?
+  const watched = report
+    ? tx.doc.animations.filter(
+        (a, i) => i === ai || (!plan.mirrored && 'mirrorOf' in a && a.mirrorOf === plan.source.id),
+      )
+    : [];
+  const status = (): Map<OverrideId, OverrideStatus> =>
+    new Map(
+      checkOverrides(tx, {
+        animations: watched.map((a) => ({ id: a.id })),
+        rig,
+        ...(opts.render === undefined ? {} : { render: opts.render }),
+      })
+        .filter((s) => s.frameId === plan.frame.id)
+        .map((s) => [s.overrideId, s]),
+    );
+  const was = report ? status() : new Map<OverrideId, OverrideStatus>();
+
+  const added: Override[] = list.map((a) => {
+    const set = a.set === undefined ? undefined : tx.createImage(a.set);
+    const erase = a.erase === undefined ? undefined : tx.createImage(a.erase);
+    return {
+      id: tx.newId('override'),
+      frameId: plan.frame.id,
+      target: a.target === 'final' ? 'final' : { partId: a.target.partId },
+      anchor: { x: a.anchor.x, y: a.anchor.y },
+      ...(set === undefined ? {} : { set }),
+      ...(erase === undefined ? {} : { erase }),
+      baseHash: a.baseHash,
+    };
+  });
+  tx.update((d) => {
+    d.animations[ai]?.overrides.push(...added);
+  });
+  const newlyStale = report
+    ? [...status().values()].filter((s) => s.stale && was.get(s.overrideId)?.stale === false)
+    : [];
+  return { ids: added.map((o) => o.id), newlyStale };
 }

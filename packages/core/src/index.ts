@@ -70,12 +70,16 @@ export type { FrameRenderer } from './render-cache.js';
 export { createRigRenderer } from './rig-render.js';
 export type { PartRenderer } from './rig-render.js';
 export {
+  attributeEditTx,
+  attributeEditTxReport,
   checkOverrides,
   discardOverrides,
   listStaleOverrides,
   rebaseOverrides,
 } from './overrides.js';
 export type {
+  AttributeEditOptions,
+  AttributeEditReport,
   OverrideCheckOptions,
   OverrideOpReason,
   OverrideRenderOptions,

@@ -160,7 +160,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T6.3 | Godot: demo scene + CI job (ubuntu, 4.6.1 headless) | haiku | low | S | T6.2 | | ☐ |
 | D1 | **Early demo**: flat target-move `.pxf` → plays in the first consumer game through the driver (user approval) | orchestrator + sonnet | medium | M | T6.3 | | ☐ |
 | T3.3 | rig: part render pipeline + overrides + staleness; core hook (+ review) | opus | high | M | T3.2, T2.3, T1.7 | ∥ | ☑ |
-| T3.8 | rig: `attributeEdit(render, edited) → overrides` (+ review) | opus | high | M | T3.3 | | ☐ |
+| T3.8 | rig: `attributeEdit(render, edited) → overrides` (+ review) | opus | high | M | T3.3 | | ☐☑ |
 | T3.4 | rig: `jointCheck` (implements the T3.0 definition) | sonnet | high | M | T3.0, T3.3 | | ☑ |
 | T3.5 | rig `overlapMask` + core `splitRegion` transaction | sonnet | high | M | T3.4 | ∥ | ☐ |
 | T3.6 | core: derived mirror in `renderFrame`; rig: pose clipboard (mirrored) | sonnet | medium | S | T3.3 | ∥ | ☐ |
@@ -596,6 +596,11 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - the erase mask, anchor and `baseHash`.
 - **Oracle** — hand-written cases: an edit inside one part, an edit straddling two parts, an erase at the silhouette, an edit then a re-pose (W4).
 - **Acceptance** — then the review.
+- **Notes (2026-10-28)** — ☑ Opus/high (about 221k tokens; resumed once after the usage limit), then code-review high (10 findings: 9 accepted, 1 rejected), then a Sonnet/high fix pass (about 134k tokens).
+  - rig `attributeEdit(ctx, before, edited) → AttributedOverride[]` (images inline, no ids; rig is pure). core `attributeEditTx` / `attributeEditTxReport` (`{ids, newlyStale}`, covering this frame and the mirrors) build the context from `renderStages` on the export render; final hashes use the same `beforeFinals` as `checkOverrides`.
+  - **Rejected finding / decision:** attribution is per 8-connected stroke, not per whole edit (spec FR-RIG-22 clarified). A part override that doesn't show through the composite is demoted to the final.
+  - Fixes: alpha-0 palette entries are transparent in footprints; erase masks are 8-bit `IndexedImage`; a `before` that doesn't match the render is refused (`before-mismatch`); `EditContext.finalOnly` for mirrors; no duplicate renders. RigError gained `BAD_ARGUMENT` + `reason`.
+  - Follow-ups: RIG-04 (new part overrides can stale nearby finals here and in mirrors; reported via `newlyStale`). An indexed colour missing from the palette has no dedicated CLI reason (T5.x).
 
 #### T3.4 joint check  [sonnet] [M]
 - **Deliverables** — `jointCheck(...)`, implementing `JOINT_CHECK.md`.
