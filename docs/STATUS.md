@@ -28,12 +28,9 @@ User wants to review the spec and the plan before proceeding past each.
 - ☑ O-1: https://github.com/pixel-anvil/pixel-forge (public, CI green, `main` protected). **From now on, work goes on phase branches and PRs to `main`**: wave branch `m1a-wave1`.
 - ☑ T0.4 RotSprite spike (verified; recommendations added to T1.6, T3.0 and ADR-008). ☑ T1.8 png codec (merged into `m1a-wave1`).
 - ☑ T0.3 testkit. ☑ T1.1 schema (the user signed off on the domain summary on 2026-10-27).
-- ☑ T4.2 .pxf io. ☑ T3.2 rig templates + binding (multiple parts per bone). ☑ T4.4 .aseprite parser. ☑ T4.3 spritesheet I/O. ☑ T3.1 FK + snapping (ADR-012 accepted). ☑ T4.6 .aseprite fixtures. ☑ T2.3 renderFrame (pipeline: core owns steps 5–8; rig hook is parts-only). ☑ T2.2 frame ops + validate. ☑ T1.5 primitives (clean-room ellipse after a licensing catch). ☑ T1.7 post-passes. ☑ T1.2 color. ☑ T1.3 presets (no licence stated on Lospec; see PAL-01). ☑ T1.4 raster. ☑ T3.0 joint-gap contract. ☑ T1.6 RotSprite (reviewed and fixed). ☑ T2.1 document store (reviewed and fixed). 
-- **Next (for a fresh Opus/medium orchestrator session, per `docs/ai/ORCHESTRATOR.md`):** nothing is in flight and there are no worktrees. Ready cards:
-  - **T3.3** rig part renderer + overrides + staleness (opus/high; then code review, then a Sonnet fix pass). Run it alone on Opus.
-  - **T6.0** Godot integration contract (opus/high, small). Read GAME_NOTES §1–§5 for the game paths. Run it after T3.3, or alongside a Sonnet card.
-  - **T4.5** .aseprite → document mapping + re-import (sonnet/high). Use `parsePartLayerName` and `bindParts` `rawNames`.
-  - **T4.1** lint waits for T3.4. **T3.9** synthetic hero (sonnet) is ready, since T3.2 is done.
+- ☑ T4.2 .pxf io. ☑ T3.2 rig templates + binding (multiple parts per bone). ☑ T4.4 .aseprite parser. ☑ T4.3 spritesheet I/O. ☑ T3.1 FK + snapping (ADR-012 accepted). ☑ T4.6 .aseprite fixtures. ☑ T2.3 renderFrame (pipeline: core owns steps 5–8; rig hook is parts-only). ☑ T2.2 frame ops + validate. ☑ T1.5 primitives (clean-room ellipse after a licensing catch). ☑ T1.7 post-passes. ☑ T1.2 color. ☑ T1.3 presets (no licence stated on Lospec; see PAL-01). ☑ T1.4 raster. ☑ T3.0 joint-gap contract. ☑ T1.6 RotSprite (reviewed and fixed). ☑ T2.1 document store (reviewed and fixed). ☑ T4.5 .aseprite mapping + re-import (IO-03/IO-04 logged).
+- **In flight (2026-10-27):** T3.3 (opus/high, worktree `.claude/worktrees/agent-a9b7700dee1c4a21a`) and T3.9 (sonnet/medium, worktree `.claude/worktrees/agent-ab94d6799481ce3d1`). If a session ends, resume them with SendMessage or re-dispatch from their worktrees.
+- **Next:** after T3.3 lands, run the code-review (high) + Sonnet fix pass, then T6.0 (opus/high; read GAME_NOTES §1–§5), T3.8, and T3.4/T3.6/T3.7. T4.1 waits for T3.4.
 
   Max two agents at a time; at most one on Opus.
 
