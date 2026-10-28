@@ -166,7 +166,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T3.6 | core: derived mirror in `renderFrame`; rig: pose clipboard (mirrored) | sonnet | medium | S | T3.3 | ∥ | ☐ |
 | T3.7 | core: bake | sonnet | medium | S | T3.3 | ∥ | ☐ |
 | T3.9 | fixtures: synthetic humanoid "hero" (TS doc + `.aseprite` via Lua) | sonnet | medium | M | T3.2, T0.3 | ∥ | ☑ |
-| T3.9b | fixtures: widen hero joint caps until `jointCheck` is clean; regenerate `hero.pxf` with a render cache | sonnet | medium | S | T3.4, T3.3 | ∥ | ☐ |
+| T3.9b | fixtures: widen hero joint caps until `jointCheck` is clean; regenerate `hero.pxf` with a render cache | sonnet | medium | S | T3.4, T3.3 | ∥ | ☑ |
 | G1 | **Gate: core + rig** | opus | high | — | W1–W3 rig track | | ☐ |
 | T4.6 | fixtures: synthetic `.aseprite` files via Aseprite Lua | sonnet | medium | S | T0.3 | ∥ | ☑ |
 | T4.4 | io: `.aseprite` binary parser (Aseprite CLI as oracle) | sonnet | high | M | T4.6 | |☑ |
@@ -624,6 +624,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - Pivots from `humanoidSide({height: 47})`; each child part reaches 2 px into its parent; the forearm has a `sleeve` variant. Testkit gained `FixtureContext.writeFile`.
   - Joint check: hand-computed rest-cap rectangles per joint plus `it.todo` for T3.4 (`jointCheck` must also cover ±30°). The T4.5 import of the `.aseprite` matches the TS parts' pixels.
   - Follow-ups: regenerate `hero.pxf` with a render cache after T3.3; the rect table is duplicated in TS and Lua (guarded by the import test).
+- **T3.9b (2026-10-28)** — ☑ Sonnet/medium; about 65k tokens. `jointCheck` now finds 0 gaps in all 15 joints at the default sweep: the neck is 5 px wide, the head has a chin rect, the pelvis is 7×7 and the thighs are 16 px tall; pivots are unchanged. `hero.pxf` now has a render cache (`createRigRenderer`). Golden reviewed.
 
 #### G1 Gate: core + rig  [opus]
 - The `code-review` skill (high) over the rig track.

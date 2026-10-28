@@ -125,76 +125,8 @@ describe('hero jointCheck (T3.4, docs/contracts/JOINT_CHECK.md)', () => {
     expect(report.summary.joints).toBe(15);
   });
 
-  // FINDING (T3.4): the hero is NOT clean under the T3.0 definition. The 3 px joint caps are narrower
-  // than the parts at the head, hips and knees. The art and the contract are unchanged. This pins the
-  // exact (joint, angle, pixel) findings until the hero's caps are widened; then summary.gapCount is 0,
-  // this test goes, and the `it.fails` below becomes a plain `it`.
-  it('reports exactly these gaps today (default sweep, radius 4)', () => {
-    const found = report.joints
-      .filter((j) => j.gapCount > 0)
-      .map((j) => [
-        j.bone,
-        j.angles.filter((a) => a.gaps.length > 0).map((a) => [a.angle, a.gaps]),
-      ]);
-    expect(found).toEqual([
-      [
-        'head',
-        [
-          [
-            -30,
-            [
-              [27, 8],
-              [26, 9],
-            ],
-          ],
-          [-25, [[26, 9]]],
-          [-20, [[26, 9]]],
-          [20, [[22, 9]]],
-          [25, [[22, 9]]],
-        ],
-      ],
-      [
-        'shin_l',
-        [
-          [-30, [[21, 37]]],
-          [-25, [[21, 37]]],
-          [-20, [[21, 37]]],
-        ],
-      ],
-      [
-        'shin_r',
-        [
-          [-30, [[22, 37]]],
-          [-25, [[22, 37]]],
-          [-20, [[22, 37]]],
-          [20, [[25, 37]]],
-          [25, [[25, 37]]],
-          [30, [[25, 37]]],
-        ],
-      ],
-      [
-        'thigh_l',
-        [
-          [10, [[25, 28]]],
-          [15, [[25, 28]]],
-          [20, [[25, 28]]],
-        ],
-      ],
-      [
-        'thigh_r',
-        [
-          [15, [[26, 28]]],
-          [20, [[26, 28]]],
-        ],
-      ],
-    ]);
-    expect(report.summary).toEqual({ joints: 15, jointsWithGaps: 5, gapCount: 20, unionCount: 8 });
-  });
-
-  // The card's acceptance: no gaps at the angles JOINT_CHECK.md requires (±30° in 5° steps). It fails
-  // until the hero's caps are fixed; `it.fails` makes the suite notice when it starts to pass.
-  it.fails('has no gaps over the default sweep (±30°, 5°, radius 4)', () => {
-    expect(report.summary.gapCount).toBe(0);
+  it('jointCheck is clean', () => {
+    expect(report.summary).toEqual({ joints: 15, jointsWithGaps: 0, gapCount: 0, unionCount: 0 });
   });
 });
 

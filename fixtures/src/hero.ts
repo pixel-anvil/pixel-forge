@@ -5,8 +5,9 @@
 // Geometry comes from `humanoidSide({ height: 47, origin: { x: 24, y: 47 } })`: the pivots are
 // (24,47) root, (24,25) hips, (24,23) torso, (24,10) neck, (24,8) head, (24,12) shoulder, (24,19)
 // elbow, (24,25) wrist, (24,35) knee, (24,45) ankle. Every child part reaches 2 px past its pivot
-// into its parent (the "joint cap", docs/contracts/JOINT_CHECK.md), so a rotated child never opens
-// a gap on the outer side of the bend.
+// into its parent (the "joint cap", docs/contracts/JOINT_CHECK.md). T3.9b widened the caps at the
+// head (wider neck, chin overlap), hips (pelvis 7 tall) and knees (thighs 16 tall) so `jointCheck`
+// reports no gap over the default sweep. The .pxf carries a render cache (core `createRigRenderer`).
 
 type Rgb = readonly [number, number, number];
 /** A filled rectangle: x, y, width, height, colour. Later rectangles paint over earlier ones. */
@@ -39,7 +40,7 @@ const CUFF: Rgb = [240, 220, 90];
 
 /** Parts in ascending template z (the layer order of the .aseprite file). */
 export const HERO_PARTS: readonly HeroPart[] = [
-  { layer: 'part:thigh_l', bone: 'thigh_l', rects: [[20, 24, 6, 13, PANTS_FAR]] },
+  { layer: 'part:thigh_l', bone: 'thigh_l', rects: [[20, 24, 6, 16, PANTS_FAR]] },
   { layer: 'part:shin_l', bone: 'shin_l', rects: [[21, 34, 4, 13, PANTS_FAR]] },
   {
     layer: 'part:foot_l',
@@ -52,10 +53,10 @@ export const HERO_PARTS: readonly HeroPart[] = [
   { layer: 'part:upper_arm_l', bone: 'upper_arm_l', rects: [[22, 11, 3, 10, SHIRT_FAR]] },
   { layer: 'part:lower_arm_l', bone: 'lower_arm_l', rects: [[22, 18, 3, 9, SKIN_FAR]] },
   { layer: 'part:hand_l', bone: 'hand_l', rects: [[22, 24, 4, 4, SKIN_FAR]] },
-  { layer: 'part:pelvis', bone: 'pelvis', rects: [[21, 23, 7, 5, PANTS]] },
+  { layer: 'part:pelvis', bone: 'pelvis', rects: [[21, 23, 7, 7, PANTS]] },
   { layer: 'part:torso', bone: 'torso', rects: [[21, 10, 7, 15, SHIRT]] },
-  { layer: 'part:neck', bone: 'neck', rects: [[23, 8, 3, 4, SKIN]] },
-  { layer: 'part:thigh_r', bone: 'thigh_r', rects: [[21, 24, 6, 13, PANTS]] },
+  { layer: 'part:neck', bone: 'neck', rects: [[22, 8, 5, 4, SKIN]] },
+  { layer: 'part:thigh_r', bone: 'thigh_r', rects: [[21, 24, 6, 16, PANTS]] },
   { layer: 'part:shin_r', bone: 'shin_r', rects: [[22, 34, 4, 13, PANTS]] },
   {
     layer: 'part:foot_r',
@@ -70,6 +71,7 @@ export const HERO_PARTS: readonly HeroPart[] = [
     bone: 'head',
     rects: [
       [21, 0, 8, 10, SKIN],
+      [22, 10, 5, 2, SKIN],
       [21, 0, 8, 3, HAIR],
       [21, 3, 2, 3, HAIR],
       [27, 4, 1, 1, EYE],
@@ -226,7 +228,7 @@ export async function buildHeroPxf(): Promise<Uint8Array> {
   });
   const built = io.buildPxf(store, {
     clock: io.fixedClock('2026-01-01T00:00:00Z'),
-    renderCache: false,
+    rig: core.createRigRenderer(),
     app: 'pixel-forge fixtures',
   });
   return built.bytes;
