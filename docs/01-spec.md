@@ -223,12 +223,13 @@ These settle ambiguities found while writing `@pixel-forge/schema`. Its README i
   7. Apply **final overrides** (erase, then set).
   8. Apply the skin last, by colour on the RGBA composite, in both colour modes.
 
-  Steps 1–4 belong to the rig (the `RigRenderer.renderParts` hook). Steps 5–8 belong to core's `renderFrame`. A mirror animation renders its source through steps 1–7, flips about `origin.x`, applies its own final overrides, then the skin. (T2.3 review, 2026-10-27.)
+  Steps 1–4 belong to the rig (the `RigRenderer.renderParts` hook). Steps 5–8 belong to core's `renderFrame`. A mirror animation renders its source through steps 1–7, flips about `origin.x`, applies its own final overrides, then the skin. (T2.3 review, 2026-10-27.) In step 3 (T3.3, 2026-10-27), part keys (`variant`, `z`, `visible`) step and hold like the bone channels (the first key holds before it; a loop wraps), `variant: 'auto'` uses the view's default variant until FR-RIG-14 (M1b), and a bone's `flipX` mirrors its parts about the pivot column after the rotation.
 - FR-RIG-21 [M1a]: Rotation algorithm per part: RotSprite (default), nearest, or none. **RotSprite introduces no new colours**, and a test asserts it.
 - FR-RIG-22 [M1a] **Overrides**:
   - drawing on a rig frame writes a part override if the stroke falls within one part's area, otherwise a final override;
   - a part override follows its part when the part moves. If the part's rotation or variant changes, the override becomes **stale** (baseHash mismatch), rather than being moved or dropped;
   - stale overrides are listed by lint and shown in the timeline. You can keep, discard, or re-base them (re-base means recapture baseHash under the current render).
+  - **baseHash** (T3.3, 2026-10-27): SHA-256 of the decoded RGBA under the bbox of the override's non-empty `set` and `erase` pixels, dilated by 1 px, over the target's render before all of its overrides. A part override's target is its part's pre-override render in pivot-relative coordinates (so translation keeps it valid); a final override's target is the composite after the post-passes of the export render. A part that is not drawn in the frame makes its overrides stale too. Stale overrides keep being applied.
 - FR-RIG-23 [M1a]: **Bake**: rig animation → a plain pixel animation, as a new animation, or replacing in place with confirmation.
 - FR-RIG-24 [M1a]: **`pf override import <doc> <anim> <frame> edited.png`** diffs an externally edited frame against the current render and writes the differences as overrides (part overrides where unambiguous, otherwise final). This is the touch-up path before the editor exists.
 

@@ -80,6 +80,16 @@ export interface RenderedPart {
  *   passed to the renderer yet; that belongs to T3.6.
  */
 export interface RigRenderer {
+  /**
+   * Identity and version of the renderer for the render input key (the `.pxf` render cache): equal
+   * keys promise equal parts for equal inputs. **Only a renderer that gives a key lets
+   * `renderInputKey` narrow its rig part** to what rig's `renderParts` reads (the rig, the keys of
+   * the animation, the variant and part-override images in use); without a key the key stays
+   * conservative (it includes every image of the document, as before T3.3). Include the version
+   * of every algorithm whose change alters pixels; `createRigRenderer` uses `PART_RENDER_KEY`
+   * (rig's `PART_RENDER_VERSION` and raster's `ROTSPRITE_VERSION`).
+   */
+  readonly renderKey?: string;
   /** FR-RIG-20 steps 1 to 4: the visible rendered parts of `ctx.frame`. */
   renderParts(ctx: RigFrameContext): readonly RenderedPart[];
 }

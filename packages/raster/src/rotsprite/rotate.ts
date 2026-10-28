@@ -42,6 +42,14 @@ export interface RotateResult<T extends RotatableImage> {
 }
 
 /**
+ * Version of the {@link rotateAbout} output (RotSprite, nearest and none) for the same input.
+ * Caches that store rotated pixels (core's render input key, the `.pxf` render cache) include it:
+ * **bump it whenever a change to this module, `scale2x.ts` or the trig table changes any output
+ * pixel, `pivotOut` or canvas**, so cached frames are re-rendered.
+ */
+export const ROTSPRITE_VERSION = 1;
+
+/**
  * Largest opaque bounding-box area (pixels) RotSprite accepts (2^18, e.g. 512×512). The ×8 image costs
  * 256 bytes per source pixel, so this caps it at 64 MiB. `rotateAbout(..., 'rotsprite')` on a larger
  * source throws `RasterError('BAD_SIZE')` at every angle, quarter turns included, so the outcome never

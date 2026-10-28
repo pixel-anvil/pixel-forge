@@ -159,7 +159,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T6.2 | Godot: PixelForgeDriver (clock + game-driven playback), adapters, mirroring, markers/events | sonnet | high | M | T6.1 | | ☐ |
 | T6.3 | Godot: demo scene + CI job (ubuntu, 4.6.1 headless) | haiku | low | S | T6.2 | | ☐ |
 | D1 | **Early demo**: flat target-move `.pxf` → plays in the first consumer game through the driver (user approval) | orchestrator + sonnet | medium | M | T6.3 | | ☐ |
-| T3.3 | rig: part render pipeline + overrides + staleness; core hook (+ review) | opus | high | M | T3.2, T2.3, T1.7 | ∥ | ☐ |
+| T3.3 | rig: part render pipeline + overrides + staleness; core hook (+ review) | opus | high | M | T3.2, T2.3, T1.7 | ∥ | ☑ |
 | T3.8 | rig: `attributeEdit(render, edited) → overrides` (+ review) | opus | high | M | T3.3 | | ☐ |
 | T3.4 | rig: `jointCheck` (implements the T3.0 definition) | sonnet | high | M | T3.0, T3.3 | | ☐ |
 | T3.5 | rig `overlapMask` + core `splitRegion` transaction | sonnet | high | M | T3.4 | ∥ | ☐ |
@@ -570,6 +570,11 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - an untouched part's override stays valid;
   - the outline runs before final overrides.
 - **Acceptance** — then the review.
+- **Notes (2026-10-27)** — ☑ Opus/high (about 291k tokens), then code-review high (10 findings, all accepted), then a Sonnet/high fix pass (about 172k tokens).
+  - rig: `renderParts` (steps 1–4), the `(variant, angle)` cache, `baseHash` (bbox of set ∪ erase ±1, against the pre-override target), `staleOverrides`, `rebase`, `discard`, and shared `paintOverride`/`maskAt`/`unionRect`. core: `createRigRenderer`, `checkOverrides`, `listStaleOverrides`, `rebaseOverrides`, `discardOverrides`. No skin hook was needed (core applies the skin last).
+  - Part targets are pivot-relative, so translation keeps an override valid and rotation makes it stale. Final targets are the export render after post-passes. Stale overrides are still applied.
+  - Fixes: per-override cache-key description; `RigRenderer.renderKey` (`PART_RENDER_VERSION` + raster `ROTSPRITE_VERSION`), else the conservative key; per-override `'error'` status; an indexed set pixel equal to the part's transparent index is refused; `none` rotation is cached once; part keys are precomputed.
+  - Follow-ups: RIG-03, CORE-03; T3.8 must hash finals against the same export render; mirror part overrides are T3.6.
 
 #### T3.8 attributeEdit  [opus] [M]
 - **Package** — `rig` (pure).

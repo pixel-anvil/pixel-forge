@@ -5,7 +5,6 @@
  * @packageDocumentation
  */
 import {
-  IndexedImage,
   RasterError,
   TiledImage,
   composite,
@@ -17,6 +16,7 @@ import {
   translate,
 } from '@pixel-forge/raster';
 import type { Rgba } from '@pixel-forge/raster';
+import { paintOverride } from '@pixel-forge/rig';
 import { MAX_LAYER_DEPTH } from '@pixel-forge/schema';
 import type {
   Animation,
@@ -409,10 +409,6 @@ function applyPostPasses(
   return out;
 }
 
-/** The value of an 8-bit erase mask at a pixel: the index (indexed) or the alpha (RGBA-stored). */
-const maskAt = (m: StoredImage, x: number, y: number): number =>
-  m instanceof IndexedImage ? m.get(x, y) : m.get(x, y)[3];
-
 /**
  * FR-RIG-22 / clarification 11: per override, in array order, `erase` (mask 255 clears) then `set`
  * (painted over the result), both anchored at the canvas position `anchor`; clipped to the canvas.
@@ -425,18 +421,7 @@ function applyFinals(
   if (finals.length === 0) return img;
   const out = img.clone();
   for (const { override, set, erase } of finals) {
-    const { x: ax, y: ay } = override.anchor;
-    if (erase !== undefined) {
-      const b = erase.bounds();
-      if (b !== undefined) {
-        for (let y = b.y; y < b.y + b.h; y++) {
-          for (let x = b.x; x < b.x + b.w; x++) {
-            if (maskAt(erase, x, y) === 255) out.set(ax + x, ay + y, [0, 0, 0, 0]);
-          }
-        }
-      }
-    }
-    if (set !== undefined) composite(out, toRgba(plan, set), { x: ax, y: ay });
+    paintOverride(out, override.anchor, { erase, set: set && toRgba(plan, set) });
   }
   return out;
 }
@@ -465,6 +450,28 @@ export function renderFrame(
  * the mirror flip and the mirror's own final overrides, then the skin (8).
  */
 export function renderPlan(view: DocumentView, plan: RenderPlan, opts: RenderOptions): TiledImage {
+  return renderStages(view, plan, opts).result;
+}
+
+/** The intermediate images of one frame render (see {@link renderStages}). */
+export interface RenderStages {
+  /** After the composite and the post-passes (steps 5 and 6): the target of the final overrides. */
+  readonly beforeFinals: TiledImage;
+  /** Mirrors only: the flipped source render, the target of the mirror's own final overrides. */
+  readonly beforeMirrorFinals: TiledImage | undefined;
+  /** The finished frame (after step 8). */
+  readonly result: TiledImage;
+}
+
+/**
+ * {@link renderPlan} keeping the images the final overrides are applied to, so that their `baseHash`
+ * can be captured and checked (FR-RIG-22). Never mutate the returned images.
+ */
+export function renderStages(
+  view: DocumentView,
+  plan: RenderPlan,
+  opts: RenderOptions,
+): RenderStages {
   const { w, h } = view.doc.meta.canvas;
   const skinPalette = skinPaletteOf(view, plan.skin);
   let result = new TiledImage(w, h);
@@ -508,13 +515,17 @@ export function renderPlan(view: DocumentView, plan: RenderPlan, opts: RenderOpt
   plan.items.slice(plan.rigAt).forEach(drawItem);
 
   result = applyPostPasses(result, plan.postPasses); // step 6
+  const beforeFinals = result;
   result = applyFinals(result, plan, plan.finals); // step 7
 
+  let beforeMirrorFinals: TiledImage | undefined;
   if (plan.mirrored) {
     // x' = 2*origin.x - x: the origin column stays put (same rule as the markers, FR-RIG-16).
     const flipped = flipH(result);
     result = translate(flipped, 2 * view.doc.meta.origin.x - (w - 1), 0);
+    beforeMirrorFinals = result;
     result = applyFinals(result, plan, plan.mirrorFinals);
   }
-  return skinRgba(result, plan, skinPalette); // step 8
+  // step 8
+  return { beforeFinals, beforeMirrorFinals, result: skinRgba(result, plan, skinPalette) };
 }

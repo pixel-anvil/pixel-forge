@@ -1,7 +1,8 @@
 /**
  * `@pixel-forge/core`: the document store (immutable JSON plus copy-on-write images), transactions,
  * patches, the linear undo/redo history with a memory cap, change events, `documentHash`, and the
- * rig render hook interface. Pure: no DOM, no Node built-ins, no clock, no randomness.
+ * rig render hook and its adapter over `rig`'s part pipeline, and override staleness. Pure: no DOM,
+ * no Node built-ins, no clock, no randomness.
  * See the package README and `docs/ai/PLAYBOOKS.md` ("How mutations work").
  * @packageDocumentation
  */
@@ -66,6 +67,20 @@ export { renderFrame } from './render.js';
 export type { RenderOptions, SkinRef } from './render.js';
 export { createFrameRenderer, renderInputKey } from './render-cache.js';
 export type { FrameRenderer } from './render-cache.js';
+export { createRigRenderer } from './rig-render.js';
+export type { PartRenderer } from './rig-render.js';
+export {
+  checkOverrides,
+  discardOverrides,
+  listStaleOverrides,
+  rebaseOverrides,
+} from './overrides.js';
+export type {
+  OverrideCheckOptions,
+  OverrideOpReason,
+  OverrideRenderOptions,
+  OverrideStatus,
+} from './overrides.js';
 
 export {
   addBone,

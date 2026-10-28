@@ -4,12 +4,12 @@
  */
 import { IndexedImage, sha256Hex } from '@pixel-forge/raster';
 import type { TiledImage } from '@pixel-forge/raster';
-import type { AnimRef, FrameRef } from '@pixel-forge/schema';
+import type { AnimRef, FrameRef, ImageId, Override } from '@pixel-forge/schema';
 import { utf8 } from './hash.js';
 import { imageHash } from './images.js';
 import type { StoredImage } from './images.js';
 import { canonicalJson } from './json.js';
-import type { JsonValue } from './json.js';
+import type { DeepReadonly, JsonValue } from './json.js';
 import { planFrame, renderPlan, skinPaletteOf } from './render.js';
 import type { RenderOptions, RenderPlan, ResolvedOverride } from './render.js';
 import type { DocumentView } from './view.js';
@@ -27,16 +27,77 @@ const overrideDesc = (o: ResolvedOverride): JsonValue => ({
   erase: o.erase === undefined ? null : imageDesc(o.erase),
 });
 
+/** A part override of this frame: like {@link overrideDesc} plus the target part, read from the view. */
+function partOverrideDesc(view: DocumentView, o: DeepReadonly<Override>): JsonValue {
+  const img = (id: ImageId | undefined): JsonValue => {
+    if (id === undefined) return null;
+    const i = view.image(id);
+    return i === undefined ? `missing:${id}` : imageDesc(i);
+  };
+  return {
+    id: o.id,
+    target: o.target,
+    anchor: o.anchor,
+    set: img(o.set),
+    erase: img(o.erase),
+  };
+}
+
 function describe(view: DocumentView, plan: RenderPlan, opts: RenderOptions): JsonValue {
   const meta = view.doc.meta;
   const hasParts = plan.parts.length > 0;
   const palette = meta.colorMode === 'indexed' || plan.skin !== undefined;
   const skinPalette = skinPaletteOf(view, plan.skin);
-  const images: Record<string, JsonValue> = {};
+  let rig: JsonValue = null;
   if (hasParts) {
-    for (const id of view.imageIds()) {
-      const img = view.image(id);
-      if (img !== undefined) images[id] = imageDesc(img);
+    const src = plan.source;
+    const layers = plan.parts.map((p) => ({ id: p.layer.id, opacity: p.opacity }));
+    const renderKey = opts.rig?.renderKey;
+    if (renderKey === undefined) {
+      // An unknown renderer may read anything: every image and the whole animation node.
+      const images: Record<string, JsonValue> = {};
+      for (const id of view.imageIds()) {
+        const img = view.image(id);
+        if (img !== undefined) images[id] = imageDesc(img);
+      }
+      rig = {
+        present: opts.rig !== undefined,
+        layers,
+        animation: src,
+        frameIndex: plan.frameIndex,
+        definition: view.doc.rig ?? null,
+        images,
+      };
+    } else {
+      // The renderer says it is rig's `renderParts` (T3.3) by its `renderKey`, which reads: the rig,
+      // the variant images, every frame's bone and part keys (interpolation looks at the
+      // neighbouring keys), loop, quantum and direction, and this frame's part overrides with their
+      // images (described like the final overrides: set and erase with image kind and hash).
+      const partOverrides = src.overrides.filter(
+        (o) => o.frameId === plan.frame.id && o.target !== 'final',
+      );
+      const variants: Record<string, JsonValue> = {};
+      for (const p of view.doc.rig?.parts ?? []) {
+        for (const v of p.variants) {
+          const img = view.image(v.imageId);
+          variants[v.imageId] = img === undefined ? null : imageDesc(img);
+        }
+      }
+      rig = {
+        present: true,
+        renderer: renderKey,
+        layers,
+        animation: {
+          direction: src.direction ?? null,
+          loop: src.loop,
+          angleQuantum: src.angleQuantum ?? null,
+          keys: src.frames.map((f) => ({ bone: f.boneKeys, part: f.partKeys })),
+          partOverrides: partOverrides.map((o) => partOverrideDesc(view, o)),
+        },
+        frameIndex: plan.frameIndex,
+        definition: view.doc.rig ?? null,
+        variants,
+      };
     }
   }
   const d = {
@@ -56,17 +117,7 @@ function describe(view: DocumentView, plan: RenderPlan, opts: RenderOptions): Js
     rigAt: hasParts ? plan.rigAt : null,
     postPasses: plan.postPasses ?? null,
     finals: plan.finals.map(overrideDesc),
-    // Rig input placeholder (T3.3 refines it): everything the part pipeline may read.
-    rig: hasParts
-      ? {
-          present: opts.rig !== undefined,
-          layers: plan.parts.map((p) => ({ id: p.layer.id, opacity: p.opacity })),
-          animation: plan.source,
-          frameIndex: plan.frameIndex,
-          definition: view.doc.rig ?? null,
-          images,
-        }
-      : null,
+    rig,
     palette: palette ? (plan.palette ?? null) : null,
     skin: plan.skin ?? 'base',
     skinPalette: skinPalette ?? null,
@@ -81,9 +132,15 @@ function describe(view: DocumentView, plan: RenderPlan, opts: RenderOptions): Js
  * id, offset and final opacity (layer chain times cel opacity), the post-passes config, the final
  * overrides of the frame (id, anchor, set and erase image hashes, in order), the active palette
  * (indexed documents and skins), the skin (or `base`) and its palette, and, when the frame has part
- * layers, the position of the rig block among the pixel layers and the rig input placeholder (part
- * layers with opacity, the authored animation node, the frame index, `doc.rig`, the hash of every
- * image, and whether the renderer exists). A mirror's part overrides are not in the key yet (T3.6).
+ * layers, the position of the rig block among the pixel layers and the inputs of the part pipeline
+ * (part layers with opacity, whether the renderer exists, the renderer's `renderKey`, the source
+ * animation's direction, loop, quantum and the bone and part keys of all its frames, this frame's part
+ * overrides (id, target, anchor, set and erase image hashes, in order), the frame index, `doc.rig`,
+ * and the hashes of the variant images). Durations, markers, `baseHash`, images nothing draws and
+ * other frames' overrides are not in it. That narrowing applies only to a renderer that gives a
+ * `renderKey` (`createRigRenderer` does); for one without a key the key holds the whole animation
+ * node and every image of the document, as it did before T3.3. A mirror's part overrides are not in
+ * the key yet (T3.6).
  *
  * Hence it changes iff an input that can reach the pixels changes: renaming a layer, editing a hidden
  * or filtered-out layer, or touching another animation leaves it unchanged. Throws like `renderFrame`

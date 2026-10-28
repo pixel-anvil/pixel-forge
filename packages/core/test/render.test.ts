@@ -1422,7 +1422,8 @@ describe('createFrameRenderer and renderInputKey', () => {
       const rig = new FakeRig(() => []);
       const withRig = key(s, { rig });
       expect(withRig).not.toBe(key(s));
-      // image pixels, part layer opacity and the animation node reach the key through the rig input
+      // a renderer without a `renderKey` is unknown: image pixels, part layer opacity and the
+      // animation node reach the key through the rig input (the conservative key)
       s.transact('e', (tx) =>
         tx.writeImage(IMG(0), (i) => (i as TiledImage).set(2, 1, [5, 5, 5, 255])),
       );

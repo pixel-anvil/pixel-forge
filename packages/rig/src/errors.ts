@@ -6,6 +6,8 @@ export type RigErrorCode =
   | 'UNKNOWN_FRAME' // the frame id is not in the animation, or the frame index is out of range
   | 'UNKNOWN_VIEW' // no view of the rig draws the requested direction (or the rig has no views)
   | 'BAD_QUANTUM' // angleQuantum is not a multiple of 0.25 in (0, 90] that divides 360
+  | 'UNKNOWN_VARIANT' // a part key names a variant the part does not have
+  | 'IMAGE_MISSING' // a variant or override image is not in the image lookup
   | 'BAD_VALUE'; // a non-finite angle, a non-integer or out-of-range offset or rest position, an unknown interp
 
 /**
