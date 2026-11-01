@@ -33,7 +33,7 @@ export const renderFrame = defineOp({
   summary:
     'Render one frame to an upscaled PNG on a checkerboard (long edge at most 1568 px), optionally with bone lines and pivot markers.',
   description:
-    'Use it to look at the result of an edit: vision judges gesture, proportions and readability, while lint owns precision (1 px gaps, off-palette pixels), so run lint.run for those. The image is `output.image` (PNG, base64): transports that support images show it as an image. Overlay: `bones` draws a yellow line from each bone pivot to its tip, `pivots` draws a red square on each snapped pivot pixel; both need a rig, and `output.bones` lists the same points as numbers. Transparent pixels show a grey checkerboard. Mirror animations are rendered mirrored, with the overlay mirrored too.',
+    'Look at the result of an edit: vision judges gesture, proportions and readability, lint.run owns precision (1 px gaps, off-palette pixels). The image is `output.image` (PNG, base64). `bones` draws a yellow line from each bone pivot to its tip, `pivots` a red square on each snapped pivot pixel (both need a rig; `output.bones` lists the points as numbers). Transparent pixels show a grey checkerboard.',
   input: z.strictObject({
     doc: DocRef,
     animation: AnimRef,

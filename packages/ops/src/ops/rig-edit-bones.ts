@@ -91,7 +91,7 @@ export const rigEditBones = defineOp({
   summary:
     'Edit the skeleton: add/delete/reparent/rename bones, set length and rest pose per view, add/rename/delete views.',
   description:
-    'Edits run in order inside one undo step; one failure undoes the whole call, and later edits can name bones or views added earlier. Deleting never destroys art: a bone with parts or (without cascade) children is refused. Reparenting keeps the art in place. Rest x/y: root = canvas pivot, child = offset from the parent pivot; angle in deg clockwise relative to the parent. For a standard skeleton use rig_apply_template. Bone and part keys of deleted bones go with them.',
+    'Edits run in order in one undo step; one failure undoes all. Deleting never destroys art: a bone with parts or (without cascade) children is refused. Reparenting keeps the art in place. Rest x/y: root = canvas pivot, child = offset from the parent pivot; angle in deg clockwise relative to the parent. For a standard skeleton use rig_apply_template.',
   input: z.strictObject({
     doc: DocRef,
     edits: z.array(BoneEdit).min(1).max(100).describe('Edits, applied in order.'),

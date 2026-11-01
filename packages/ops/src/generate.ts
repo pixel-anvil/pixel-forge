@@ -296,6 +296,8 @@ export function operationsMarkdown(registry: OpRegistry): string {
     '',
     'A call returns `{"ok": true, "op", "output", "doc"?, "warnings"?}` or `{"ok": false, "op", "error"}`. `doc` is `{id, version, undoEntry, canUndo, canRedo}` for ops on a document. `warnings` (present only when non-empty) lists problems that happened **after** the change was committed, such as a change listener of the document throwing: the op succeeded, the change is applied and in `doc.undoEntry`.',
     '',
+    'Over MCP (`pf mcp`, `tools/list` carries no `outputSchema`) a success is that envelope as compact JSON in a text block; an output with a top-level `image` also returns an `image` content block and its `data` is left out of the text. A failure is a tool result with `isError: true` whose text is the error object `{"code", "message", "details"}`; it is never a protocol error.',
+    '',
     '## Safety classes',
     '',
     '| Class | Meaning |',

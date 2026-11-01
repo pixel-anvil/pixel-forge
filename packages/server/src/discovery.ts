@@ -15,6 +15,12 @@ import { join } from 'node:path';
 import { OpError } from '@pixel-forge/ops';
 import { isProcessAlive } from './lockfile.js';
 
+/**
+ * The wire protocol version this build speaks. `pf serve` writes it to `server.json`; a client
+ * (`pf mcp`) forwards only to a server whose `protocolVersion` equals it. Nothing listens yet (M2).
+ */
+export const SERVER_PROTOCOL_VERSION = 1;
+
 /** The content of `server.json`. */
 export interface ServerInfo {
   /** Process id of `pf serve`. */

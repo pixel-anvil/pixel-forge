@@ -2,9 +2,9 @@
 
 DocumentHost, lockfiles and discovery, WS sync, HTTP, MCP transports, providers, keychain and workspace roots.
 
-**Depends on:** `ops`, `io` (only for the Node `FileSystem` and `Clock` of `@pixel-forge/io/node`)
+**Depends on:** `ops`, `io` (only for the Node `FileSystem` and `Clock` of `@pixel-forge/io/node`), and the npm package `@modelcontextprotocol/sdk` (1.x)
 
-**Status:** T5.4 done (DocumentHost, lockfiles, `server.json` helpers, workspace roots). Transports, sync, providers and keychain are later cards.
+**Status:** T5.4 done (DocumentHost, lockfiles, `server.json` helpers, workspace roots). T5.5 done (MCP stdio server). HTTP, WS sync, providers and keychain are later cards. `pf mcp` (flags, SIGINT/SIGTERM) is T5.6a.
 
 ## DocumentHost
 
@@ -28,6 +28,31 @@ await host.dispose();
 
 `writeServerInfo`, `readServerInfo`, `discoverServer`, `removeServerInfo` manage `<baseDir>/server.json` `{pid, port, token, protocolVersion}` (mode 0600, written by rename). `discoverServer` returns the running server, or `undefined` and deletes a stale (dead pid) or invalid entry. Nothing listens yet.
 
+## MCP server
+
+`createMcpServer({host, registry, trace?, baseDir?, now?, serverInfo?})` returns a handle `{server, forwardedTo, tools, closed, close()}`; `server` is the SDK's low-level `Server`, ready to `connect` to any transport (tests use `InMemoryTransport`). `serveStdio({host, registry, trace?, stdin?, stdout?})` creates it and connects it to stdin/stdout; `closed` resolves when stdin ends or `close()` is called. Closing the connection on any transport disposes the host (documents closed, lockfiles released). Signal handling is the CLI's: call `handle.close()` on SIGINT and SIGTERM.
+
+```ts
+const host = createDocumentHost({ roots: resolveWorkspaceRoots({ roots: flags }) });
+const mcp = await serveStdio({
+  host,
+  registry,
+  trace: (line) => process.stderr.write(`${line}\n`),
+});
+await mcp.closed; // stdin ended (the client left): the host is already disposed
+```
+
+- **Tools.** `tools/list` is `mcpTools(registry)` without `outputSchema` (about 75 KB for 34 tools). A call is routed by `_meta['pixel-forge/op']` through `registry.call`, so it is one transaction and one undo entry labelled `AI: <op name>` (none when it changes nothing). Calls run one at a time. The result text is the compact JSON envelope `{ok, op, output, doc?, warnings?}` (no `structuredContent`). An output with a top-level `image` also yields an `image` content block (`image/png`, long edge at most 1568) and only `image.data` is dropped from the text.
+- **Errors.** An op failure, an unknown tool and a forwarded call are tool results with `isError: true` whose text is the `OpErrorJson` `{code, message, details}`. Nothing here throws a protocol error for a tool call.
+- **Forwarding.** At startup `discoverServer(baseDir)` looks for a running `pf serve`; if its `protocolVersion` equals `SERVER_PROTOCOL_VERSION`, every tool call returns `NOT_IMPLEMENTED` (resources too) until M2 (KNOWN_ISSUES SRV-02, `handle.forwardedTo`). Otherwise the documents are hosted in this process. `baseDir` defaults to the host's, else `~/.pixel-forge`.
+- **Trace.** stdout belongs to the protocol; the server never writes to it. `trace` is a sink `(line) => void`; it gets one JSON line per tool call, `{at, tool, op, doc?, ms, ok, code?, undoEntry?}`, never tool input or image data. The CLI points it at stderr or a file. A throwing sink is ignored; a failing `dispose()` is reported to it as `{event: 'dispose-failed'}`.
+- **Resources** (read-only JSON): `pf://docs`, `pf://doc/{id}/summary` (the `doc.summary` output), `/palette` (colour mode, lock, palettes with hex colours), `/rig` (the `rig` section of the summary), `/animations/{group}/{direction}` and `/animations/{group}` (frames: duration, markers, events, root motion; a mirror shows its source's frames). An unknown document, animation or URI is an MCP error `-32002` (`RESOURCE_NOT_FOUND`); `resources/list` names the open documents. See KNOWN_ISSUES MCP-03 for what the rig resource lacks.
+- Why the low-level `Server`: tool schemas are already JSON Schema from the registry (KNOWN_ISSUES MCP-01).
+
 ## Tests
+
+`test/mcp-*.test.ts`: an in-process SDK `Client` over `InMemoryTransport` on a real `DocumentHost` in a temp workspace. `mcp-scenarios.ts` holds one scenario per tool and `mcp-tools.test.ts` fails when `tools/list` has a tool without one (add it when you add an op, `docs/ai/PLAYBOOKS.md`). The real-process test (`mcp-stdio.test.ts`, `test/fixtures/mcp-child.mjs`) speaks raw JSON-RPC to a spawned server, checks that stdout is protocol only and that closing stdin releases the lock.
+
+### Ownership tests
 
 Two-process tests run `test/fixtures/child.mjs` against the built `dist/` (`pnpm build` first; `pnpm test` at the root builds through `typecheck`).

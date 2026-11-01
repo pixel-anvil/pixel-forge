@@ -168,10 +168,9 @@ function setCel(
 export const pixelsWriteGrid = defineOp({
   name: 'pixels.writeGrid',
   safety: 'mutate',
-  summary:
-    'Paint a text grid (at most 32x32 px) at (x, y) of a frame: "." transparent, "_" keep, other symbols from "legend". Rig frames get overrides; flat frames get a layer cel.',
+  summary: 'Paint a text grid (at most 32x32 px) at (x, y) of a frame; symbols come from "legend".',
   description:
-    'Pass `rows` (equally long strings) and `legend` (symbol to "#rrggbb" or "#rrggbbaa"), as pixels.readGrid returns them. "." writes a transparent pixel and "_" leaves the pixel as it is. On a document with part layers (a rig) the grid edits the rendered frame and the differences are stored as overrides: a part override where a stroke lies inside one part, a final override otherwise; they survive re-posing and are listed by override.list (a new part override can make an earlier final override stale: see `newlyStale`). Otherwise name the pixel `layer` (optional when there is only one): its cel is rewritten. A palette-locked or indexed document only takes palette colours. Writing what is already there changes nothing. Check the result with render_frame and lint.',
+    '"." writes transparent, "_" keeps the pixel. On a rig (part layers) the differences from the rendered frame become overrides (a part override inside one part, else a final one) that survive re-posing (see override.list, `newlyStale`). Otherwise name the pixel `layer` (optional if only one): its cel is rewritten. Palette-locked and indexed documents only take palette colours.',
   input: z.strictObject({
     doc: DocRef,
     animation: AnimRef,

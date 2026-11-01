@@ -1,4 +1,4 @@
-// rig.bake: destructive (confirm text names what "replace" consumes and drops), bake equals the rig render.
+// rig.bake: destructive (confirm text names what "replace" merges and drops), bake equals the rig render.
 import { documentHash, imageHash, renderFrame, validate } from '@pixel-forge/core';
 import { describe, expect, it } from 'vitest';
 import { exampleInput, registry, rigBake } from '../src/index.js';
@@ -28,16 +28,14 @@ describe('rig.bake', () => {
       registry.execute('rig.bake', need(rigBake.examples[0]).input, run),
     );
     expect(refused.code).toBe('CONFIRM_REQUIRED');
-    expect(refused.message).toMatch(/consumes the cels of the other exported pixel layers/);
-    expect(refused.message).toMatch(
-      /drops the animation's bone keys, part keys, overrides and post-passes/,
-    );
-    expect(refused.details.warning).toEqual(expect.stringContaining('consumes'));
+    expect(refused.message).toMatch(/merges other exported layers/);
+    expect(refused.message).toMatch(/drops the animation's keys, overrides and post-passes/);
+    expect(refused.details.warning).toEqual(expect.stringContaining('merges'));
     expect(documentHash(hero.store)).toBe(hash);
     const tool = (await import('../src/index.js'))
       .mcpTools(registry)
       .find((t) => t.name === 'rig_bake');
-    expect(tool?.description).toContain('consumes the cels of the other exported pixel layers');
+    expect(tool?.description).toContain('merges other exported layers');
   });
 
   it('runs its example (mode new): the baked frames equal the rig render, one undo step', async () => {

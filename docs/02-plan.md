@@ -177,7 +177,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T5.2b | ops with logic + P-06 ops | sonnet | medium | M | T5.1 | ∥ | ☑ |
 | T5.3 | ops: text grid read/write + render/contact sheet with overlays | sonnet | high | M | T5.1, T3.8, T4.3 | ∥ | ☑ |
 | T5.4 | server: DocumentHost, lockfiles, discovery, workspace roots | sonnet | high | M | T5.1 | ∥ | ☑ |
-| T5.5 | MCP stdio server | sonnet | high | M | T5.2a, T5.2b, T5.3, T5.4 | | ☐ |
+| T5.5 | MCP stdio server | sonnet | high | M | T5.2a, T5.2b, T5.3, T5.4 | | ☑ |
 | T5.6a | CLI shell + `check` harness + `tsup` bundle + `pf` on PATH | sonnet | medium | M | T5.5 | | ☐ |
 | T5.6b | CLI subcommands from registry metadata (+ override import/list/resolve, `pf godot install`) | haiku | medium | S | T5.6a | ∥ | ☐ |
 | T5.7 | Claude Code setup guide + `.mcp.json` | haiku | low | S | T5.6a | ∥ | ☐ |
@@ -777,6 +777,11 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - **each mutating call adds exactly one undo entry labelled `AI: <tool>`**;
   - images respect the MIME type and size limit;
   - a destructive op without `confirm` is refused.
+- **Notes (2026-11-01)** — ☑ Sonnet/high; about 285k tokens, 17 min. `createMcpServer` and `serveStdio` in `server`, on SDK 1.32.2's low-level `Server` (MCP-01). 34 tools, all called in tests; `tools/list` is 75 KB without `outputSchema` (was 106 KB). Server coverage 95%, now enforced.
+  - Undo label stays `AI: <op name>`, no entry for a no-op (FR-AI-14 updated). Success text is the ops envelope, error text the bare `OpErrorJson`; `isError` tells them apart. Image block follows the text and only `image.data` is dropped.
+  - Beyond the card: ten descriptions trimmed to at most 800 characters (test-held, MCP-04), `SERVER_PROTOCOL_VERSION = 1`, `/animations/{group}` for undirected animations, `toHex` exported from ops. Calls run one at a time (MCP-02).
+  - For T5.6a: pass `trace` and call `handle.close()` on SIGINT/SIGTERM; the `--trace` flag and `pf mcp` are yours. While a compatible `pf serve` runs, every call gets `NOT_IMPLEMENTED` (SRV-02).
+  - For T5.8: no read op exposes poses, so the `rig` resource shows no angles (MCP-03); watch whether that hurts.
 
 #### T5.6a CLI shell + harness + build  [sonnet] [M]
 - **Deliverables**:

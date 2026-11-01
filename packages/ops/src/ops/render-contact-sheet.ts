@@ -19,7 +19,7 @@ export const renderContactSheet = defineOp({
   summary:
     'Render the frames of some or all animations as one labelled PNG contact sheet (long edge at most 1568 px), optionally with bone lines and pivot markers.',
   description:
-    'Use it to judge motion across frames (before/after a re-pose, a whole walk cycle): vision judges gesture and readability, lint owns precision (1 px gaps, off-palette pixels). Each tile is labelled "GROUP/DIRECTION #n" (n = 0-based frame index, the same number frames are addressed by). The scale is the largest that fits 1568 px, or lower than `scale` when that does not fit. The image is `output.image` (PNG, base64). `bones` draws yellow bone lines and `pivots` red pivot squares on every tile (they need a rig).',
+    'Judge motion across frames (before/after a re-pose, a walk cycle): vision judges gesture and readability, lint owns precision (1 px gaps, off-palette pixels). Tiles are labelled "GROUP/DIRECTION #n" (n = 0-based frame index). The scale is the largest that fits 1568 px, or lower than `scale`. The image is `output.image` (PNG, base64). `bones` draws yellow bone lines and `pivots` red pivot squares (need a rig).',
   input: z.strictObject({
     doc: DocRef,
     animations: z

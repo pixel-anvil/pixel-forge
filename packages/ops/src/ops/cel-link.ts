@@ -54,7 +54,7 @@ export const celLink = defineOp({
   summary:
     'Link a layer\'s cel to another frame\'s cel (mode "link"), make a linked cel independent ("unlink"), or link all identical cels ("linkIdentical").',
   description:
-    'A linked cel shows the same pixels as its target (edit one, both change; links go across animations, one hop only: linking to a link links to its target). "link" needs animation, frame (the cel that becomes the link) and source.frame (the cel it shows; source.animation defaults to animation). "unlink" copies the pixels into the cel (animation, frame). "linkIdentical" links, per layer, every cel with the same pixels, offset and opacity to the first one in document order (animation limits the scan to one animation).',
+    'A linked cel shows the same pixels as its target; links cross animations, one hop (linking to a link links to its target). "link": animation, frame (the cel that becomes the link), source.frame (source.animation defaults to animation). "unlink" copies the pixels into the cel. "linkIdentical" links, per layer, every cel with identical pixels, offset and opacity to the first in document order.',
   input: z.strictObject({
     doc: DocRef,
     layer: LayerRef,

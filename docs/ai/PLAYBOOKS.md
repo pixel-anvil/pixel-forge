@@ -36,7 +36,7 @@ An op is one file in `packages/ops/src/ops/` that calls `defineOp`. The registry
 3. **Create** `packages/ops/src/ops/<area>-<verb>.ts` (file name in kebab case; op name `area.verbNoun`, e.g. `frame.duplicate`, `rig.setPivot`). Use the template below:
    - `input`: `z.strictObject({...})`, first field `doc: DocRef` for any op on a document; take references with the shared schemas from `../refs.js` (`AnimRef`, `FrameRef`, `LayerRef`, `BoneRef`, `PartRef`, `ViewRef`, `VariantRef`); `.describe('...')` **every** field (a test enforces it); use `z.record(z.string(), X)` for maps, never schema's `record` helper or `z.custom` (no JSON Schema).
    - `output`: `z.strictObject({...})` of plain JSON (ids, indices, names, counts); describe the fields.
-   - `summary`: one imperative line, at most 200 characters, with units (`deg clockwise`, `int px`). `description`: optional, when to use it and what to call next.
+   - `summary`: one imperative line, at most 200 characters, with units (`deg clockwise`, `int px`). `description`: optional, when to use it and what to call next. The whole MCP tool description (summary, description, `confirmText`, safety note, conventions, first example) must stay **at most 800 characters**; `packages/server/test/mcp-tools.test.ts` fails otherwise, so do not repeat what the field `.describe()` texts already say.
    - `examples`: at least one, against the hero fixture (`doc: 'doc_g1ed5q'`, animation `{ group: 'default' }`, frame `0`, bones like `upper_arm_r`, parts like `head`, `lower_arm_r` with variants `default`, `sleeve`). They are checked against the schemas when the module loads, and the first one is shown in the MCP tool description.
 4. **Write the handler** (synchronous unless `io`):
    - change the document only through `ctx.tx` (pass it to core functions: `duplicateFrame(ctx.tx, ...)`); never call `store.begin`, `commit`, `cancel`, `undo` (except history ops, see below);
@@ -46,7 +46,8 @@ An op is one file in `packages/ops/src/ops/` that calls `defineOp`. The registry
    - return exactly the output shape (the registry rejects anything else as `INTERNAL`).
 5. **Register** it: import and append to `ALL_OPS` in `packages/ops/src/ops/index.ts`, add it to the `export { ... } from './<file>.js'` lines there, and to the `./ops/index.js` export list in `packages/ops/src/index.ts`.
 6. **Test** in `packages/ops/test/<area>-<verb>.test.ts` with the helpers in `test/helpers.ts` (`openHero`, `rejection`, `need`, `HERO_ID`): one **schema test** (bad input -> `BAD_INPUT` with the issue path) and one **example test** (run `examples[0]` on the hero; for mutate ops check the history has exactly one entry `AI: <op>` and that `store.undo()` restores `documentHash`). Add a test per refusal you throw yourself.
-7. `pnpm gen` (rewrites `packages/ops/generated/*.json` and `docs/contracts/OPERATIONS.md`; commit them), `pnpm changeset`, then `pnpm vitest run --project ops`, `pnpm lint`, `pnpm typecheck`, `pnpm gen:check`.
+7. **MCP scenario**: add one entry for the new tool to `SCENARIOS` in `packages/server/test/mcp-scenarios.ts` (how to set up a document, the call, and whether it records one `AI: <op>` undo entry or why not); `mcp-tools.test.ts` fails when a listed tool has none. `pf://` resources need nothing unless the op adds a new kind of document data.
+8. `pnpm gen` (rewrites `packages/ops/generated/*.json` and `docs/contracts/OPERATIONS.md`; commit them), `pnpm changeset`, then `pnpm vitest run --project ops`, `pnpm lint`, `pnpm typecheck`, `pnpm gen:check`.
 
 **Worked example** (compiled and tested verbatim during T5.1). `packages/ops/src/ops/frame-duplicate.ts`:
 

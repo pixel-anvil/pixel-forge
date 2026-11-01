@@ -14,7 +14,7 @@ export const partPaintOverlap = defineOp({
   summary:
     'Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite does not change.',
   description:
-    'For each joint with gaps (rig_joint_check), paints only pixels the upper part covers at rest, growing the variant image and shifting its pivot to keep the part in place. The colour is the variant\'s most frequent opaque one unless you pass color ([r,g,b,a] in RGBA documents, a palette index in indexed ones). Existing pixels are kept. "uncovered" lists joints that no hidden paint can close (they need a visible art change); "skipped" joints with several parts per bone or a part drawn rotated at rest. Check with rig_joint_check afterwards.',
+    'For each joint with gaps (rig_joint_check), paints only pixels the upper part covers at rest, growing the variant image and shifting its pivot to keep the part in place. The colour is the variant\'s most frequent opaque one unless you pass color ([r,g,b,a], or a palette index when indexed). "uncovered" lists joints no hidden paint can close (they need a visible art change); "skipped" joints with several parts per bone or a part rotated at rest. Re-run rig_joint_check.',
   input: z.strictObject({
     doc: DocRef,
     view: ViewRef.optional().describe('Rig view to check (default: the first view).'),

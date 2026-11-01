@@ -1,0 +1,318 @@
+// One scenario per MCP tool: how to set up a document, what to call and what the undo stack must
+// show afterwards. mcp-tools.test.ts checks the table against tools/list.
+import { expect } from 'vitest';
+import { HERO_ID } from './mcp-helpers.js';
+import type { McpFixture } from './mcp-helpers.js';
+
+export type Base = 'none' | 'hero' | 'flat' | 'flatRig';
+
+export interface Scenario {
+  /** The document the call works on (`none`: the call makes or opens its own). */
+  readonly base: Base;
+  /** Extra tool calls to run (and not count) before the call under test. */
+  readonly setup?: (f: McpFixture, doc: string, memo: Record<string, unknown>) => Promise<void>;
+  readonly args: (ctx: {
+    doc: string;
+    root: string;
+    memo: Record<string, unknown>;
+  }) => Record<string, unknown>;
+  /** `one`: exactly one new entry labelled `AI: <op>`; otherwise why the call records none. */
+  readonly entry: 'one' | { readonly none: string };
+}
+
+const READ = { none: 'read-only' } as const;
+const IMAGE = { none: 'read-only (returns an image)' } as const;
+const run = [
+  [0, 0],
+  [0, 1],
+  [0, 2],
+  [1, 0],
+];
+const frame0 = { group: 'default' };
+
+export const SCENARIOS: Record<string, Scenario> = {
+  anim_create: {
+    base: 'hero',
+    args: ({ doc }) => ({ doc, group: 'run', direction: 'side', frames: 4 }),
+    entry: 'one',
+  },
+  anim_update: {
+    base: 'hero',
+    args: ({ doc }) => ({ doc, animation: frame0, loop: 'pingpong' }),
+    entry: 'one',
+  },
+  cel_link: {
+    base: 'flat',
+    setup: async (f, doc) => {
+      // the same first cell again, as a separate image: identical pixels to link
+      await f.call('import_file', {
+        doc,
+        file: `${f.root}/run.png`,
+        cell: [64, 64],
+        animations: [{ group: 'run_copy', cells: [[0, 0]] }],
+      });
+    },
+    args: ({ doc }) => ({ doc, layer: 'body', mode: 'linkIdentical' }),
+    entry: 'one',
+  },
+  doc_create: {
+    base: 'none',
+    args: () => ({ name: 'fresh', width: 32, height: 32 }),
+    entry: { none: 'creates a new document; its history starts empty' },
+  },
+  doc_open: {
+    base: 'none',
+    args: ({ root }) => ({ path: `${root}/hero.pxf` }),
+    entry: { none: 'opens a file; its history starts empty' },
+  },
+  doc_save: {
+    base: 'hero',
+    args: ({ doc, root }) => ({ doc, path: `${root}/hero-v2.pxf` }),
+    entry: { none: 'writes a file, the document is not changed' },
+  },
+  doc_set_color_mode: {
+    base: 'hero',
+    setup: (f, doc) => {
+      // M1a has no palette tool: give the document one directly, as the ops tests do
+      f.doc(doc).store.transact('palette', (tx) => {
+        const id = tx.newId('palette');
+        tx.update((d) => {
+          d.palettes.push({
+            id,
+            name: 'test',
+            colors: [[0, 0, 0, 0]],
+            ramps: [],
+          });
+          d.activePaletteId = id;
+        });
+      });
+      return Promise.resolve();
+    },
+    args: ({ doc }) => ({ doc, paletteLocked: true }),
+    entry: 'one',
+  },
+  doc_summary: { base: 'hero', args: ({ doc }) => ({ doc }), entry: READ },
+  export: {
+    base: 'hero',
+    args: ({ doc, root }) => ({ doc, path: `${root}/out/hero.png`, scale: 2 }),
+    entry: { none: 'writes files, the document is not changed' },
+  },
+  frame_add: {
+    base: 'hero',
+    args: ({ doc }) => ({ doc, animation: frame0, frame: 0 }),
+    entry: 'one',
+  },
+  frame_delete: {
+    base: 'hero',
+    setup: async (f, doc) => {
+      await f.call('frame_add', { doc, animation: frame0, frame: 0 });
+    },
+    args: ({ doc }) => ({ doc, animation: frame0, frame: 1 }),
+    entry: 'one',
+  },
+  frame_duplicate: {
+    base: 'hero',
+    args: ({ doc }) => ({ doc, animation: frame0, frame: 0 }),
+    entry: 'one',
+  },
+  frame_set_meta: {
+    base: 'hero',
+    args: ({ doc }) => ({ doc, animation: frame0, frame: 0, durationMs: 200, events: ['step'] }),
+    entry: 'one',
+  },
+  import_file: {
+    base: 'flat',
+    args: ({ doc, root }) => ({
+      doc,
+      file: `${root}/idle.png`,
+      cell: [64, 64],
+      animations: [
+        {
+          group: 'idle',
+          cells: [[0, 0]],
+        },
+      ],
+    }),
+    entry: 'one',
+  },
+  layer_update: {
+    base: 'hero',
+    args: ({ doc }) => ({ doc, layer: 'head', visible: false }),
+    entry: 'one',
+  },
+  lint: { base: 'hero', args: ({ doc }) => ({ doc }), entry: READ },
+  override_list: { base: 'hero', args: ({ doc }) => ({ doc }), entry: READ },
+  override_resolve: {
+    base: 'hero',
+    setup: async (f, doc, memo) => {
+      await f.call('pixels_write_grid', {
+        doc,
+        animation: frame0,
+        frame: 0,
+        x: 26,
+        y: 4,
+        rows: ['21'],
+        legend: { '1': '#e8be96', '2': '#1e1e28' },
+      });
+      const listed = await f.call('override_list', { doc });
+      memo.overrides = (listed.json.output as { valid: string[] }).valid;
+    },
+    args: ({ doc, memo }) => ({ doc, action: 'discard', overrides: memo.overrides }),
+    entry: 'one',
+  },
+  part_paint_overlap: {
+    base: 'hero',
+    setup: async (f, doc) => {
+      await f.call('rig_set_pivot', { doc, part: 'lower_arm_r', pivot: { x: 3, y: 1 } });
+    },
+    args: ({ doc }) => ({ doc, bones: ['lower_arm_r'] }),
+    entry: 'one',
+  },
+  part_split: {
+    base: 'flatRig',
+    args: ({ doc }) => ({
+      doc,
+      layer: 'body',
+      animation: { group: 'run' },
+      frame: 0,
+      selection: { kind: 'rect', x: 24, y: 16, w: 18, h: 12 },
+      partName: 'part:head',
+    }),
+    entry: 'one',
+  },
+  pixels_read_grid: {
+    base: 'hero',
+    args: ({ doc }) => ({ doc, animation: frame0, frame: 0, x: 21, y: 0, width: 8, height: 6 }),
+    entry: READ,
+  },
+  pixels_write_grid: {
+    base: 'hero',
+    args: ({ doc }) => ({
+      doc,
+      animation: frame0,
+      frame: 0,
+      x: 26,
+      y: 4,
+      rows: ['21'],
+      legend: { '1': '#e8be96', '2': '#1e1e28' },
+    }),
+    entry: 'one',
+  },
+  redo: {
+    base: 'hero',
+    setup: async (f, doc) => {
+      await f.call('frame_add', { doc, animation: frame0, frame: 0 });
+      await f.call('undo', { doc });
+    },
+    args: ({ doc }) => ({ doc }),
+    entry: { none: 'moves along the history, adds no entry of its own' },
+  },
+  render_contact_sheet: {
+    base: 'hero',
+    args: ({ doc }) => ({ doc, bones: true, pivots: true }),
+    entry: IMAGE,
+  },
+  render_frame: {
+    base: 'hero',
+    args: ({ doc }) => ({ doc, animation: frame0, frame: 0, scale: 8, bones: true, pivots: true }),
+    entry: IMAGE,
+  },
+  rig_apply_template: {
+    base: 'flat',
+    args: ({ doc }) => ({ doc, template: 'humanoid-side', viewName: 'side', height: 60 }),
+    entry: 'one',
+  },
+  rig_bake: {
+    base: 'hero',
+    args: ({ doc }) => ({ doc, animation: frame0, mode: 'new', confirm: true }),
+    entry: 'one',
+  },
+  rig_bind_parts: {
+    base: 'flatRig',
+    setup: async (f, doc) => {
+      await f.call('part_split', {
+        doc,
+        layer: 'body',
+        animation: { group: 'run' },
+        frame: 0,
+        selection: { kind: 'rect', x: 24, y: 16, w: 18, h: 12 },
+        name: 'cap',
+        bind: false,
+      });
+    },
+    args: ({ doc }) => ({
+      doc,
+      layers: ['cap'],
+      rawNames: { cap: 'part:head@cap' },
+      byOverlap: false,
+    }),
+    entry: 'one',
+  },
+  rig_edit_bones: {
+    base: 'hero',
+    args: ({ doc }) => ({
+      doc,
+      edits: [{ action: 'addBone', name: 'tail', parent: 'torso', length: 8 }],
+    }),
+    entry: 'one',
+  },
+  rig_joint_check: { base: 'hero', args: ({ doc }) => ({ doc }), entry: READ },
+  rig_mirror_animation: {
+    base: 'hero',
+    args: ({ doc }) => ({ doc, source: frame0, direction: 'left' }),
+    entry: 'one',
+  },
+  rig_set_pivot: {
+    base: 'hero',
+    args: ({ doc }) => ({ doc, part: 'lower_arm_r', pivot: { x: 3, y: 1 } }),
+    entry: 'one',
+  },
+  rig_set_pose: {
+    base: 'hero',
+    args: ({ doc }) => ({
+      doc,
+      animation: frame0,
+      frame: 0,
+      bones: { upper_arm_r: { angle: -45 } },
+    }),
+    entry: 'one',
+  },
+  undo: {
+    base: 'hero',
+    setup: async (f, doc) => {
+      await f.call('frame_add', { doc, animation: frame0, frame: 0 });
+    },
+    args: ({ doc }) => ({ doc }),
+    entry: { none: 'reverts the newest entry, adds none' },
+  },
+};
+
+/** Opens the scenario's base document and returns its id. */
+export async function prepare(f: McpFixture, base: Base): Promise<string> {
+  if (base === 'none') return '';
+  if (base === 'hero') {
+    const opened = await f.call('doc_open', { path: f.hero });
+    expect(opened.isError, opened.text).toBe(false);
+    return HERO_ID;
+  }
+  const created = await f.call('doc_create', { name: 'flat', width: 64, height: 64 });
+  expect(created.isError, created.text).toBe(false);
+  const doc = (created.json.output as { doc: string }).doc;
+  const imported = await f.call('import_file', {
+    doc,
+    file: `${f.root}/run.png`,
+    cell: [64, 64],
+    animations: [{ group: 'run', cells: run }],
+  });
+  expect(imported.isError, imported.text).toBe(false);
+  if (base === 'flatRig') {
+    const rigged = await f.call('rig_apply_template', {
+      doc,
+      template: 'humanoid-side',
+      viewName: 'side',
+      height: 60,
+    });
+    expect(rigged.isError, rigged.text).toBe(false);
+  }
+  return doc;
+}

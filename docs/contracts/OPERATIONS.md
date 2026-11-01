@@ -10,6 +10,8 @@ Conventions: origin top-left, y down, angles in degrees clockwise, integer pixel
 
 A call returns `{"ok": true, "op", "output", "doc"?, "warnings"?}` or `{"ok": false, "op", "error"}`. `doc` is `{id, version, undoEntry, canUndo, canRedo}` for ops on a document. `warnings` (present only when non-empty) lists problems that happened **after** the change was committed, such as a change listener of the document throwing: the op succeeded, the change is applied and in `doc.undoEntry`.
 
+Over MCP (`pf mcp`, `tools/list` carries no `outputSchema`) a success is that envelope as compact JSON in a text block; an output with a top-level `image` also returns an `image` content block and its `data` is left out of the text. A failure is a tool result with `isError: true` whose text is the error object `{"code", "message", "details"}`; it is never a protocol error.
+
 ## Safety classes
 
 | Class | Meaning |
@@ -59,15 +61,15 @@ Every failure is `{"code", "message", "details"}`, identical on every transport.
 | [`frame.duplicate`](#frameduplicate) | mutate | `frame_duplicate` | `pf frame duplicate` | Duplicate one frame; the copy goes right after it, with linked cels and copied keys. |
 | [`frame.setMeta`](#framesetmeta) | mutate | `frame_set_meta` | `pf frame set-meta` | Set one frame's duration (ms), markers (name -> int px), events (names) and root motion (int px). |
 | [`io.export`](#ioexport) | io | `export` | `pf export` | Export animations as a spritesheet PNG plus a JSON description (Aseprite hash format). |
-| [`io.import`](#ioimport) | io | `import_file` | `pf import` | Import a PNG / grid spritesheet (pick cells and ranges per animation) or an .aseprite file into a document. |
+| [`io.import`](#ioimport) | io | `import_file` | `pf import` | Import a PNG spritesheet (cells per animation) or an .aseprite file into a document. |
 | [`layer.update`](#layerupdate) | mutate | `layer_update` | `pf layer update` | Rename a layer, or set its visible flag, opacity (0..255) or export flag. |
 | [`lint.run`](#lintrun) | read | `lint` | `pf lint` | Check the document and list findings (palette, orphan pixels, joint gaps, stale overrides, empty frames). |
 | [`override.list`](#overridelist) | read | `override_list` | `pf override list` | List overrides: stale ones (art under them changed) and ones that fail to render, apart. |
 | [`override.resolve`](#overrideresolve) | mutate | `override_resolve` | `pf override resolve` | Resolve overrides: "keep" them, "rebase" onto the current art, or "discard" them. |
 | [`part.paintOverlap`](#partpaintoverlap) | mutate | `part_paint_overlap` | `pf part paint-overlap` | Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite does not change. |
-| [`part.split`](#partsplit) | mutate | `part_split` | `pf part split` | Split a region (rect, lasso or flood, canvas px) of a flat layer's cel on one frame into a new layer, bound to a bone. |
+| [`part.split`](#partsplit) | mutate | `part_split` | `pf part split` | Split a region (rect, lasso or flood) of a flat layer's cel into a new layer bound to a bone. |
 | [`pixels.readGrid`](#pixelsreadgrid) | read | `pixels_read_grid` | `pf pixels read-grid` | Read a region (at most 64x64 px) of a frame as a text grid: one symbol per pixel, "." transparent, with a legend of the colours present. |
-| [`pixels.writeGrid`](#pixelswritegrid) | mutate | `pixels_write_grid` | `pf pixels write-grid` | Paint a text grid (at most 32x32 px) at (x, y) of a frame: "." transparent, "_" keep, other symbols from "legend". Rig frames get overrides; flat frames get a layer cel. |
+| [`pixels.writeGrid`](#pixelswritegrid) | mutate | `pixels_write_grid` | `pf pixels write-grid` | Paint a text grid (at most 32x32 px) at (x, y) of a frame; symbols come from "legend". |
 | [`render.contactSheet`](#rendercontactsheet) | read | `render_contact_sheet` | `pf render contact-sheet` | Render the frames of some or all animations as one labelled PNG contact sheet (long edge at most 1568 px), optionally with bone lines and pivot markers. |
 | [`render.frame`](#renderframe) | read | `render_frame` | `pf render frame` | Render one frame to an upscaled PNG on a checkerboard (long edge at most 1568 px), optionally with bone lines and pivot markers. |
 | [`rig.applyTemplate`](#rigapplytemplate) | mutate | `rig_apply_template` | `pf rig apply-template` | Apply a humanoid skeleton template: bones matched by name are reused, missing ones are created. |
@@ -166,7 +168,7 @@ Output:
 
 Link a layer's cel to another frame's cel (mode "link"), make a linked cel independent ("unlink"), or link all identical cels ("linkIdentical").
 
-A linked cel shows the same pixels as its target (edit one, both change; links go across animations, one hop only: linking to a link links to its target). "link" needs animation, frame (the cel that becomes the link) and source.frame (the cel it shows; source.animation defaults to animation). "unlink" copies the pixels into the cel (animation, frame). "linkIdentical" links, per layer, every cel with the same pixels, offset and opacity to the first one in document order (animation limits the scan to one animation).
+A linked cel shows the same pixels as its target; links cross animations, one hop (linking to a link links to its target). "link": animation, frame (the cel that becomes the link), source.frame (source.animation defaults to animation). "unlink" copies the pixels into the cel. "linkIdentical" links, per layer, every cel with identical pixels, offset and opacity to the first in document order.
 
 - Safety: `mutate`
 - MCP tool: `cel_link`
@@ -674,9 +676,9 @@ Output:
 
 ## io.import
 
-Import a PNG / grid spritesheet (pick cells and ranges per animation) or an .aseprite file into a document.
+Import a PNG spritesheet (cells per animation) or an .aseprite file into a document.
 
-format is guessed from the extension (.png -> spritesheet, .aseprite/.ase -> aseprite). Spritesheet: cell is [w, h] px (omit it for a single image: the whole PNG is one cell) and animations maps cells to animations, e.g. {"group": "move_gather", "cells": [{"row": 4, "col": "3-6"}]}; repeated cells become linked cels, empty cells empty frames; the cell's bottom-centre lands on the document origin. An optional outlineFile (same size) becomes a second layer. Aseprite: adds layers, tags (as animations) and the palette; reimport: true updates a file imported earlier, in place, by name. The canvas of an aseprite file must equal the document's. A failed import changes nothing.
+Format is guessed from the extension. Spritesheet: animations maps cells to animations; repeated cells become linked cels; the cell's bottom-centre lands on the document origin. Aseprite: adds layers, tags (as animations) and the palette; the canvas must equal the document's. A failed import changes nothing.
 
 - Safety: `io`
 - MCP tool: `import_file`
@@ -871,7 +873,7 @@ Output:
 
 Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite does not change.
 
-For each joint with gaps (rig_joint_check), paints only pixels the upper part covers at rest, growing the variant image and shifting its pivot to keep the part in place. The colour is the variant's most frequent opaque one unless you pass color ([r,g,b,a] in RGBA documents, a palette index in indexed ones). Existing pixels are kept. "uncovered" lists joints that no hidden paint can close (they need a visible art change); "skipped" joints with several parts per bone or a part drawn rotated at rest. Check with rig_joint_check afterwards.
+For each joint with gaps (rig_joint_check), paints only pixels the upper part covers at rest, growing the variant image and shifting its pivot to keep the part in place. The colour is the variant's most frequent opaque one unless you pass color ([r,g,b,a], or a palette index when indexed). "uncovered" lists joints no hidden paint can close (they need a visible art change); "skipped" joints with several parts per bone or a part rotated at rest. Re-run rig_joint_check.
 
 - Safety: `mutate`
 - MCP tool: `part_paint_overlap`
@@ -904,9 +906,9 @@ Close the elbow gap of the hero:
 
 ## part.split
 
-Split a region (rect, lasso or flood, canvas px) of a flat layer's cel on one frame into a new layer, bound to a bone.
+Split a region (rect, lasso or flood) of a flat layer's cel into a new layer bound to a bone.
 
-The pixels move into a new layer above the source and leave transparency behind; at rest the remainder plus the parts recomposite the source frame exactly. Name the target with partName ("part:upper_arm_r", "part:hand_r@open#side", or a bone name), else it binds by overlap with the bones when there is a clear winner (ambiguous or no overlap: it stays a pixel layer, see ambiguous/skipped). The part draws in every frame that renders the rig, not only this one: key it visible=false (rig_set_pose) on other frames. Then run rig_joint_check and part_paint_overlap.
+The pixels move into a new layer; the remainder plus the parts recomposite the frame. partName ("part:upper_arm_r", "part:hand_r@open#side": variant, view) binds it, else it binds by overlap if there is a clear winner, or stays a pixel layer (see ambiguous/skipped). The part draws in every frame: hide it elsewhere (rig_set_pose visible=false).
 
 - Safety: `mutate`
 - MCP tool: `part_split`
@@ -952,7 +954,7 @@ Cut the head rectangle of a flat run frame into the head part:
 
 Read a region (at most 64x64 px) of a frame as a text grid: one symbol per pixel, "." transparent, with a legend of the colours present.
 
-Without "layer" the region is the rendered frame (what pixels.writeGrid edits on a rig frame); with "layer" it is that pixel layer's own cel. Symbols are 0-9A-Za-z, assigned in the order colours first appear and valid for this call only. At most 62 colours per call (an error beyond that: read a smaller region). Set "rulers" for column and row numbers. Feed `rows` and `legend` straight back to pixels.writeGrid (use "_" there to keep a pixel). The grid is for editing and exact values; use render_frame to judge how it looks.
+Without "layer" the region is the rendered frame (what pixels.writeGrid edits on a rig frame); with "layer" it is that pixel layer's own cel. Symbols 0-9A-Za-z are assigned in order of first appearance and valid for this call only; at most 62 colours (else read a smaller region). "rulers" adds column and row numbers. Feed `rows` and `legend` back to pixels.writeGrid. Use render_frame to judge looks.
 
 - Safety: `read`
 - MCP tool: `pixels_read_grid`
@@ -1003,9 +1005,9 @@ Output:
 
 ## pixels.writeGrid
 
-Paint a text grid (at most 32x32 px) at (x, y) of a frame: "." transparent, "_" keep, other symbols from "legend". Rig frames get overrides; flat frames get a layer cel.
+Paint a text grid (at most 32x32 px) at (x, y) of a frame; symbols come from "legend".
 
-Pass `rows` (equally long strings) and `legend` (symbol to "#rrggbb" or "#rrggbbaa"), as pixels.readGrid returns them. "." writes a transparent pixel and "_" leaves the pixel as it is. On a document with part layers (a rig) the grid edits the rendered frame and the differences are stored as overrides: a part override where a stroke lies inside one part, a final override otherwise; they survive re-posing and are listed by override.list (a new part override can make an earlier final override stale: see `newlyStale`). Otherwise name the pixel `layer` (optional when there is only one): its cel is rewritten. A palette-locked or indexed document only takes palette colours. Writing what is already there changes nothing. Check the result with render_frame and lint.
+"." writes transparent, "_" keeps the pixel. On a rig (part layers) the differences from the rendered frame become overrides (a part override inside one part, else a final one) that survive re-posing (see override.list, `newlyStale`). Otherwise name the pixel `layer` (optional if only one): its cel is rewritten. Palette-locked and indexed documents only take palette colours.
 
 - Safety: `mutate`
 - MCP tool: `pixels_write_grid`
@@ -1048,7 +1050,7 @@ Move the hero's eye one pixel left (an override on the head):
 
 Render the frames of some or all animations as one labelled PNG contact sheet (long edge at most 1568 px), optionally with bone lines and pivot markers.
 
-Use it to judge motion across frames (before/after a re-pose, a whole walk cycle): vision judges gesture and readability, lint owns precision (1 px gaps, off-palette pixels). Each tile is labelled "GROUP/DIRECTION #n" (n = 0-based frame index, the same number frames are addressed by). The scale is the largest that fits 1568 px, or lower than `scale` when that does not fit. The image is `output.image` (PNG, base64). `bones` draws yellow bone lines and `pivots` red pivot squares on every tile (they need a rig).
+Judge motion across frames (before/after a re-pose, a walk cycle): vision judges gesture and readability, lint owns precision (1 px gaps, off-palette pixels). Tiles are labelled "GROUP/DIRECTION #n" (n = 0-based frame index). The scale is the largest that fits 1568 px, or lower than `scale`. The image is `output.image` (PNG, base64). `bones` draws yellow bone lines and `pivots` red pivot squares (need a rig).
 
 - Safety: `read`
 - MCP tool: `render_contact_sheet`
@@ -1088,7 +1090,7 @@ Show every frame of the hero with the skeleton drawn:
 
 Render one frame to an upscaled PNG on a checkerboard (long edge at most 1568 px), optionally with bone lines and pivot markers.
 
-Use it to look at the result of an edit: vision judges gesture, proportions and readability, while lint owns precision (1 px gaps, off-palette pixels), so run lint.run for those. The image is `output.image` (PNG, base64): transports that support images show it as an image. Overlay: `bones` draws a yellow line from each bone pivot to its tip, `pivots` draws a red square on each snapped pivot pixel; both need a rig, and `output.bones` lists the same points as numbers. Transparent pixels show a grey checkerboard. Mirror animations are rendered mirrored, with the overlay mirrored too.
+Look at the result of an edit: vision judges gesture, proportions and readability, lint.run owns precision (1 px gaps, off-palette pixels). The image is `output.image` (PNG, base64). `bones` draws a yellow line from each bone pivot to its tip, `pivots` a red square on each snapped pivot pixel (both need a rig; `output.bones` lists the points as numbers). Transparent pixels show a grey checkerboard.
 
 - Safety: `read`
 - MCP tool: `render_frame`
@@ -1164,7 +1166,7 @@ Set the rest pose of the hero in its existing side view:
 
 Bake a rig animation into one plain pixel layer: as a new animation, or in place.
 
-Renders every frame (parts, part and final overrides, post-passes, other exported layers) into a new pixel layer "baked" at the rig's position, one full-canvas cel per frame, and hides all parts for the baked animation. mode "new" adds animation <group>_baked (or name) and leaves the source untouched. mode "replace" bakes the source in place (ids kept, so mirrors keep working). A mirror cannot be baked: bake its source; mirrors stay derived. After a bake the pixels no longer follow the rig.
+Renders every frame (parts, overrides, post-passes, exported layers) into a pixel layer "baked" and hides the parts. mode "new" adds animation <group>_baked; "replace" bakes in place. A mirror cannot be baked: bake its source. Pixels no longer follow the rig.
 
 - Safety: `destructive`
 - MCP tool: `rig_bake`
@@ -1239,7 +1241,7 @@ Bind every layer named after a bone, no overlap guessing:
 
 Edit the skeleton: add/delete/reparent/rename bones, set length and rest pose per view, add/rename/delete views.
 
-Edits run in order inside one undo step; one failure undoes the whole call, and later edits can name bones or views added earlier. Deleting never destroys art: a bone with parts or (without cascade) children is refused. Reparenting keeps the art in place. Rest x/y: root = canvas pivot, child = offset from the parent pivot; angle in deg clockwise relative to the parent. For a standard skeleton use rig_apply_template. Bone and part keys of deleted bones go with them.
+Edits run in order in one undo step; one failure undoes all. Deleting never destroys art: a bone with parts or (without cascade) children is refused. Reparenting keeps the art in place. Rest x/y: root = canvas pivot, child = offset from the parent pivot; angle in deg clockwise relative to the parent. For a standard skeleton use rig_apply_template.
 
 - Safety: `mutate`
 - MCP tool: `rig_edit_bones`

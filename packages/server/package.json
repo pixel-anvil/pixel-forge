@@ -19,6 +19,7 @@
     "test": "vitest run --root ../.. --project server"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "@pixel-forge/io": "workspace:*",
     "@pixel-forge/ops": "workspace:*"
   },

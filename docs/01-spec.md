@@ -260,8 +260,8 @@ These settle ambiguities found while writing `@pixel-forge/schema`. Its README i
   - a read returns a grid with a **per-call legend** covering the colours present (≤62 symbols `0-9A-Za-z`; an error beyond that), plus optional coordinate rulers;
   - in writes, `.` means transparent and `_` means keep;
   - writes are capped at 32×32 per call, and reads at 64×64.
-- FR-AI-14 [M1a]: **MCP edits apply directly.** Each mutating call is one transaction labelled `AI: <tool>` and can be undone. `destructive` tools need `confirm: true`.
-- FR-AI-15 [M1a]: Resources: `pf://docs`, `pf://doc/{id}/summary`, `…/palette`, `…/rig`, `…/animations/{group}/{direction}`.
+- FR-AI-14 [M1a]: **MCP edits apply directly.** Each mutating call is one transaction labelled `AI: <op name>` (e.g. `AI: rig.setPose`, the op name, not the tool name) and can be undone as one step. A call that changes nothing records no entry. `destructive` tools need `confirm: true`.
+- FR-AI-15 [M1a]: Resources: `pf://docs`, `pf://doc/{id}/summary`, `…/palette`, `…/rig`, `…/animations/{group}/{direction}`. Read-only JSON; `…/animations/{group}` also serves an animation without a direction. An unknown document or animation is an MCP error (`-32002`).
 - FR-AI-16 [M1b]: MCP prompts: animate-character, image-to-sprite, rig-character, split-flat-art.
 - FR-AI-17 [M1b]: `rig_set_pose` also accepts **end-effector targets** (e.g. `hand_r → (24,30)`) and solves them with IK. LLMs place points more reliably than they chain angles.
 - FR-AI-20 [**M3**] In-app AI panel:

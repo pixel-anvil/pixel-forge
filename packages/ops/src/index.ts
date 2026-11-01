@@ -143,4 +143,4 @@ export {
   SplitSelectionInput,
 } from './ops/index.js';
 export { ImageOutput, MAX_IMAGE_EDGE, bytesToBase64 } from './image-output.js';
-export { MAX_READ_GRID, MAX_WRITE_GRID } from './grid.js';
+export { MAX_READ_GRID, MAX_WRITE_GRID, toHex } from './grid.js';

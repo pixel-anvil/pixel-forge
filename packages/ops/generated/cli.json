@@ -557,7 +557,7 @@
     {
       "op": "io.import",
       "command": ["import"],
-      "summary": "Import a PNG / grid spritesheet (pick cells and ranges per animation) or an .aseprite file into a document.",
+      "summary": "Import a PNG spritesheet (cells per animation) or an .aseprite file into a document.",
       "safety": "io",
       "options": [
         {
@@ -845,7 +845,7 @@
     {
       "op": "part.split",
       "command": ["part", "split"],
-      "summary": "Split a region (rect, lasso or flood, canvas px) of a flat layer's cel on one frame into a new layer, bound to a bone.",
+      "summary": "Split a region (rect, lasso or flood) of a flat layer's cel into a new layer bound to a bone.",
       "safety": "mutate",
       "options": [
         {
@@ -994,7 +994,7 @@
     {
       "op": "pixels.writeGrid",
       "command": ["pixels", "write-grid"],
-      "summary": "Paint a text grid (at most 32x32 px) at (x, y) of a frame: \".\" transparent, \"_\" keep, other symbols from \"legend\". Rig frames get overrides; flat frames get a layer cel.",
+      "summary": "Paint a text grid (at most 32x32 px) at (x, y) of a frame; symbols come from \"legend\".",
       "safety": "mutate",
       "options": [
         {

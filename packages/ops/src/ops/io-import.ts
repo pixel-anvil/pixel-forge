@@ -89,10 +89,9 @@ const FORMATS = ['spritesheet', 'aseprite'] as const;
 export const ioImport = defineOp({
   name: 'io.import',
   safety: 'io',
-  summary:
-    'Import a PNG / grid spritesheet (pick cells and ranges per animation) or an .aseprite file into a document.',
+  summary: 'Import a PNG spritesheet (cells per animation) or an .aseprite file into a document.',
   description:
-    'format is guessed from the extension (.png -> spritesheet, .aseprite/.ase -> aseprite). Spritesheet: cell is [w, h] px (omit it for a single image: the whole PNG is one cell) and animations maps cells to animations, e.g. {"group": "move_gather", "cells": [{"row": 4, "col": "3-6"}]}; repeated cells become linked cels, empty cells empty frames; the cell\'s bottom-centre lands on the document origin. An optional outlineFile (same size) becomes a second layer. Aseprite: adds layers, tags (as animations) and the palette; reimport: true updates a file imported earlier, in place, by name. The canvas of an aseprite file must equal the document\'s. A failed import changes nothing.',
+    "Format is guessed from the extension. Spritesheet: animations maps cells to animations; repeated cells become linked cels; the cell's bottom-centre lands on the document origin. Aseprite: adds layers, tags (as animations) and the palette; the canvas must equal the document's. A failed import changes nothing.",
   mcp: { name: 'import_file' },
   cli: { command: ['import'] },
   input: z.strictObject({

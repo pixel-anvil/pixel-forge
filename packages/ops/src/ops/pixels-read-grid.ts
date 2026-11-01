@@ -27,7 +27,7 @@ export const pixelsReadGrid = defineOp({
   summary:
     'Read a region (at most 64x64 px) of a frame as a text grid: one symbol per pixel, "." transparent, with a legend of the colours present.',
   description:
-    'Without "layer" the region is the rendered frame (what pixels.writeGrid edits on a rig frame); with "layer" it is that pixel layer\'s own cel. Symbols are 0-9A-Za-z, assigned in the order colours first appear and valid for this call only. At most 62 colours per call (an error beyond that: read a smaller region). Set "rulers" for column and row numbers. Feed `rows` and `legend` straight back to pixels.writeGrid (use "_" there to keep a pixel). The grid is for editing and exact values; use render_frame to judge how it looks.',
+    'Without "layer" the region is the rendered frame (what pixels.writeGrid edits on a rig frame); with "layer" it is that pixel layer\'s own cel. Symbols 0-9A-Za-z are assigned in order of first appearance and valid for this call only; at most 62 colours (else read a smaller region). "rulers" adds column and row numbers. Feed `rows` and `legend` back to pixels.writeGrid. Use render_frame to judge looks.',
   input: z.strictObject({
     doc: DocRef,
     animation: AnimRef,
