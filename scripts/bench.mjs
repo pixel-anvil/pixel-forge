@@ -15,7 +15,7 @@ import {
 } from '../packages/io/dist/index.js';
 import { encodePng } from '../packages/png/dist/index.js';
 import { TiledImage, prepareRotSprite, rotateAbout } from '../packages/raster/dist/index.js';
-import { overlapMasks } from '../packages/rig/dist/index.js';
+import { jointCheck, overlapMasks } from '../packages/rig/dist/index.js';
 
 const HERO = new URL('../fixtures/generated/hero.pxf', import.meta.url);
 /** Quantised, never a quarter turn: those take a short path that would flatter the numbers. */
@@ -122,6 +122,10 @@ function rig() {
     stats(frames.map((i) => time(() => renderFrame(view, ref, i, { rig: createRigRenderer() })))),
   );
   const input = { rig: doc.rig, images: view, canvas: doc.meta.canvas };
+  row(
+    'jointCheck, whole rig at the default sweep',
+    stats(Array.from({ length: 5 }, () => time(() => jointCheck(input)))),
+  );
   row(
     'overlapMasks, whole rig at the default sweep',
     stats(Array.from({ length: 5 }, () => time(() => overlapMasks(input)))),

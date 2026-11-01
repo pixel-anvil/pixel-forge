@@ -11,9 +11,9 @@ One decision per file, at most one page. Numbering is stable; supersede rather t
 | [ADR-005](ADR-005.md) | `.pxf` as a zip with a render cache | Accepted |
 | [ADR-006](ADR-006.md) | Browser-first editor; desktop shell deferred | Accepted |
 | [ADR-007](ADR-007.md) | Sparse tiles and patch-based history | Accepted |
-| [ADR-008](ADR-008.md) | RotSprite, part variants and overrides (warping deferred) | Proposed (pending T0.4, T1.6) |
+| [ADR-008](ADR-008.md) | RotSprite, part variants and overrides (warping deferred) | Accepted (G1) |
 | [ADR-009](ADR-009.md) | Godot: engine-neutral baked output plus a driver | Accepted |
-| [ADR-010](ADR-010.md) | Determinism rules | Proposed (pending T1.6) |
+| [ADR-010](ADR-010.md) | Determinism rules | Accepted for macOS and Linux (G1); Windows unproven (DET-01) |
 | [ADR-011](ADR-011.md) | Views and mirroring model | Accepted |
 | [ADR-012](ADR-012.md) | Rig maths conventions (refines spec §3.4.7) | Accepted (T3.1) |
 
