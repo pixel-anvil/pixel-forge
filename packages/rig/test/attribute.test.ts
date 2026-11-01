@@ -646,3 +646,41 @@ describe('attributeEdit: exact round trips', () => {
     expect(list.map((o) => o.target)).toEqual(['final']);
   });
 });
+
+describe('attributeEdit: one very large component', () => {
+  it('attributes 160,000 pixels of one part (no argument-spread over the pixel list)', () => {
+    const size = 400; // 160,000 changed pixels in one component, above the ~125,000 argument-spread limit
+    const red = new TiledImage(size, size);
+    const green = new TiledImage(size, size);
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        red.set(x, y, [255, 0, 0, 255]);
+        green.set(x, y, [0, 255, 0, 255]);
+      }
+    }
+    const part: PartRender = {
+      partId: P('big'),
+      layerId: LAY('big'),
+      boneId: B('big'),
+      variantId: 'var_big' as PartRender['variantId'],
+      z: 0,
+      angle: 0,
+      flipX: false,
+      pivot: { x: 0, y: 0 },
+      base: { image: red, offset: { x: 0, y: 0 } },
+      image: red,
+      offset: { x: 0, y: 0 },
+      overrides: [],
+    };
+    const render = (parts: readonly PartRender[]): EditRender => {
+      const canvas = new TiledImage(size, size);
+      for (const p of parts) composite(canvas, toRgba(p.image), p.offset);
+      return { finalTarget: canvas, result: canvas.clone() };
+    };
+    const ctx: EditContext = { parts: [part], render, palette: PALETTE };
+    const list = attributeEdit(ctx, render([part]).result, green);
+    expect(list).toHaveLength(1);
+    expect(list[0]?.target).toEqual({ partId: P('big') });
+    expect(list[0]?.set).toBeDefined();
+  });
+});

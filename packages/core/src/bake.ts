@@ -126,18 +126,18 @@ function allLayerNames(layers: readonly LayerRo[], out = new Set<string>()): Set
   return out;
 }
 
-/** The sibling array of the first part layer (depth first, tree order), with its index. */
-function rigBlockSlot(layers: Layer[]): { siblings: Layer[]; index: number } | undefined {
-  for (let i = 0; i < layers.length; i++) {
-    const l = layers[i];
-    if (l === undefined) continue;
-    if (l.kind === 'part') return { siblings: layers, index: i };
-    if (l.kind === 'group') {
-      const found = rigBlockSlot(l.children);
-      if (found !== undefined) return found;
-    }
-  }
-  return undefined;
+/** True when `l` is a part layer or a group that holds one, at any depth. */
+function holdsPart(l: LayerRo): boolean {
+  return l.kind === 'part' || (l.kind === 'group' && l.children.some(holdsPart));
+}
+
+/**
+ * The index among the root layers of the one that holds the first part layer (the rig block's slot): the
+ * part layer itself or its top-level ancestor group. `undefined` without part layers.
+ */
+function rigBlockTopIndex(layers: readonly LayerRo[]): number | undefined {
+  const i = layers.findIndex(holdsPart);
+  return i < 0 ? undefined : i;
 }
 
 /**
@@ -148,15 +148,18 @@ function rigBlockSlot(layers: Layer[]): { siblings: Layer[]; index: number } | u
  * with no skin (a skin still applies afterwards, by colour). The pixels of frame `i` equal that render.
  *
  * **Where.** One new pixel layer `baked` (`baked_2`, ... when the name is taken among all layers;
- * visible, opacity 255, `export: true`), inserted in the tree at the position of the first part layer
- * (the rig block's position), else on top of the root. Its cels are full-canvas images at offset (0, 0),
+ * visible, opacity 255, `export: true`), inserted at the **top level** of the layer tree, at the position
+ * of the top-level layer that holds the first part layer (the rig block's slot; the layer itself, or its
+ * outermost group), else on top of the root. It is never put inside a group: the render it holds already
+ * contains the group's opacity, visibility and export flag, which the baked layer must not inherit. Its cels are full-canvas images at offset (0, 0),
  * in the document's colour mode (an indexed document needs every colour to be an exact palette
  * entry). A fully transparent frame gets no cel. Identical consecutive frames are kept as separate
  * cels (no `linkTo`).
  *
- * **Part layers stay** (other animations use them). The baked animation's first frame carries a
- * part key `visible: false` for every part, so the rig draws nothing for it; it still needs the
- * `rig` renderer whenever part layers exist.
+ * **Part layers stay** (other animations use them). **Every** frame of the baked animation carries a
+ * part key `visible: false` for every part, so the rig draws nothing for it whichever frame comes first
+ * (deleting or reordering frames keeps it hidden); it still needs the `rig` renderer whenever part
+ * layers exist.
  *
  * **`new`**: an authored animation `name` (default `<group>_baked`; same direction, loop, durations,
  * markers, events and root motion; fresh frame ids; no bone keys, overrides or post-passes). The
@@ -298,9 +301,9 @@ export function bakeAnimation(tx: Transaction, animRef: AnimRef, opts: BakeOptio
     tx.update((d) => {
       const an = d.animations[index];
       if (an === undefined || 'mirrorOf' in an) return;
-      for (const [i, f] of an.frames.entries()) {
+      for (const f of an.frames) {
         f.boneKeys = {};
-        f.partKeys = i === 0 ? { ...hide } : {};
+        f.partKeys = { ...hide };
       }
       an.overrides = [];
       delete an.postPasses;
@@ -328,7 +331,7 @@ export function bakeAnimation(tx: Transaction, animRef: AnimRef, opts: BakeOptio
       events: [...f.events],
       rootMotion: { ...f.rootMotion },
       boneKeys: {},
-      partKeys: i === 0 ? { ...hide } : {},
+      partKeys: { ...hide },
     }));
     const anim: AuthoredAnimation = {
       id: animationId,
@@ -344,9 +347,9 @@ export function bakeAnimation(tx: Transaction, animRef: AnimRef, opts: BakeOptio
   }
 
   tx.update((d) => {
-    const slot = rigBlockSlot(d.layers);
-    if (slot === undefined) d.layers.push(layer);
-    else slot.siblings.splice(slot.index, 0, layer);
+    const at = rigBlockTopIndex(d.layers);
+    if (at === undefined) d.layers.push(layer);
+    else d.layers.splice(at, 0, layer);
   });
 
   if (candidates.size > 0) {

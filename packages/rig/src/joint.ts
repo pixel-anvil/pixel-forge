@@ -163,8 +163,11 @@ function gapsOnMasks(
   };
 }
 
-/** @internal Alpha > 0 of `img` as a 0/1 mask of `w × h`; `SIZE_MISMATCH` when the image is another size. */
-export function alphaMask(img: RgbaImage, what: string, w: number, h: number): Uint8Array {
+/**
+ * @internal Alpha >= `min` (default 1: alpha > 0) of `img` as a 0/1 mask of `w × h`; `SIZE_MISMATCH` when
+ * the image is another size.
+ */
+export function alphaMask(img: RgbaImage, what: string, w: number, h: number, min = 1): Uint8Array {
   if (img.width !== w || img.height !== h || img.data.length !== w * h * 4) {
     throw new JointCheckError(
       'SIZE_MISMATCH',
@@ -172,7 +175,7 @@ export function alphaMask(img: RgbaImage, what: string, w: number, h: number): U
     );
   }
   const m = new Uint8Array(w * h);
-  for (let i = 0; i < m.length; i++) m[i] = (img.data[i * 4 + 3] ?? 0) > 0 ? 1 : 0;
+  for (let i = 0; i < m.length; i++) m[i] = (img.data[i * 4 + 3] ?? 0) >= min ? 1 : 0;
   return m;
 }
 
@@ -294,7 +297,15 @@ function sweepAngles(range: number, step: number): number[] {
   if (!Number.isFinite(step) || step <= 0) {
     throw new RigError('BAD_VALUE', `stepDeg must be a finite number > 0, got ${String(step)}`);
   }
+  // Bound the step count before the correction loops: for a huge count `n + 1 === n` in float64 and
+  // `(n + 1) * step <= range` would never become false.
   let n = Math.floor(range / step);
+  if (!Number.isFinite(n) || n > MAX_SWEEP_ANGLES) {
+    throw new RigError(
+      'BAD_VALUE',
+      `the sweep has too many angles (rangeDeg ${String(range)}, stepDeg ${String(step)}; at most ${String(2 * MAX_SWEEP_ANGLES)})`,
+    );
+  }
   while ((n + 1) * step <= range) n++;
   while (n > 0 && n * step > range) n--;
   if (n > MAX_SWEEP_ANGLES) {
@@ -308,13 +319,17 @@ function sweepAngles(range: number, step: number): number[] {
   return out;
 }
 
-/** Adds the opaque pixels of `part`'s pre-override render (clipped to the canvas) to `mask`. */
-function paint(
+/**
+ * @internal Adds the opaque pixels of `part`'s pre-override render (clipped to the canvas) to `mask`.
+ * `solid`: only pixels of alpha 255 (an indexed image without a palette: every non-transparent index).
+ */
+export function paint(
   mask: Uint8Array,
   w: number,
   h: number,
   part: PartRender,
   palette: Palette | undefined,
+  solid = false,
 ): void {
   const img: RotatableImage = part.base.image;
   const { x: ox, y: oy } = part.base.offset;
@@ -332,11 +347,12 @@ function paint(
           `part ${part.partId}: index ${String(i)} is not in the palette`,
         );
       }
-      return c[3] > 0;
+      return solid ? c[3] === 255 : c[3] > 0;
     };
   } else {
     const data = img.toRGBA().data;
-    opaque = (x, y) => (data[(y * img.width + x) * 4 + 3] ?? 0) > 0;
+    const min = solid ? 255 : 1;
+    opaque = (x, y) => (data[(y * img.width + x) * 4 + 3] ?? 0) >= min;
   }
   for (let y = Math.max(0, -oy); y < Math.min(img.height, h - oy); y++) {
     for (let x = Math.max(0, -ox); x < Math.min(img.width, w - ox); x++) {

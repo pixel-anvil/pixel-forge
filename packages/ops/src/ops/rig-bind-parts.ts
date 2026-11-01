@@ -14,7 +14,7 @@ export const rigBindParts = defineOp({
   summary:
     'Bind pixel layers to bones as parts, by layer name ("part:<bone>[.<part>][@variant][#view]") or by overlap.',
   description:
-    "By name: a layer called part:upper_arm_r (or just a bone name) becomes that bone's part; @variant adds another variant of the same part, #view another view. By overlap: remaining layers bind to the bone their opaque pixels cover, only with a clear winner (ties are listed as ambiguous, nothing is guessed). Layers with several drawings cannot bind (animated). Running it again changes nothing. Cut flat art into layers first with part_split.",
+    "By name: a layer called part:upper_arm_r (or just a bone name) becomes that bone's part; @variant adds another variant of the same part, #view another view. By overlap: remaining layers bind to the bone their opaque pixels cover, only with a clear winner (ties are listed as ambiguous). Layers with several drawings (animated) or a translucent layer and cel are skipped. Running it again changes nothing. Cut flat art into layers first with part_split.",
   input: z.strictObject({
     doc: DocRef,
     layers: z

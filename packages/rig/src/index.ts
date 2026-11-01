@@ -118,6 +118,7 @@ export type {
   OverlapJoint,
   OverlapMaskInput,
   OverlapMaskResult,
+  OverlapMasksInput,
   OverlapPaint,
   OverlapPaintInput,
   OverlapPaintReport,

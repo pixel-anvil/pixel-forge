@@ -7,7 +7,14 @@
  */
 import { IndexedImage, TiledImage } from '@pixel-forge/raster';
 import type { Rect, Rgba } from '@pixel-forge/raster';
-import { parsePartLayerName } from '@pixel-forge/rig';
+import {
+  RigError,
+  bindByOverlap,
+  parsePartLayerName,
+  partLayerName,
+  renderParts,
+} from '@pixel-forge/rig';
+import type { PartAnimation, PartLayerName, PartShape } from '@pixel-forge/rig';
 import { NAME_REGEX } from '@pixel-forge/schema';
 import type {
   BoneId,
@@ -101,7 +108,8 @@ export type SplitReason =
   | 'image-missing' // the cel's image is not in the store
   | 'bad-selection' // a malformed rectangle, lasso, flood seed or boundary
   | 'empty-selection' // no opaque pixel is selected
-  | 'translucent' // the layer and the cel are both partly transparent: the split could not recomposite exactly
+  | 'translucent' // the layer and the cel are both partly transparent, or the moved art is and would fold into a part as a variant: the split could not recomposite exactly
+  | 'rig-block-order' // a pixel layer between the rig block and the new part would change which pixels cover which (`details.blockingLayerId`)
   | 'bad-name' // the layer name or part name does not parse
   | 'name-taken' // a layer of that name exists
   | 'unknown-bone' // `partName` names no bone
@@ -169,6 +177,187 @@ function locate(layers: Layer[], id: LayerId): { list: Layer[]; index: number } 
     }
   }
   return undefined;
+}
+
+// ---- rig block order --------------------------------------------------------------------------------
+
+/** A leaf layer in draw order (bottom to top) and whether it is drawn (it and its groups are visible). */
+interface Leaf {
+  readonly layer: LayerRo;
+  readonly drawn: boolean;
+}
+
+function leaves(layers: readonly LayerRo[], drawn = true, out: Leaf[] = []): Leaf[] {
+  for (const l of layers) {
+    const d = drawn && l.visible;
+    if (l.kind === 'group') leaves(l.children, d, out);
+    else out.push({ layer: l, drawn: d });
+  }
+  return out;
+}
+
+/** The drawing a pixel layer shows at `frame` (links resolved), or `undefined`. */
+function drawingAt(l: PixelRo, frame: FrameId) {
+  const c = l.cels[frame];
+  const d = c !== undefined && 'linkTo' in c ? l.cels[c.linkTo] : c;
+  return d === undefined || 'linkTo' in d ? undefined : d;
+}
+
+/** How a new layer ends up bound: a new part layer (`new`) or a variant of an existing part (`fold`). */
+type BindOutcome = 'new' | 'fold';
+
+/**
+ * Predicts, before anything is written, what `bindParts` will do with the new layer, by the same
+ * rules: with a part name the layer folds into the existing part of that bone and part name, else
+ * becomes a new part; by overlap only a bone without parts and with a rest entry in the view takes it,
+ * as a new main part. `undefined`: it stays a pixel layer.
+ */
+function predictBind(
+  doc: DeepReadonly<Document>,
+  opts: SplitRegionOptions,
+  target: PartLayerName | undefined,
+  shape: PartShape,
+): BindOutcome | undefined {
+  const rig = doc.rig;
+  if (rig === undefined || rig.views.length === 0) return undefined;
+  const partLayers = new Map<string, string>();
+  for (const e of leaves(doc.layers)) {
+    if (e.layer.kind === 'part') partLayers.set(e.layer.id, e.layer.name);
+  }
+  if (target !== undefined) {
+    const bone = rig.bones.find((b) => b.name === target.bone);
+    if (bone === undefined) return undefined;
+    const name = partLayerName(target);
+    return rig.parts.some((p) => p.boneId === bone.id && partLayers.get(p.layerId) === name)
+      ? 'fold'
+      : 'new';
+  }
+  if (!(opts.bind ?? true)) return undefined;
+  const view =
+    opts.viewId === undefined ? rig.views[0] : rig.views.find((v) => v.id === opts.viewId);
+  if (view === undefined) return undefined;
+  const hit = bindByOverlap([shape], { bones: rig.bones, view }, {}).assignments[0];
+  if (hit === undefined || view.rest[hit.boneId] === undefined) return undefined;
+  if (rig.parts.some((p) => p.boneId === hit.boneId)) return undefined;
+  const name = partLayerName({ bone: rig.bones.find((b) => b.id === hit.boneId)?.name ?? '' });
+  if (!NAME_REGEX.test(name) || [...partLayers.values()].includes(name)) return undefined;
+  return 'new';
+}
+
+/**
+ * Where the existing parts' pixels are at rest in `frame`, as a canvas pixel test: the rig rendered with
+ * no bone keys and the frame's own part keys (variant, visibility). No view for the animation's
+ * direction means no pixels.
+ */
+function restPartPixels(
+  tx: Transaction,
+  doc: DeepReadonly<Document>,
+  frame: FrameId,
+): (x: number, y: number) => boolean {
+  const none = (): boolean => false;
+  const rig = doc.rig;
+  const anim = doc.animations.find((a) => 'frames' in a && a.frames.some((f) => f.id === frame));
+  if (rig === undefined || anim === undefined || !('frames' in anim)) return none;
+  const fr = anim.frames.find((f) => f.id === frame);
+  if (fr === undefined) return none;
+  const animation: PartAnimation = {
+    ...(anim.direction === undefined ? {} : { direction: anim.direction }),
+    loop: 'once',
+    frames: [{ id: frame, boneKeys: {}, partKeys: fr.partKeys }],
+    overrides: [],
+  };
+  let parts: ReturnType<typeof renderParts>;
+  try {
+    parts = renderParts({ rig, animation, frame: 0, images: tx });
+  } catch (e) {
+    if (e instanceof RigError && e.code === 'UNKNOWN_VIEW') return none;
+    throw e;
+  }
+  const seen = new Set<string>();
+  for (const p of parts) {
+    const read = readerOf(p.image);
+    for (let y = 0; y < p.image.height; y++) {
+      for (let x = 0; x < p.image.width; x++) {
+        if (read.opaque(x, y)) seen.add(`${String(p.offset.x + x)},${String(p.offset.y + y)}`);
+      }
+    }
+  }
+  return (x, y) => seen.has(`${String(x)},${String(y)}`);
+}
+
+/** The moved pixels: `mask` over an image `w` wide whose top-left pixel is at canvas `at`. */
+interface Moved {
+  readonly mask: Uint8Array;
+  readonly w: number;
+  readonly at: { readonly x: number; readonly y: number };
+}
+
+/**
+ * FR-RIG-20 step 5 draws every part at the tree position of the first drawn part layer. Splitting
+ * moves pixels from the source layer's position to that block, and can move the block itself, so the
+ * frame stays pixel for pixel only if no pixel layer with a cel at `frame` lies in between where it
+ * covers (or is covered by) those pixels. Returns the first such layer, or `undefined`.
+ *
+ * With the new layer `N` inserted right above the source `S`, and `block` the first drawn part layer
+ * (`N` itself when it becomes a part): (a) a pixel layer between `N` and `block`, other than `S`,
+ * overlapping the moved pixels; (b) when `N` becomes the first part layer and the old block was above
+ * it, a pixel layer between `N` and the old block overlapping the existing parts' rest pixels.
+ */
+function rigBlockConflict(
+  tx: Transaction,
+  doc: DeepReadonly<Document>,
+  source: LayerId,
+  frame: FrameId,
+  moved: Moved,
+  outcome: BindOutcome,
+): LayerRo | undefined {
+  const flat = leaves(doc.layers);
+  const si = flat.findIndex((e) => e.layer.id === source);
+  const src = flat[si];
+  if (!src?.drawn) return undefined;
+  const NEW = 'new' as const;
+  const sim: (Leaf | typeof NEW)[] = [...flat.slice(0, si + 1), NEW, ...flat.slice(si + 1)];
+  const newAt = si + 1;
+  const isPart = (e: Leaf | typeof NEW): boolean =>
+    e === NEW ? outcome === 'new' : e.drawn && e.layer.kind === 'part';
+  const blockAt = sim.findIndex(isPart);
+  if (blockAt < 0) return undefined;
+
+  /** The first drawn pixel layer strictly between two positions with a pixel that satisfies `hit`. */
+  const firstIn = (
+    a: number,
+    b: number,
+    hit: (x: number, y: number) => boolean,
+  ): LayerRo | undefined => {
+    for (let k = Math.min(a, b) + 1; k < Math.max(a, b); k++) {
+      const e = sim[k];
+      if (e === undefined || e === NEW || !e.drawn || e.layer.kind !== 'pixel') continue;
+      if (e.layer.id === source || e.layer.opacity === 0) continue;
+      const d = drawingAt(e.layer, frame);
+      const img = d === undefined ? undefined : tx.image(d.imageId);
+      if (d === undefined || img === undefined || d.opacity === 0) continue;
+      const read = readerOf(img);
+      for (let y = 0; y < img.height; y++) {
+        for (let x = 0; x < img.width; x++) {
+          if (read.opaque(x, y) && hit(d.offset.x + x, d.offset.y + y)) return e.layer;
+        }
+      }
+    }
+    return undefined;
+  };
+
+  const movedAt = (x: number, y: number): boolean => {
+    const ix = x - moved.at.x;
+    const iy = y - moved.at.y;
+    return ix >= 0 && iy >= 0 && ix < moved.w && moved.mask[iy * moved.w + ix] === 1;
+  };
+  const a = firstIn(newAt, blockAt, movedAt);
+  if (a !== undefined || outcome !== 'new') return a;
+
+  // The block moves down to N: the existing parts go with it.
+  const oldAt = sim.findIndex((e) => e !== NEW && e.drawn && e.layer.kind === 'part');
+  if (oldAt <= newAt) return undefined;
+  return firstIn(newAt, oldAt, restPartPixels(tx, doc, frame));
 }
 
 const isInt = (n: unknown): n is number => typeof n === 'number' && Number.isSafeInteger(n);
@@ -389,10 +578,25 @@ function selectionMask(
  * The part is a part of the rig, not of the frame: it draws in every frame that renders the rig. Key
  * `visible: false` on frames where it must not appear. A layer opacity below 255 combined with a cel
  * opacity below 255 is refused (`translucent`): one part layer cannot express both exactly. With a
- * layer opacity of 255 the cel's opacity moves to the new layer.
+ * layer opacity of 255 the cel's opacity moves to the new layer. Folding the moved art into an existing
+ * part as a variant (`partName` of a part that exists) is refused (`translucent`) when its opacity is
+ * below 255, because a variant has no opacity of its own.
+ *
+ * **Rig block order.** All parts composite at the tree position of the first part layer (FR-RIG-20 step
+ * 5), wherever their own layers sit, so a split can change which pixels cover which. It is refused
+ * (`rig-block-order`, `details.blockingLayerId` / `blockingLayer` name the layer) when a drawn pixel
+ * layer with a cel at `frame` lies between the rig block (after the split) and the new layer and
+ * overlaps the moved pixels, or when the split moves the block down past such a layer that overlaps an
+ * existing part's rest-pose pixels at `frame`. Layers that do not overlap never block: a body and the
+ * outline layer above it can both be split. The bind is predicted with `bindParts`' rules (by `partName`,
+ * or by overlap when `bind` is not false), so the refusal comes before anything changes; with `bind:
+ * false` nothing becomes a part and nothing is checked. The check is about `frame` only, and about
+ * visible layers only.
  *
  * @throws CoreError `BAD_ARGUMENT` with `details.reason` a {@link SplitReason}. All refusals except
- * `bind-failed` happen before anything changes; after `bind-failed` abort the transaction.
+ * `bind-failed` happen before anything changes (`rig-block-order` too, unless the bind turns out
+ * different from the prediction, a defect: then abort the transaction); after `bind-failed` abort the
+ * transaction.
  */
 export function splitRegion(
   tx: Transaction,
@@ -438,6 +642,7 @@ export function splitRegion(
     for (let n = 2; taken.has(layerName); n++) layerName = `split_${String(n)}`;
   }
   const rawName = opts.partName;
+  let target: PartLayerName | undefined;
   if (rawName !== undefined) {
     const parsed =
       parsePartLayerName(rawName) ??
@@ -455,6 +660,7 @@ export function splitRegion(
     if (parsed.view !== undefined && !rig.views.some((v) => v.name === parsed.view)) {
       throw refuse('unknown-view', `no view ${parsed.view}`);
     }
+    target = parsed;
   }
   if (opts.viewId !== undefined && rig?.views.some((v) => v.id === opts.viewId) !== true) {
     throw refuse('unknown-view', `no view ${opts.viewId}`);
@@ -482,6 +688,39 @@ export function splitRegion(
   }
   const bw = maxX - minX + 1;
   const bh = maxY - minY + 1;
+  const layerOpacity = source.opacity === 255 ? owner.opacity : source.opacity;
+
+  // Predict the bind, then refuse what it would break, before anything is written.
+  const shape: PartShape = {
+    layerId: layer,
+    x: owner.offset.x + minX,
+    y: owner.offset.y + minY,
+    w: bw,
+    h: bh,
+    alpha: Uint8Array.from({ length: bw * bh }, (_, i) =>
+      mask[(minY + Math.floor(i / bw)) * w + minX + (i % bw)] === 1 ? 255 : 0,
+    ),
+  };
+  const movedPx: Moved = { mask, w, at: owner.offset };
+  const predicted = predictBind(doc, opts, target, shape);
+  if (predicted === 'fold' && layerOpacity < 255) {
+    throw refuse(
+      'translucent',
+      `the moved art is partly transparent (opacity ${String(layerOpacity)}) and would become a variant of an existing part, which has no opacity of its own`,
+    );
+  }
+  /** Refuses when binding as `outcome` would put a pixel layer between the rig block and the new part. */
+  const checkBlock = (outcome: BindOutcome): void => {
+    const blocking = rigBlockConflict(tx, doc, layer, frame, movedPx, outcome);
+    if (blocking !== undefined) {
+      throw refuse(
+        'rig-block-order',
+        `layer "${blocking.name}" lies between the rig block and the new part and overlaps pixels whose order would change; move it above or below the rig block's parts first`,
+        { blockingLayerId: blocking.id, blockingLayer: blocking.name },
+      );
+    }
+  };
+  if (predicted !== undefined) checkBlock(predicted);
 
   // Build the two new images.
   const moved = image.emptyLike(bw, bh);
@@ -521,7 +760,6 @@ export function splitRegion(
     .map(([f]) => f as FrameId)
     .sort();
   const newLayerId = tx.newId('layer');
-  const layerOpacity = source.opacity === 255 ? owner.opacity : source.opacity;
   tx.update((d) => {
     const loc = locate(d.layers, layer);
     if (loc === undefined) return;
@@ -553,7 +791,12 @@ export function splitRegion(
     tx.deleteImage(owner.imageId);
   }
 
-  // Bind.
+  // Bind. The prediction above mirrors bindParts; should the two ever disagree, check the real outcome
+  // (the caller's transaction is then aborted, like after `bind-failed`).
+  const verifyBind = (bound: BoundPart): void => {
+    const outcome: BindOutcome = bound.merged ? 'fold' : 'new';
+    if (outcome !== predicted) checkBlock(outcome);
+  };
   const base = { unlinked: linkers, imageId: movedId, bounds, pixels: count };
   const bindOpts = {
     layers: [newLayerId],
@@ -578,12 +821,16 @@ export function splitRegion(
         },
       );
     }
+    verifyBind(bound);
     return { ...base, layerId: layerOf(tx, bound, newLayerId), bound };
   }
   if ((opts.bind ?? true) && rig !== undefined && rig.views.length > 0) {
     const r = bindParts(tx, { ...bindOpts, byName: false, byOverlap: true });
     const bound = r.bound[0];
-    if (bound !== undefined) return { ...base, layerId: layerOf(tx, bound, newLayerId), bound };
+    if (bound !== undefined) {
+      verifyBind(bound);
+      return { ...base, layerId: layerOf(tx, bound, newLayerId), bound };
+    }
     const amb = r.ambiguous[0];
     const skipped = r.skipped[0]?.reason;
     return {

@@ -110,8 +110,8 @@ export function ellipsePixels(
       err += dx;
     }
   } while (x0 <= x1);
-  // Flat ellipses (width 1 or 2) stop too early: finish the vertical extent.
-  while (y0 - y1 < b) {
+  // Flat ellipses (width 1 or 2) stop too early: finish the vertical extent, up to and including the last row.
+  while (y0 - y1 <= b) {
     if (hline !== undefined) {
       hline(x0 - 1, x1 + 1, y0);
       hline(x0 - 1, x1 + 1, y1);

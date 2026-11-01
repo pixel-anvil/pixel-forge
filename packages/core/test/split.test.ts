@@ -766,6 +766,38 @@ describe('W2b end to end: split, find the gaps, paint the overlap, composite unc
     expect(errorsOf(s)).toEqual([]);
     expect(check().summary.gapCount).toBe(0); // and the joint is closed
   });
+  it('paints nothing under an upper part whose layer is translucent (G1-fix 8)', () => {
+    const { s } = w2bSplit();
+    const rig = s.doc.rig;
+    const upperBone = rig?.bones.find((b) => b.name === 'upper_arm_r');
+    const upper = rig?.parts.find((p) => p.boneId === upperBone?.id);
+    if (upper === undefined) throw new Error('upper arm part');
+    const setOpacity = (layerId: LayerId, opacity: number): void => {
+      s.transact('opacity', (tx) => {
+        tx.update((d) => {
+          const walk = (ls: typeof d.layers): void => {
+            for (const l of ls) {
+              if (l.id === layerId) l.opacity = opacity;
+              if (l.kind === 'group') walk(l.children);
+            }
+          };
+          walk(d.layers);
+        });
+      });
+    };
+    setOpacity(upper.layerId, 254);
+    const before = hashOf(s);
+    const none = s.transact('paint', (tx) => paintOverlapTx(tx, { color: BLUE }));
+    expect(none.painted).toEqual([]);
+    expect(none.uncovered.map((u) => u.bone)).toEqual(['lower_arm_r']);
+    expect(hashOf(s)).toBe(before);
+    // Back at full opacity the same call paints.
+    setOpacity(upper.layerId, 255);
+    const done = s.transact('paint', (tx) => paintOverlapTx(tx, { color: BLUE }));
+    expect(done.painted).toHaveLength(1);
+    expect(done.uncovered).toEqual([]);
+  });
+
   it('paints in an indexed document (palette index colour) and converts both ways without changing the render', () => {
     const { s, before } = w2bSplit();
     s.transact('palette', (tx) => {
@@ -858,5 +890,315 @@ describe('W2b end to end: split, find the gaps, paint the overlap, composite unc
     expect(reason({ colorMode: 'indexed' })).toBe('no-palette');
     expect(reason({ paletteLocked: true })).toBe('no-palette');
     expect(reason({})).toBeUndefined(); // nothing to change
+  });
+});
+
+// ---- G1-fix 9 and 7(c): the rig block position and translucent folds ---------------------------------
+
+/** A document of flat pixel layers (bottom to top, one cel each at frame f0), with a humanoid rig. */
+function layeredStore(specs: readonly { name: string; draw: (img: TiledImage) => void }[]): {
+  s: DocumentStore;
+  ids: (name: string) => LayerId;
+} {
+  const g = createIdGenerator({ seed: 8, next: 0 });
+  const images: [ImageId, StoredImage][] = [];
+  const byName: Record<string, LayerId> = {};
+  const layers = specs.map(({ name, draw }): Document['layers'][number] => {
+    const img = new TiledImage(40, 50);
+    draw(img);
+    const imageId = g.next('image');
+    images.push([imageId, img]);
+    const id = g.next('layer');
+    byName[name] = id;
+    return {
+      kind: 'pixel',
+      id,
+      name,
+      visible: true,
+      opacity: 255,
+      export: true,
+      cels: { [I.f0]: { imageId, offset: { x: 0, y: 0 }, opacity: 255 } },
+    };
+  });
+  const doc: Document = {
+    meta: {
+      id: I.doc,
+      name: 'layered',
+      schemaVersion: SCHEMA_VERSION,
+      canvas: { w: 40, h: 50 },
+      origin: ORIGIN,
+      pixelsPerUnit: 16,
+      colorMode: 'rgba',
+      paletteLocked: false,
+      ids: { ...g.state() },
+    },
+    palettes: [{ id: I.pal, name: 'Base', colors: [[0, 0, 0, 0]], ramps: [] }],
+    activePaletteId: I.pal,
+    skins: [],
+    layers,
+    animations: [
+      {
+        id: I.anim,
+        group: 'idle',
+        loop: 'loop',
+        frames: [
+          {
+            id: I.f0,
+            durationMs: 100,
+            markers: {},
+            events: [],
+            rootMotion: { dx: 0, dy: 0 },
+            boneKeys: {},
+            partKeys: {},
+          },
+        ],
+        overrides: [],
+      },
+    ],
+    directionFallback: {},
+    markerDefs: [],
+    eventDefs: [],
+  };
+  const s = new DocumentStore(doc, { images });
+  s.transact('rig', (tx) =>
+    applySkeletonTemplate(tx, humanoidSide({ height: 48, origin: ORIGIN })),
+  );
+  const ids = (name: string): LayerId => {
+    const id = byName[name];
+    if (id === undefined) throw new Error(`no layer ${name}`);
+    return id;
+  };
+  return { s, ids };
+}
+
+const splitOf = (
+  s: DocumentStore,
+  layer: LayerId,
+  sel: SplitSelection,
+  opts: SplitRegionOptions = {},
+) => s.transact('split', (tx) => splitRegion(tx, layer, I.f0, sel, opts));
+
+function refusal(fn: () => unknown): { reason?: unknown; blocking?: unknown } {
+  try {
+    fn();
+  } catch (e) {
+    if (e instanceof CoreError) {
+      return { reason: e.details?.reason, blocking: e.details?.blockingLayer };
+    }
+    throw e;
+  }
+  return {};
+}
+
+describe('splitRegion and the rig block position (G1-fix 9)', () => {
+  // Bottom to top: body, shirt, jacket. The sleeve is cut from the jacket; it overlaps the shirt at x = 12.
+  const clothes = [
+    {
+      name: 'body',
+      draw: (i: TiledImage) => {
+        rect(i, 10, 10, 8, 8, SKIN);
+      },
+    },
+    {
+      name: 'shirt',
+      draw: (i: TiledImage) => {
+        rect(i, 12, 10, 4, 8, SHIRT);
+      },
+    },
+    {
+      name: 'jacket',
+      draw: (i: TiledImage) => {
+        rect(i, 10, 12, 3, 6, BLUE); // sleeve, x 10..12
+        rect(i, 14, 2, 2, 2, BLUE); // a pixel nothing covers
+      },
+    },
+  ];
+  const body = { kind: 'rect', x: 10, y: 10, w: 8, h: 8 } as const;
+  const sleeve = { kind: 'rect', x: 10, y: 12, w: 3, h: 6 } as const;
+  const narrow = { kind: 'rect', x: 10, y: 12, w: 2, h: 6 } as const;
+
+  it('refuses a part cut from a layer above a pixel layer that covers the block (body, then jacket)', () => {
+    const { s, ids } = layeredStore(clothes);
+    const before = hashOf(s);
+    splitOf(s, ids('body'), body, { partName: 'part:torso' });
+    expect(hashOf(s)).toBe(before);
+    const h = documentHash(s);
+    const r = refusal(() => splitOf(s, ids('jacket'), sleeve, { partName: 'part:upper_arm_r' }));
+    expect(r).toEqual({ reason: 'rig-block-order', blocking: 'shirt' });
+    expect(documentHash(s)).toBe(h); // nothing changed
+    // A sleeve that does not touch the shirt keeps working, and recomposites exactly.
+    splitOf(s, ids('jacket'), narrow, { partName: 'part:upper_arm_r' });
+    expect(hashOf(s)).toBe(before);
+    expect(errorsOf(s)).toEqual([]);
+    // Without a bind the layer is just a pixel layer: no part, no refusal.
+    splitOf(s, ids('jacket'), { kind: 'rect', x: 12, y: 12, w: 1, h: 6 }, { bind: false });
+    expect(hashOf(s)).toBe(before);
+  });
+
+  it('refuses a part cut below the block when an existing part would drop under a pixel layer (jacket, then body)', () => {
+    const { s, ids } = layeredStore(clothes);
+    const before = hashOf(s);
+    splitOf(s, ids('jacket'), sleeve, { partName: 'part:upper_arm_r' });
+    expect(hashOf(s)).toBe(before);
+    const h = documentHash(s);
+    expect(refusal(() => splitOf(s, ids('body'), body, { partName: 'part:torso' }))).toEqual({
+      reason: 'rig-block-order',
+      blocking: 'shirt',
+    });
+    expect(documentHash(s)).toBe(h);
+
+    // The same with a sleeve that clears the shirt: allowed, and the frame is unchanged.
+    const ok = layeredStore(clothes);
+    splitOf(ok.s, ok.ids('jacket'), narrow, { partName: 'part:upper_arm_r' });
+    splitOf(ok.s, ok.ids('body'), body, { partName: 'part:torso' });
+    expect(hashOf(ok.s)).toBe(before);
+    expect(errorsOf(ok.s)).toEqual([]);
+  });
+
+  it('a body layer and the separate outline layer above it split in either order', () => {
+    const outline = (i: TiledImage): void => {
+      rect(i, 9, 9, 10, 1, OUTLINE);
+      rect(i, 9, 18, 10, 1, OUTLINE);
+      rect(i, 9, 10, 1, 8, OUTLINE);
+      rect(i, 18, 10, 1, 8, OUTLINE);
+    };
+    const specs = [
+      {
+        name: 'body',
+        draw: (i: TiledImage) => {
+          rect(i, 10, 10, 8, 8, SKIN);
+        },
+      },
+      { name: 'outline', draw: outline },
+    ];
+    const ring = { kind: 'rect', x: 9, y: 9, w: 10, h: 10 } as const;
+    for (const order of [
+      ['body', 'outline'],
+      ['outline', 'body'],
+    ] as const) {
+      const { s, ids } = layeredStore(specs);
+      const before = hashOf(s);
+      for (const name of order) {
+        splitOf(s, ids(name), name === 'body' ? body : ring, {
+          partName: name === 'body' ? 'part:torso' : 'part:head',
+        });
+      }
+      expect(hashOf(s), order.join()).toBe(before);
+      expect(errorsOf(s)).toEqual([]);
+    }
+  });
+
+  it('a variant that folds into a part above a covering layer is refused; a new part below is not', () => {
+    const specs = [
+      {
+        name: 'base',
+        draw: (i: TiledImage) => {
+          rect(i, 10, 10, 6, 6, SKIN);
+        },
+      },
+      {
+        name: 'shirt',
+        draw: (i: TiledImage) => {
+          rect(i, 12, 12, 6, 6, SHIRT);
+        },
+      },
+      {
+        name: 'cap',
+        draw: (i: TiledImage) => {
+          rect(i, 30, 2, 4, 4, BLUE);
+        },
+      },
+    ];
+    const base = { kind: 'rect', x: 10, y: 10, w: 6, h: 6 } as const;
+    const a = layeredStore(specs);
+    splitOf(
+      a.s,
+      a.ids('cap'),
+      { kind: 'rect', x: 30, y: 2, w: 4, h: 4 },
+      {
+        partName: 'part:head',
+      },
+    );
+    const h = documentHash(a.s);
+    expect(refusal(() => splitOf(a.s, a.ids('base'), base, { partName: 'part:head@alt' }))).toEqual(
+      { reason: 'rig-block-order', blocking: 'shirt' },
+    );
+    expect(documentHash(a.s)).toBe(h);
+    const before = hashOf(a.s);
+    splitOf(a.s, a.ids('base'), base, { partName: 'part:pelvis' });
+    expect(hashOf(a.s)).toBe(before);
+  });
+});
+
+describe('splitRegion folding translucent art into a part (G1-fix 7c)', () => {
+  it('refuses, before anything changes, when the moved cel is translucent and would become a variant', () => {
+    const s = makeStore({ celOpacity: 128 });
+    split(s, { kind: 'rect', x: 17, y: 4, w: 6, h: 3 }, { partName: 'part:head' });
+    const h = documentHash(s);
+    expect(
+      reason(() =>
+        split(s, { kind: 'rect', x: 17, y: 7, w: 6, h: 3 }, { partName: 'part:head@chin' }),
+      ),
+    ).toBe('translucent');
+    expect(documentHash(s)).toBe(h);
+  });
+
+  it('refuses the same for a translucent source layer, and still folds opaque art', () => {
+    const t = makeStore({ layerOpacity: 128 });
+    split(t, { kind: 'rect', x: 17, y: 4, w: 6, h: 3 }, { partName: 'part:head' });
+    expect(
+      reason(() =>
+        split(t, { kind: 'rect', x: 17, y: 7, w: 6, h: 3 }, { partName: 'part:head@chin' }),
+      ),
+    ).toBe('translucent');
+    const o = makeStore();
+    split(o, { kind: 'rect', x: 17, y: 4, w: 6, h: 3 }, { partName: 'part:head' });
+    expect(
+      split(o, { kind: 'rect', x: 17, y: 7, w: 6, h: 3 }, { partName: 'part:head@chin' }).bound
+        ?.merged,
+    ).toBe(true);
+  });
+});
+
+describe('splitRegion: the block check also applies to a bind by overlap (G1-fix 9)', () => {
+  /** The pixels of a one-pixel line along `bone`'s rest segment, from a rig-only probe document. */
+  function lineAlong(bone: string): [number, number][] {
+    const r = layeredStore([]).s.doc.rig;
+    const view = r?.views[0];
+    const b = r?.bones.find((x) => x.name === bone);
+    if (r === undefined || view === undefined || b === undefined) throw new Error('rig');
+    const sb = snapSkeleton(r, view, new Map()).bones.get(b.id);
+    if (sb === undefined) throw new Error('bone');
+    const [dx, dy] = rotatePoint(b.length, 0, sb.restAngle);
+    const n = Math.max(Math.abs(dx), Math.abs(dy), 1);
+    const out: [number, number][] = [];
+    for (let k = 0; k <= n; k++) {
+      out.push([sb.pivot.x + Math.round((dx * k) / n), sb.pivot.y + Math.round((dy * k) / n)]);
+    }
+    return out;
+  }
+  const draw = (pixels: [number, number][], c: Rgba) => (i: TiledImage) => {
+    for (const [x, y] of pixels) i.set(x, y, c);
+  };
+
+  it('refuses when overlap would bind the new layer above a covering pixel layer', () => {
+    const neck = lineAlong('neck');
+    const specs = [
+      { name: 'body', draw: draw(lineAlong('head'), SKIN) },
+      { name: 'shirt', draw: draw(neck, SHIRT) },
+      { name: 'jacket', draw: draw(neck, BLUE) },
+    ];
+    const { s, ids } = layeredStore(specs);
+    const all = { kind: 'rect', x: 0, y: 0, w: 40, h: 50 } as const;
+    const first = splitOf(s, ids('body'), all);
+    expect(first.bound?.how).toBe('overlap');
+    const h = documentHash(s);
+    expect(refusal(() => splitOf(s, ids('jacket'), all))).toEqual({
+      reason: 'rig-block-order',
+      blocking: 'shirt',
+    });
+    expect(documentHash(s)).toBe(h);
+    // Not asked to bind: it stays a pixel layer.
+    expect(splitOf(s, ids('jacket'), all, { bind: false }).bound).toBeUndefined();
   });
 });

@@ -257,6 +257,29 @@ describe('jointCheck', () => {
     expect(() => jointCheck({ rig, images, canvas: { w: 0, h: 4 } })).toThrow(RigError);
   });
 
+  it('refuses a sweep whose step count is huge or not finite, instead of spinning', () => {
+    const { rig, images, canvas } = fixtureRig('gappy_elbow');
+    const bads = [
+      { rangeDeg: 30, stepDeg: 1e-15 }, // 3e16 steps: (n + 1) * step no longer grows with n
+      { rangeDeg: 1e20, stepDeg: 1 }, // n + 1 === n in float64
+      { rangeDeg: Number.MAX_VALUE, stepDeg: Number.MIN_VALUE }, // the quotient overflows to Infinity
+      { rangeDeg: Number.POSITIVE_INFINITY, stepDeg: 5 },
+      { rangeDeg: 30, stepDeg: Number.POSITIVE_INFINITY },
+    ];
+    for (const bad of bads) {
+      let code: string | undefined;
+      try {
+        jointCheck({ rig, images, canvas, ...bad });
+      } catch (e) {
+        code = e instanceof RigError ? e.code : String(e);
+      }
+      expect(code, JSON.stringify(bad)).toBe('BAD_VALUE');
+    }
+    // the bound itself: 1440 steps each way is allowed, 1441 is not
+    expect(() => jointCheck({ rig, images, canvas, rangeDeg: 1440, stepDeg: 1 })).not.toThrow();
+    expect(() => jointCheck({ rig, images, canvas, rangeDeg: 1441, stepDeg: 1 })).toThrow(RigError);
+  });
+
   it('skips bones without visible parts and does not re-attach their children', () => {
     const { rig, images, canvas } = fixtureRig('gappy_elbow');
     const hidden = { [P('lower')]: { visible: false } };

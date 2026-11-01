@@ -167,7 +167,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T3.7 | core: bake | sonnet | medium | S | T3.3 | ∥ | ☑ |
 | T3.9 | fixtures: synthetic humanoid "hero" (TS doc + `.aseprite` via Lua) | sonnet | medium | M | T3.2, T0.3 | ∥ | ☑ |
 | T3.9b | fixtures: widen hero joint caps until `jointCheck` is clean; regenerate `hero.pxf` with a render cache | sonnet | medium | S | T3.4, T3.3 | ∥ | ☑ |
-| G1 | **Gate: core + rig** | opus | high | — | W1–W3 rig track | | ☐ |
+| G1 | **Gate: core + rig** | opus | high | — | W1–W3 rig track | | ☑ |
 | T4.6 | fixtures: synthetic `.aseprite` files via Aseprite Lua | sonnet | medium | S | T0.3 | ∥ | ☑ |
 | T4.4 | io: `.aseprite` binary parser (Aseprite CLI as oracle) | sonnet | high | M | T4.6 | |☑ |
 | T4.5 | io: `.aseprite` → document mapping + in-place re-import (explicit rules) | sonnet | high | M | T4.4, T4.2 | ∥ | ☑ |
@@ -659,6 +659,11 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 - Flip ADR-008 and ADR-010 to Accepted, or revise them.
 - Update KNOWN_ISSUES. Correct the model columns for W4.
 - **Exit** — no open Blocker or Major findings.
+- **Notes (2026-11-01)** — ☑ Exit met. Code-review high (about 355k tokens): 10 findings, all accepted and reproduced; 7 were Major class. Sonnet/high fix pass (about 346k tokens), which added refusals `rig-block-order`, `view-in-use` and `translucent`.
+  - **CI had been red for 5 commits:** pnpm refused esbuild's unapproved build script (fixed; `allowBuilds` records the decision). Contact sheet tests also needed a longer timeout on CI.
+  - **Bench** (`pnpm bench` is real now; Apple M5, p95): cold RotSprite 32×32 under 1 ms (target 10), posed 16-part 48×48 frame warm 0.08 ms (target 2), open 13 MB `.pxf` 106 ms (target 500). jointCheck and overlapMasks take about 5 ms per rig, so no window-only mask is needed. IO-04 has no RotSprite cost. Godot re-import is left for G2.
+  - **Spec re-check** (§3, §6.2, FR-RIG-20): render order, package dependencies and purity rules match the code. ADR-008 and ADR-010 accepted; Windows unproven (DET-01). New minor issues: RIG-06, CORE-05.
+  - **Calibration:** no card escalated a model. Averages per card: Sonnet/medium 175k, Sonnet/high 226k, Opus 280k to 320k, Haiku/low 72k, Haiku/medium 181k. Keep the columns for T5.9, T5.8 and T6.4. The gate review still found 10 bugs in code already reviewed per card, so keep it at G2.
 
 ### Wave 4 — io, lint, ops, server, CLI, MCP
 

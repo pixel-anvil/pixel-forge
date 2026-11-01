@@ -9,11 +9,13 @@
 import { IndexedImage } from '@pixel-forge/raster';
 import {
   DEFAULT_VARIANT_NAME,
+  RigError,
   bindByOverlap,
   copyPose,
   parsePartLayerName,
   pastePose,
   partLayerName,
+  selectView,
   snapSkeleton,
 } from '@pixel-forge/rig';
 import type {
@@ -51,6 +53,8 @@ import type { Transaction } from './transaction.js';
  * exists; `direction-taken`: another view already draws that direction; `cycle`: reparenting a bone
  * under itself or a descendant; `has-parts`: the bone (or a descendant being deleted) has parts;
  * `has-children`: delete without `cascade`; `has-variants`: the view still holds variants;
+ * `view-in-use`: an authored animation resolves to the view (`selectView`, so an undirected
+ * animation counts for the first view);
  * `bad-value`: a non-integer or non-finite number; `bone-mismatch`: a template bone of that name
  * exists with another parent; `mirror-animation`: the animation is a derived mirror and has no bone
  * keys of its own.
@@ -67,6 +71,7 @@ export type RigEditReason =
   | 'has-parts'
   | 'has-children'
   | 'has-variants'
+  | 'view-in-use'
   | 'bad-value'
   | 'bone-mismatch'
   | 'mirror-animation';
@@ -382,13 +387,28 @@ export function addView(tx: Transaction, name: string, directions: readonly stri
 
 /**
  * Deletes a view with its rest poses, part visibility and default z. Refused (`has-variants`) while
- * any variant is drawn for it: delete those variants (or their parts) first, so no art is lost.
+ * any variant is drawn for it: delete those variants (or their parts) first, so no art is lost. Refused
+ * (`view-in-use`) while an authored animation resolves to it through `selectView` (its direction, or
+ * `views[0]` for an animation without one): the animation would otherwise fail to render. Mirror
+ * animations follow their source, so only authored ones are looked at.
  */
 export function deleteView(tx: Transaction, view: ViewId): void {
   const rig = rigOf(tx.doc);
   mustView(rig, view);
   if (rig.parts.some((p) => p.variants.some((v) => v.viewId === view))) {
     throw refuse('has-variants', `view ${view} still has variants`);
+  }
+  for (const a of tx.doc.animations) {
+    if ('mirrorOf' in a) continue;
+    let resolved: string | undefined;
+    try {
+      resolved = selectView(rig, a.direction).id;
+    } catch (e) {
+      if (!(e instanceof RigError)) throw e;
+    }
+    if (resolved === view) {
+      throw refuse('view-in-use', `animation ${a.group} (${a.id}) resolves to view ${view}`);
+    }
   }
   tx.update((d) => {
     const r = mutRig(d);
@@ -477,7 +497,8 @@ export interface AppliedTemplate {
 /**
  * Applies a skeleton template (`humanoidSide()` etc.; pass `origin` = the document origin and the
  * character height when generating it). Bones are matched **by name**: a bone that exists is reused
- * (its length is kept; a different parent is refused, `bone-mismatch`), a missing one is created.
+ * (its length is kept; a different parent is refused, `bone-mismatch`, and so is a template parent that
+ * the rig does not have), a missing one is created.
  * Every template bone gets its rest transform in the view, so applying the front template after the
  * side one gives a rig with two views over one skeleton. With no `viewId` a new view named after the
  * template (`side`, `front`, `back`) is created.
@@ -509,7 +530,9 @@ export function applySkeletonTemplate(
     if (existing === undefined) continue;
     const want =
       tb.parent === undefined ? undefined : rig.bones.find((b) => b.name === tb.parent)?.id;
-    if (existing.parentId !== want) {
+    // A template parent that is not in the rig yet is not "no parent": `want` is undefined for it too,
+    // which would match a root. A reused bone cannot be attached to a bone that does not exist.
+    if (existing.parentId !== want || (tb.parent !== undefined && want === undefined)) {
       throw refuse('bone-mismatch', `bone ${tb.name} exists with another parent`);
     }
     idOf[tb.name] = existing.id;
@@ -602,8 +625,10 @@ export interface BindPartsResult {
 /**
  * Why a layer was not bound: `no-view` (the rig has no view); `unknown-bone` (a `part:` name names no
  * bone); `unknown-view` (the `#view` names no view); `bone-not-in-view` (the bone has no rest entry
- * there, so no pivot); `empty` (no cel); `animated` (cels hold more than one drawing: a variant is
- * one image); `image-missing`; `duplicate-variant` (that bone/view/variant name is already taken);
+ * there, so no pivot); `empty` (no cel); `animated` (cels hold more than one drawing, counting the
+ * cel opacity: a variant is one image at one opacity); `translucent` (the layer and its one cel are both
+ * below opacity 255, which one part layer cannot hold, or the cel is below 255 and would be folded into
+ * an existing part as a variant, which has no opacity of its own); `image-missing`; `duplicate-variant` (that bone/view/variant name is already taken);
  * `name-taken` (another part layer already has the name `<bone>[_<part>]`); `name-too-long` (`<bone>_<part>` is not a valid name, > 48 characters); `bone-has-part` (overlap never adds to a bone that already has a part); `no-overlap` (no opaque pixel within reach
  * of any bone).
  */
@@ -614,6 +639,7 @@ export type BindSkipReason =
   | 'bone-not-in-view'
   | 'empty'
   | 'animated'
+  | 'translucent'
   | 'image-missing'
   | 'duplicate-variant'
   | 'name-taken'
@@ -625,6 +651,8 @@ interface Source {
   readonly layerId: LayerId;
   readonly imageId: ImageId;
   readonly offset: { readonly x: number; readonly y: number };
+  /** The cel's opacity, 0..255. */
+  readonly opacity: number;
 }
 
 type LayerRo = DeepReadonly<Layer>;
@@ -638,23 +666,34 @@ function pixelLayers(layers: readonly LayerRo[], out: PixelRo[] = []): PixelRo[]
   return out;
 }
 
-/** The one drawing of a pixel layer: its image and offset, or why there is none. */
+/**
+ * The one drawing of a pixel layer: its image, offset and cel opacity, or why there is none. Cels that
+ * differ in image, offset or opacity are `animated`; a one-drawing layer whose layer and cel opacity are
+ * both below 255 is `translucent` (one part layer holds one opacity).
+ */
 function sourceOf(layer: PixelRo): Source | BindSkipReason {
   let found: Source | undefined;
   for (const cel of Object.values(layer.cels)) {
     const resolved = 'linkTo' in cel ? layer.cels[cel.linkTo] : cel;
     if (resolved === undefined || 'linkTo' in resolved) continue;
-    const s: Source = { layerId: layer.id, imageId: resolved.imageId, offset: resolved.offset };
+    const s: Source = {
+      layerId: layer.id,
+      imageId: resolved.imageId,
+      offset: resolved.offset,
+      opacity: resolved.opacity,
+    };
     if (
       found !== undefined &&
       (found.imageId !== s.imageId ||
         found.offset.x !== s.offset.x ||
-        found.offset.y !== s.offset.y)
+        found.offset.y !== s.offset.y ||
+        found.opacity !== s.opacity)
     ) {
       return 'animated';
     }
     found = s;
   }
+  if (found !== undefined && found.opacity < 255 && layer.opacity < 255) return 'translucent';
   return found ?? 'empty';
 }
 
@@ -903,6 +942,11 @@ export function bindParts(tx: Transaction, opts: BindPartsOptions = {}): BindPar
     );
     let partId = existing?.id ?? newPartOfKey.get(key);
     const newPart = partId === undefined;
+    if (!newPart && p.source.opacity < 255) {
+      // A variant has no opacity of its own and the part layer's is shared by all variants.
+      skip(p.layer.id, 'translucent');
+      continue;
+    }
     if (newPart) {
       if (partLayerNames.has(layerNm)) {
         skip(p.layer.id, 'name-taken');
@@ -940,6 +984,8 @@ export function bindParts(tx: Transaction, opts: BindPartsOptions = {}): BindPar
         layer.kind = 'part';
         delete layer.cels;
         layer.name = w.layerName;
+        // The cel opacity becomes the layer opacity (the layer's own is 255 here: both below was skipped).
+        if (w.source.opacity < 255) layer.opacity = w.source.opacity;
         r.parts.push({ id: w.partId, boneId: w.boneId, layerId: w.layer.id, variants: [variant] });
       } else {
         r.parts.find((p) => p.id === w.partId)?.variants.push(variant);

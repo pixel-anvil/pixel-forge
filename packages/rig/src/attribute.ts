@@ -394,7 +394,8 @@ export function attributeEdit(
         continue;
       }
       const all = writes.get(c.part) ?? [];
-      all.push(...list);
+      // A loop, not `push(...list)`: spreading a per-pixel list overflows the call stack near 125,000 items.
+      for (const write of list) all.push(write);
       writes.set(c.part, all);
     }
     const built = new Map<number, Built>();

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   brushMask,
   ellipse,
+  ellipsePixels,
   floodFill,
   IndexedImage,
   line,
@@ -364,6 +365,50 @@ describe('ellipse', () => {
         }
       }
     }
+  });
+});
+
+describe('ellipsePixels extent', () => {
+  // Property of the box, not of the algorithm: every row 0..h-1 gets a pixel (the outline reaches the top and
+  // bottom edge) and nothing is plotted outside the inclusive box. Exhaustive for 1x1..24x24.
+  it('reaches the top and bottom rows and stays inside the box (outline and fill)', () => {
+    const bad: string[] = [];
+    for (let w = 1; w <= 24; w++) {
+      for (let h = 1; h <= 24; h++) {
+        for (const fill of [false, true]) {
+          const pts: [number, number][] = [];
+          if (fill) {
+            ellipsePixels(
+              0,
+              0,
+              w - 1,
+              h - 1,
+              () => undefined,
+              (xa, xb, y) => {
+                for (let x = xa; x <= xb; x++) pts.push([x, y]);
+              },
+            );
+          } else {
+            ellipsePixels(0, 0, w - 1, h - 1, (x, y) => pts.push([x, y]));
+          }
+          const rows = new Set(pts.map(([, y]) => y));
+          const inside = pts.every(([x, y]) => x >= 0 && x < w && y >= 0 && y < h);
+          if (!rows.has(0) || !rows.has(h - 1) || !inside)
+            bad.push(`${String(w)}x${String(h)}${fill ? ' fill' : ''}`);
+        }
+      }
+    }
+    expect(bad).toEqual([]);
+  });
+
+  it('draws a 1x3 flat ellipse full height', () => {
+    const one = draw(1, 3, (i) => {
+      ellipse(i, 0, 0, 0, 2, R);
+    });
+    expectAscii(one, '#\n#\n#', legend);
+    const pts: string[] = [];
+    ellipsePixels(0, 0, 0, 2, (x, y) => pts.push(`${String(x)},${String(y)}`));
+    expect(new Set(pts)).toEqual(new Set(['0,0', '0,1', '0,2']));
   });
 });
 

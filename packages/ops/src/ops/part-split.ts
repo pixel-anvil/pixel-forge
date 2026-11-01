@@ -69,7 +69,7 @@ export const partSplit = defineOp({
   summary:
     "Split a region (rect, lasso or flood) of a flat layer's cel into a new layer bound to a bone.",
   description:
-    'The pixels move into a new layer; the remainder plus the parts recomposite the frame. partName ("part:upper_arm_r", "part:hand_r@open#side": variant, view) binds it, else it binds by overlap if there is a clear winner, or stays a pixel layer (see ambiguous/skipped). The part draws in every frame: hide it elsewhere (rig_set_pose visible=false).',
+    'The pixels move into a new layer; remainder plus parts recomposite the frame. partName ("part:upper_arm_r", "part:hand_r@open#side") binds it, else overlap binds it on a clear winner, else it stays a pixel layer. The part draws in every frame: hide it elsewhere (rig_set_pose). Refused: rig-block-order (a covering pixel layer between rig block and part).',
   input: z.strictObject({
     doc: DocRef,
     layer: LayerRef.describe('The flat pixel layer to cut from (id or name).'),

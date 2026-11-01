@@ -6,14 +6,23 @@
  * not change and the gaps close. One edit of the open transaction.
  * @packageDocumentation
  */
-import { IndexedImage, TiledImage } from '@pixel-forge/raster';
+import { IndexedImage, TiledImage, div255 } from '@pixel-forge/raster';
 import type { Rgba } from '@pixel-forge/raster';
 import { overlapMasks } from '@pixel-forge/rig';
 import type { OverlapSkipped } from '@pixel-forge/rig';
-import type { BoneId, ImageId, PartId, VariantId, ViewId } from '@pixel-forge/schema';
+import type {
+  BoneId,
+  ImageId,
+  Layer,
+  LayerId,
+  PartId,
+  VariantId,
+  ViewId,
+} from '@pixel-forge/schema';
 import { CoreError } from './errors.js';
 import { referencedImages } from './frames.js';
 import type { StoredImage } from './images.js';
+import type { DeepReadonly } from './json.js';
 import type { Transaction } from './transaction.js';
 
 /** Why a paint was refused (`CoreError.details.reason`, code `BAD_ARGUMENT`). */
@@ -70,6 +79,23 @@ export interface PaintOverlapResult {
 
 const refuse = (reason: PaintOverlapReason, message: string): CoreError =>
   new CoreError('BAD_ARGUMENT', message, { reason });
+
+/**
+ * The effective opacity (0..255) of every part layer: its own opacity times its groups', as the frame
+ * render applies it. A part layer under a hidden group or hidden itself is never drawn, so it counts as 0.
+ */
+function partLayerOpacity(
+  layers: readonly DeepReadonly<Layer>[],
+  parent = 255,
+  out: Partial<Record<LayerId, number>> = {},
+): Partial<Record<LayerId, number>> {
+  for (const l of layers) {
+    const eff = l.visible ? div255(parent * l.opacity) : 0;
+    if (l.kind === 'group') partLayerOpacity(l.children, eff, out);
+    else if (l.kind === 'part') out[l.id] = eff;
+  }
+  return out;
+}
 
 /** The most frequent opaque colour (RGBA) or index of an image, or `undefined` when it has none. */
 function dominant(img: StoredImage): Rgba | number | undefined {
@@ -146,6 +172,8 @@ export function paintOverlapTx(
     rig,
     images: tx,
     canvas: doc.meta.canvas,
+    // Paint only hides under a part that is drawn at full opacity (translucent uppers show it through).
+    layerOpacity: partLayerOpacity(doc.layers),
     ...(direction === undefined ? {} : { direction }),
     ...(palette === undefined ? {} : { palette }),
   });
@@ -164,7 +192,8 @@ export function paintOverlapTx(
     const key = `${j.partId}/${j.variantId}`;
     const g = groups.get(key) ?? { partId: j.partId, variantId: j.variantId, bones: [], local: [] };
     g.bones.push(j.bone);
-    g.local.push(...j.local);
+    // A loop, not `push(...j.local)`: spreading a per-pixel list overflows the call stack near 125,000 items.
+    for (const px of j.local) g.local.push(px);
     groups.set(key, g);
   }
   const plan = [...groups.values()].map((g) => {

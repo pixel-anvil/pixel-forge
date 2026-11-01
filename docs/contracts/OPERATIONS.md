@@ -948,7 +948,7 @@ Close the elbow gap of the hero:
 
 Split a region (rect, lasso or flood) of a flat layer's cel into a new layer bound to a bone.
 
-The pixels move into a new layer; the remainder plus the parts recomposite the frame. partName ("part:upper_arm_r", "part:hand_r@open#side": variant, view) binds it, else it binds by overlap if there is a clear winner, or stays a pixel layer (see ambiguous/skipped). The part draws in every frame: hide it elsewhere (rig_set_pose visible=false).
+The pixels move into a new layer; remainder plus parts recomposite the frame. partName ("part:upper_arm_r", "part:hand_r@open#side") binds it, else overlap binds it on a clear winner, else it stays a pixel layer. The part draws in every frame: hide it elsewhere (rig_set_pose). Refused: rig-block-order (a covering pixel layer between rig block and part).
 
 - Safety: `mutate`
 - MCP tool: `part_split`
@@ -1320,7 +1320,7 @@ Bake the hero idle as a new animation:
 
 Bind pixel layers to bones as parts, by layer name ("part:<bone>[.<part>][@variant][#view]") or by overlap.
 
-By name: a layer called part:upper_arm_r (or just a bone name) becomes that bone's part; @variant adds another variant of the same part, #view another view. By overlap: remaining layers bind to the bone their opaque pixels cover, only with a clear winner (ties are listed as ambiguous, nothing is guessed). Layers with several drawings cannot bind (animated). Running it again changes nothing. Cut flat art into layers first with part_split.
+By name: a layer called part:upper_arm_r (or just a bone name) becomes that bone's part; @variant adds another variant of the same part, #view another view. By overlap: remaining layers bind to the bone their opaque pixels cover, only with a clear winner (ties are listed as ambiguous). Layers with several drawings (animated) or a translucent layer and cel are skipped. Running it again changes nothing. Cut flat art into layers first with part_split.
 
 - Safety: `mutate`
 - MCP tool: `rig_bind_parts`

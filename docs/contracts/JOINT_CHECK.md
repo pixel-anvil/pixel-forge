@@ -189,12 +189,14 @@ image bounds, and the paint op then grows the image. The cases:
   entry θ and each gap q with d = q − P, take `[C, S] = trigQ16(θ)` and the nearest-sample source
   `src(q) = P + (rnd(C·dx + S·dy, 65536), rnd(−S·dx + C·dy, 65536))`. This is the same inverse mapping as the
   spike's `rotNearest`. Then:
-  `hidden(t) ⇔ parent(t) ∧ ¬child_0(t)` (rest canvas), and
+  `hidden(t) ⇔ solid(parent)(t) ∧ ¬child_0(t)` (rest canvas; `solid` means alpha 255 on a layer of effective opacity
+  255, because paint under a translucent pixel shows through; G1-fix), and
   `mask = ⋃_q { t ∈ 3×3 block around src(q) : hidden(t) }`.
   The 3×3 dilation matters: RotSprite's Scale2x rounds convex corners, so the exact source pixel can already be
   opaque (see the `gappy_knee` example). `local = mask − P + Pc`, where Pc is the child variant's pivot.
 - **Child drawn over the parent.** Paint on the parent, directly at the gap pixels, which never move. Every gap q is
-  child-covered at rest, so painting it is hidden: `mask = union`. `local = mask − Pp + Ppc`, where Pp is the
+  child-covered at rest, so painting it is hidden where the child is solid: `mask` = the union restricted to the pixels
+  where the child is solid (the rest are `uncovered`). `local = mask − Pp + Ppc`, where Pp is the
   parent's snapped pivot and Ppc its variant pivot.
 - `uncovered`: the gaps q (from any angle, deduplicated, sorted) that no mask pixel can serve. In the child-under
   case, that means no hidden pixel in the 3×3 block around src(q). These need a visible art change.

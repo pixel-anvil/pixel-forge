@@ -379,6 +379,93 @@ PPP....CCCCCCC
   });
 });
 
+/** The setup with the opaque pixels of one art turned into alpha `a` (only the pixel `only`, when given). */
+function translucent(s: Setup, art: 'upper' | 'lower', a: number, only?: Px): Setup {
+  const img = TiledImage.fromRGBA(art === 'upper' ? s.parent : s.child);
+  for (let y = 0; y < img.height; y++) {
+    for (let x = 0; x < img.width; x++) {
+      const px = img.get(x, y);
+      if (px[3] === 0) continue;
+      if (only !== undefined && (only[0] !== x || only[1] !== y)) continue;
+      img.set(x, y, [px[0], px[1], px[2], a]);
+    }
+  }
+  s.images.map.set(IMG(art), img);
+  return { ...s, ...(art === 'upper' ? { parent: img.toRGBA() } : { child: img.toRGBA() }) };
+}
+
+describe('overlap masks: only solid pixels hide paint', () => {
+  it('child under: a translucent parent pixel is not hiding paint, its neighbours still are', () => {
+    // The elbow's hand-computed mask is (5..6, 4..7); (6, 5) of the parent is now half transparent.
+    const s = translucent(elbow({ childUnder: true }), 'upper', 128, [6, 5]);
+    const j = need(overlapMasks(s).joints[0]);
+    expect(j.mask).toEqual([
+      [5, 4],
+      [6, 4],
+      [5, 5],
+      [5, 6],
+      [6, 6],
+      [5, 7],
+      [6, 7],
+    ]);
+  });
+
+  it('child under: a fully translucent parent hides nothing, so every gap is uncovered', () => {
+    const s = translucent(elbow({ childUnder: true }), 'upper', 254);
+    const j = need(overlapMasks(s).joints[0]);
+    const gaps = need(jointCheck(s).joints[0]);
+    expect(gaps.union.length).toBeGreaterThan(0);
+    expect(j.mask).toEqual([]);
+    expect(j.local).toEqual([]);
+    expect(j.uncovered).toEqual(gaps.union);
+  });
+
+  it('child under: a parent layer below opacity 255 hides nothing; 255 or unlisted changes nothing', () => {
+    const s = elbow({ childUnder: true });
+    const plain = need(overlapMasks(s).joints[0]);
+    expect(plain.mask.length).toBe(8);
+    for (const layerOpacity of [{}, { [LAY('upper')]: 255 }, { [LAY('lower')]: 10 }]) {
+      expect(need(overlapMasks({ ...s, layerOpacity }).joints[0]).mask).toEqual(plain.mask);
+    }
+    const dim = need(overlapMasks({ ...s, layerOpacity: { [LAY('upper')]: 254 } }).joints[0]);
+    expect(dim.mask).toEqual([]);
+    expect(dim.uncovered).toEqual(need(jointCheck(s).joints[0]).union);
+  });
+
+  it('child over: the parent is painted only under solid child pixels', () => {
+    const s = elbow();
+    const gaps = need(jointCheck(s).joints[0]);
+    const half = translucent(s, 'lower', 128);
+    const j = need(overlapMasks(half).joints[0]);
+    expect(j.paint).toBe('parent');
+    expect(j.mask).toEqual([]);
+    expect(j.uncovered).toEqual(gaps.union);
+    const dim = need(overlapMasks({ ...s, layerOpacity: { [LAY('lower')]: 200 } }).joints[0]);
+    expect(dim.mask).toEqual([]);
+    expect(dim.uncovered).toEqual(gaps.union);
+    // One translucent child pixel on a gap removes only that pixel.
+    const [gx, gy] = need(gaps.union[0]);
+    const one = need(overlapMasks(translucent(elbow(), 'lower', 128, [gx, gy])).joints[0]);
+    expect(one.mask).toEqual(gaps.union.slice(1));
+    expect(one.uncovered).toEqual([[gx, gy]]);
+  });
+
+  it('overlapMask on images: alpha below 255 never hides', () => {
+    const s = elbow({ childUnder: true });
+    const gaps = need(jointCheck(s).joints[0]);
+    const half = translucent(s, 'upper', 128);
+    const r = overlapMask({
+      gaps,
+      parent: half.parent,
+      childRest: s.child,
+      paint: 'child',
+      imageOrigin: [0, 0],
+    });
+    expect(r.mask).toEqual([]);
+    expect(r.uncovered).toEqual(gaps.union);
+  });
+});
+
 describe('overlapMasks: preconditions and report shape', () => {
   it('leaves out joints without gaps', () => {
     const s = setup(
@@ -484,6 +571,17 @@ describe('checkOverlapPaint: painting outside the mask is reported', () => {
     expect(report.inside).toEqual(j.mask);
     expect(report.outsideHidden).toEqual([]);
     expect(report.outsideVisible).toEqual([]);
+  });
+
+  it('a translucent upper pixel does not hide paint: it is outsideVisible', () => {
+    const half = translucent(elbow({ childUnder: true }), 'upper', 128);
+    const report = checkOverlapPaint({
+      mask: [],
+      upper: half.parent,
+      painted: [[2, 5]], // under the (now half transparent) parent
+    });
+    expect(report.outsideHidden).toEqual([]);
+    expect(report.outsideVisible).toEqual([[2, 5]]);
   });
 
   it('rejects an upper image whose buffer does not match its size', () => {

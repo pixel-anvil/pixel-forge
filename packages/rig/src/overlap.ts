@@ -3,23 +3,26 @@
  * gaps, the pixels a human or an LLM can paint on the part that is drawn **lower** so that every gap
  * is covered while the composite at rest does not change a single pixel.
  *
- * Definitions (all integer maths on alpha masks; opaque means alpha > 0):
+ * Definitions (all integer maths on alpha masks; opaque means alpha > 0, except that only a **solid**
+ * pixel hides paint: alpha 255 on a layer of effective opacity 255):
  *
  * - The **painted part** is the one of the two joint parts that is drawn lower at rest. The other is the
- *   **upper** part. Painting a pixel the upper part covers is invisible at rest, whatever the painted
- *   part held there.
+ *   **upper** part. Painting a pixel under a solid pixel of the upper part is invisible at rest, whatever
+ *   the painted part held there. Under a translucent upper pixel (alpha < 255, or a layer below full
+ *   opacity) the paint would show through, so such a pixel never counts as covering.
  * - **Child under the parent** (paint the child). For every checked angle θ and gap `q` with
  *   `d = q − P`, the nearest-sample source is `src = P + (rnd(C·dx + S·dy), rnd(−S·dx + C·dy))`
  *   with `[C, S] = trigQ16(θ)` (the inverse of the child's rotation about the pivot `P`). The mask is
- *   the union over all gaps of the 3×3 block around `src` restricted to `hidden(t) = parent(t) ∧
- *   ¬child₀(t)`: pixels the parent covers and the child does not draw at rest. The 3×3 dilation is
+ *   the union over all gaps of the 3×3 block around `src` restricted to `hidden(t) = solid(parent)(t) ∧
+ *   ¬child₀(t)`: pixels the parent covers solidly and the child does not draw at rest. The 3×3 dilation is
  *   there because RotSprite rounds convex corners, so the exact source pixel can already be opaque.
  * - **Child over the parent** (paint the parent). Gaps never move and are child-covered at rest, so the
- *   mask is the gap union itself.
- * - `uncovered` lists the gaps whose source block holds no hidden pixel (child-under only). They need a
- *   visible art change: no invisible paint can close them.
+ *   mask is the gap union restricted to the pixels where the child is solid.
+ * - `uncovered` lists the gaps no hidden pixel can serve: in the child-under case the source block holds no
+ *   hidden pixel, in the child-over case the child is translucent there. They need a visible art change:
+ *   no invisible paint can close them.
  *
- * By construction `mask ⊆ {t : upper(t) ∧ ¬painted₀(t)}`, so **painting any subset of the mask leaves
+ * By construction `mask ⊆ {t : solid upper(t) ∧ ¬painted₀(t)}`, so **painting any subset of the mask leaves
  * the rest composite unchanged**. {@link checkOverlapPaint} reports paint outside the mask.
  * @packageDocumentation
  */
@@ -27,8 +30,9 @@ import { cosQ16, roundQ16, sinQ16 } from '@pixel-forge/raster';
 import type { RgbaImage } from '@pixel-forge/raster';
 import type { BoneId, LayerId, PartId, VariantId } from '@pixel-forge/schema';
 import { JointCheckError } from './errors.js';
-import { alphaMask, sweepJoints } from './joint.js';
+import { alphaMask, paint as paintMask, sweepJoints } from './joint.js';
 import type { JointCheckInput, JointGapResult, Px } from './joint.js';
+import type { PartRender } from './render.js';
 
 /** Which part {@link overlapMask} paints: the one drawn lower at rest. */
 export type OverlapPaint = 'child' | 'parent';
@@ -61,21 +65,32 @@ export interface OverlapMaskResult {
 
 const byYX = (a: Px, b: Px): number => a[1] - b[1] || a[0] - b[0];
 
+/**
+ * `childRest` is an alpha > 0 mask; `parentSolid` and `childSolid` mark the pixels that
+ * hide paint (alpha 255 on a layer of opacity 255).
+ */
 function overlapOnMasks(
   w: number,
   h: number,
-  parent: Uint8Array,
-  childRest: Uint8Array,
+  masks: {
+    readonly childRest: Uint8Array;
+    readonly parentSolid: Uint8Array;
+    readonly childSolid: Uint8Array;
+  },
   gaps: JointGapResult,
   paint: OverlapPaint,
   origin: Px,
 ): OverlapMaskResult {
+  const { childRest, parentSolid, childSolid } = masks;
   const mask = new Set<number>();
   const uncovered = new Set<number>();
   const on = (m: Uint8Array, x: number, y: number): boolean =>
     x >= 0 && y >= 0 && x < w && y < h && m[y * w + x] !== 0;
   if (paint === 'parent') {
-    for (const [x, y] of gaps.union) mask.add(y * w + x);
+    for (const [x, y] of gaps.union) {
+      if (on(childSolid, x, y)) mask.add(y * w + x);
+      else uncovered.add(y * w + x);
+    }
   } else {
     const [px, py] = gaps.pivot;
     for (const { angle, gaps: list } of gaps.angles) {
@@ -96,7 +111,7 @@ function overlapOnMasks(
         let served = false;
         for (let ty = sy - 1; ty <= sy + 1; ty++) {
           for (let tx = sx - 1; tx <= sx + 1; tx++) {
-            if (on(parent, tx, ty) && !on(childRest, tx, ty)) {
+            if (on(parentSolid, tx, ty) && !on(childRest, tx, ty)) {
               mask.add(ty * w + tx);
               served = true;
             }
@@ -121,6 +136,9 @@ function overlapOnMasks(
  * `gaps` close without changing the rest composite. See the module comment for the exact definition.
  * Pure and deterministic; the inputs are not changed. `paint: 'child'` paints the child (the usual
  * case), `'parent'` the parent. Painting any subset of `mask` leaves the composite at rest unchanged.
+ * Only alpha 255 of the upper image hides paint: scale its alpha by the layer's effective opacity before
+ * the call (see {@link OverlapMasksInput.layerOpacity}); translucent upper pixels never enter the mask and
+ * their gaps are `uncovered`.
  *
  * Throws {@link JointCheckError}: `SIZE_MISMATCH` (image sizes differ), `BAD_ANGLE` (a gap angle that is
  * not a multiple of 0.25), `BAD_PIVOT` (a non-integer pivot, `imageOrigin` or gap pixel).
@@ -129,20 +147,27 @@ export function overlapMask(input: OverlapMaskInput): OverlapMaskResult {
   const { gaps, parent, childRest, paint, imageOrigin } = input;
   const w = parent.width;
   const h = parent.height;
-  const pm = alphaMask(parent, 'parent', w, h);
   const cm = alphaMask(childRest, 'childRest', w, h);
+  const ps = alphaMask(parent, 'parent', w, h, 255);
+  const cs = alphaMask(childRest, 'childRest', w, h, 255);
   const ints = [...gaps.pivot, ...imageOrigin, ...gaps.union.flat()];
   if (!ints.every(Number.isInteger)) {
     throw new JointCheckError('BAD_PIVOT', 'pivot, imageOrigin and gap pixels must be integers');
   }
-  return overlapOnMasks(w, h, pm, cm, gaps, paint, [imageOrigin[0], imageOrigin[1]]);
+  return overlapOnMasks(w, h, { childRest: cm, parentSolid: ps, childSolid: cs }, gaps, paint, [
+    imageOrigin[0],
+    imageOrigin[1],
+  ]);
 }
 
 /** Input of {@link checkOverlapPaint}. */
 export interface OverlapPaintInput {
   /** The `mask` of an {@link OverlapMaskResult} (canvas pixels). */
   readonly mask: readonly Px[];
-  /** The upper part's rest image in canvas space: paint it covers is invisible. */
+  /**
+   * The upper part's rest image in canvas space: paint under a pixel of alpha 255 is invisible. Scale the
+   * alpha by the layer's effective opacity first (a layer below 255 hides nothing).
+   */
   readonly upper: RgbaImage;
   /** Canvas pixels the author painted (added or changed) on the painted part. */
   readonly painted: readonly Px[];
@@ -160,8 +185,9 @@ export interface OverlapPaintReport {
 
 /**
  * Reports paint made outside an overlap mask. A painted pixel is `inside` the mask, `outsideHidden`
- * (the upper part covers it, so the rest composite is unchanged) or `outsideVisible` (it changes the
- * composite at rest and should be undone). Pixels off the canvas count as visible. Pure.
+ * (the upper part covers it solidly, so the rest composite is unchanged) or `outsideVisible` (it changes the
+ * composite at rest and should be undone). Only alpha 255 of `upper` hides paint, as in {@link overlapMask}:
+ * a translucent upper pixel lets the paint show. Pixels off the canvas count as visible. Pure.
  */
 export function checkOverlapPaint(input: OverlapPaintInput): OverlapPaintReport {
   const { upper } = input;
@@ -180,7 +206,7 @@ export function checkOverlapPaint(input: OverlapPaintInput): OverlapPaintReport 
     if (seen.has(key)) continue;
     seen.add(key);
     if (inMask.has(key)) inside.push([x, y]);
-    else if (x >= 0 && y >= 0 && x < w && y < h && (upper.data[(y * w + x) * 4 + 3] ?? 0) > 0) {
+    else if (x >= 0 && y >= 0 && x < w && y < h && (upper.data[(y * w + x) * 4 + 3] ?? 0) === 255) {
       outsideHidden.push([x, y]);
     } else outsideVisible.push([x, y]);
   }
@@ -189,6 +215,16 @@ export function checkOverlapPaint(input: OverlapPaintInput): OverlapPaintReport 
     outsideHidden: outsideHidden.sort(byYX),
     outsideVisible: outsideVisible.sort(byYX),
   };
+}
+
+/** Input of {@link overlapMasks}: the joint check input plus the opacity of the part layers. */
+export interface OverlapMasksInput extends JointCheckInput {
+  /**
+   * Effective opacity (0..255, the layer chain including its groups, as the frame render applies it) of
+   * the part layers by id. Paint only hides under a part whose layer is at 255, so a layer below
+   * 255 never covers. A layer that is not listed counts as 255.
+   */
+  readonly layerOpacity?: Readonly<Partial<Record<LayerId, number>>>;
 }
 
 /** One joint with gaps in an {@link OverlapReport}. */
@@ -228,12 +264,14 @@ const codeUnit = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
  * The overlap masks of every joint of a rig that has gaps: runs the joint sweep (same input and
  * defaults as `jointCheck`, so the masks answer exactly the reported gaps), picks the part drawn lower
  * at rest (render order: `z`, then rig order) and calls {@link overlapMask}. Joints without gaps are
- * left out. A joint whose bones do not each have exactly one visible part, or whose painted part is
+ * left out. Only solid pixels hide paint (alpha 255 on a layer whose {@link OverlapMasksInput.layerOpacity}
+ * is 255); gaps that only a translucent upper part covers are `uncovered`. A joint whose bones do not
+ * each have exactly one visible part, or whose painted part is
  * drawn rotated at rest (`drawnAngle` ≠ the rest angle, or flipped), is listed in `skipped`.
  * `local` is in the painted variant's own image coordinates (`mask − (pivot − variant pivot)`).
  * Pure and deterministic. Throws what `jointCheck` throws.
  */
-export function overlapMasks(input: JointCheckInput): OverlapReport {
+export function overlapMasks(input: OverlapMasksInput): OverlapReport {
   const sweep = sweepJoints(input);
   const joints: OverlapJoint[] = [];
   const skipped: OverlapSkipped[] = [];
@@ -259,11 +297,21 @@ export function overlapMasks(input: JointCheckInput): OverlapReport {
       continue;
     }
     const origin: Px = [painted.pivot.x - variant.pivot.x, painted.pivot.y - variant.pivot.y];
+    const solid = (part: PartRender): Uint8Array => {
+      const m = new Uint8Array(sweep.w * sweep.h);
+      if ((input.layerOpacity?.[part.layerId] ?? 255) === 255) {
+        paintMask(m, sweep.w, sweep.h, part, input.palette, true);
+      }
+      return m;
+    };
     const r = overlapOnMasks(
       sweep.w,
       sweep.h,
-      j.parentRest,
-      j.childRest,
+      {
+        childRest: j.childRest,
+        parentSolid: solid(parent),
+        childSolid: solid(child),
+      },
       j.result,
       childUnder ? 'child' : 'parent',
       origin,

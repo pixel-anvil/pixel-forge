@@ -43,6 +43,11 @@ interface Art {
   /** extra frame cel with another image (animated) */
   animated?: boolean;
   empty?: boolean;
+  /** Opacity of the first cel (default 255) and of the layer (default 255). */
+  celOpacity?: number;
+  layerOpacity?: number;
+  /** A second cel (frame 1) of the same image and offset with this opacity. */
+  secondOpacity?: number;
 }
 
 /** A document with no rig and the given pixel layers, each a filled rectangle. */
@@ -60,7 +65,10 @@ function makeStore(arts: Art[]): { store: DocumentStore; ids: Record<string, Lay
       for (let y = 0; y < a.h; y++) for (let x = 0; x < a.w; x++) img.set(x, y, [200, 0, 0, 255]);
       const iid = g.next('image');
       images.push([iid, img]);
-      cels[D.f0] = { imageId: iid, offset: { x: a.x, y: a.y }, opacity: 255 };
+      cels[D.f0] = { imageId: iid, offset: { x: a.x, y: a.y }, opacity: a.celOpacity ?? 255 };
+      if (a.secondOpacity !== undefined) {
+        cels[D.f1] = { imageId: iid, offset: { x: a.x, y: a.y }, opacity: a.secondOpacity };
+      }
       if (a.animated) {
         const img2 = new TiledImage(a.w, a.h);
         img2.set(0, 0, [1, 2, 3, 255]);
@@ -74,7 +82,7 @@ function makeStore(arts: Art[]): { store: DocumentStore; ids: Record<string, Lay
       id,
       name: a.name,
       visible: true,
-      opacity: 255,
+      opacity: a.layerOpacity ?? 255,
       export: true,
       cels,
     } as Document['layers'][number]);
@@ -232,6 +240,75 @@ describe('applySkeletonTemplate', () => {
     expect(reason(() => store.transact('x', (tx) => applySkeletonTemplate(tx, front())))).toBe(
       'bone-mismatch',
     );
+  });
+});
+
+describe('applySkeletonTemplate: a reused root against a template parent that is not in the rig (G1-fix 2)', () => {
+  it('refuses with bone-mismatch and changes nothing', () => {
+    const { store } = makeStore([]);
+    // `head` exists as a root; the template makes it a child of `neck`, which the rig does not have yet.
+    store.transact('head', (tx) => addBone(tx, { name: 'head', length: 6 }));
+    const before = documentHash(store);
+    expect(reason(() => store.transact('x', (tx) => applySkeletonTemplate(tx, side())))).toBe(
+      'bone-mismatch',
+    );
+    expect(documentHash(store)).toBe(before);
+    expect(store.doc.rig?.bones.map((b) => b.name)).toEqual(['head']);
+    expect(store.doc.rig?.views).toEqual([]);
+  });
+
+  it('still reuses a root that the template also makes a root', () => {
+    const { store } = makeStore([]);
+    store.transact('root', (tx) => addBone(tx, { name: 'root', length: 0 }));
+    const r = store.transact('x', (tx) => applySkeletonTemplate(tx, side()));
+    expect(r.created).toHaveLength(16);
+    expect(store.doc.rig?.bones.filter((b) => b.name === 'root')).toHaveLength(1);
+  });
+});
+
+describe('bindParts: opacity (G1-fix 7)', () => {
+  const arts: Art[] = [
+    { name: 'torso', x: 18, y: 20, w: 5, h: 12, celOpacity: 128 }, // cel translucent, layer opaque
+    { name: 'head', x: 18, y: 8, w: 4, h: 4, layerOpacity: 200 }, // layer translucent, cel opaque
+    { name: 'pelvis', x: 18, y: 32, w: 5, h: 4, celOpacity: 128, layerOpacity: 128 }, // both
+    { name: 'neck', x: 19, y: 14, w: 2, h: 2, secondOpacity: 100 }, // two cels, same image, other opacity
+  ];
+
+  it('cels that differ only in opacity are animated; opacity moves from cel to layer; both translucent is skipped', () => {
+    const { store, ids } = makeStore(arts);
+    store.transact('t', (tx) => applySkeletonTemplate(tx, front()));
+    const r = store.transact('bind', (tx) => bindParts(tx, { byOverlap: false }));
+    const skips = Object.fromEntries(r.skipped.map((x) => [x.layerId, x.reason]));
+    expect(skips[ids.neck as string]).toBe('animated');
+    expect(skips[ids.pelvis as string]).toBe('translucent');
+    expect(r.bound.map((b) => b.layerId).sort()).toEqual([ids.head, ids.torso].sort());
+    const layer = (id: string | undefined) => store.doc.layers.find((l) => l.id === id);
+    // the cel opacity of a one-drawing layer becomes the layer's opacity
+    expect(layer(ids.torso)).toMatchObject({ kind: 'part', opacity: 128 });
+    // an opaque cel leaves the layer opacity alone
+    expect(layer(ids.head)).toMatchObject({ kind: 'part', opacity: 200 });
+    // refused layers are untouched
+    expect(layer(ids.pelvis)).toMatchObject({ kind: 'pixel', opacity: 128 });
+    expect(layer(ids.neck)).toMatchObject({ kind: 'pixel' });
+    expect(errors(store)).toEqual([]);
+  });
+
+  it('a translucent cel cannot be folded into a part as a variant: skipped as translucent', () => {
+    const { store, ids } = makeStore([
+      { name: 'torso', x: 18, y: 20, w: 5, h: 12 },
+      { name: 'torso_b', x: 18, y: 20, w: 5, h: 12, celOpacity: 128 },
+    ]);
+    store.transact('t', (tx) => applySkeletonTemplate(tx, front()));
+    const r = store.transact('bind', (tx) =>
+      bindParts(tx, {
+        byOverlap: false,
+        rawNames: { [ids.torso_b as string]: 'part:torso@alt' },
+      }),
+    );
+    expect(r.bound.map((b) => [b.layerId, b.merged])).toEqual([[ids.torso, false]]);
+    expect(r.skipped).toEqual([{ layerId: ids.torso_b, reason: 'translucent' }]);
+    expect(store.doc.layers.some((l) => l.id === ids.torso_b)).toBe(true);
+    expect(store.doc.rig?.parts[0]?.variants).toHaveLength(1);
   });
 });
 
@@ -452,6 +529,88 @@ describe('bone and view CRUD', () => {
         });
       }),
     ).toBe('has-parts');
+  });
+
+  it('deleteView refuses a view that an authored animation resolves to (G1-fix 10)', () => {
+    const { store, t } = setup();
+    // The document's `idle` animation has no direction, so it resolves to views[0]: the template's.
+    expect(
+      reason(() => {
+        store.transact('x', (tx) => {
+          deleteView(tx, t.viewId);
+        });
+      }),
+    ).toBe('view-in-use');
+    // A second view is free to go until an animation draws its direction.
+    const v = store.transact('view', (tx) => addView(tx, 'turn', ['turn']));
+    const addAnim = (direction: string, group: string, extra: Record<string, unknown> = {}) =>
+      store.transact('anim', (tx) => {
+        const id = tx.newId('animation');
+        const fid = tx.newId('frame');
+        tx.update((d) => {
+          d.animations.push({
+            id,
+            group,
+            direction,
+            loop: 'loop',
+            frames: [
+              {
+                id: fid,
+                durationMs: 100,
+                markers: {},
+                events: [],
+                rootMotion: { dx: 0, dy: 0 },
+                boneKeys: {},
+                partKeys: {},
+              },
+            ],
+            overrides: [],
+            ...extra,
+          });
+        });
+        return id;
+      });
+    const walk = addAnim('turn', 'walk');
+    const before = documentHash(store);
+    expect(
+      reason(() => {
+        store.transact('x', (tx) => {
+          deleteView(tx, v);
+        });
+      }),
+    ).toBe('view-in-use');
+    expect(documentHash(store)).toBe(before);
+    // A mirror of it follows its source, so it is not looked at on its own.
+    store.transact('mirror', (tx) => {
+      tx.update((d) => {
+        d.animations.push({
+          id: tx.newId('animation'),
+          group: 'walk',
+          direction: 'turn_l',
+          mirrorOf: walk,
+          overrides: [],
+        });
+      });
+    });
+    expect(
+      reason(() => {
+        store.transact('x', (tx) => {
+          deleteView(tx, v);
+        });
+      }),
+    ).toBe('view-in-use');
+    // Once the animation is gone (here: re-pointed at a direction no view draws), the view can go.
+    store.transact('away', (tx) => {
+      tx.update((d) => {
+        const a = d.animations.find((x) => x.id === walk);
+        if (a !== undefined) a.direction = 'nowhere';
+        d.animations = d.animations.filter((x) => !('mirrorOf' in x));
+      });
+    });
+    store.transact('del', (tx) => {
+      deleteView(tx, v);
+    });
+    expect(store.doc.rig?.views.map((x) => x.name)).toEqual(['side']);
   });
 
   it('view CRUD', () => {

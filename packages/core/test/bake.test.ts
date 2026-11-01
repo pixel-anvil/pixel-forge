@@ -8,6 +8,7 @@ import {
   attributeEditTx,
   bakeAnimation,
   createRigRenderer,
+  deleteFrame,
   insertFrame,
   renderFrame,
   validate,
@@ -46,6 +47,7 @@ const I = {
   imgArm: gen.next('image'),
   imgLeg: gen.next('image'),
   imgFx: gen.next('image'),
+  grp: gen.next('layer'),
 };
 const idState = gen.state();
 
@@ -68,6 +70,8 @@ interface Opts {
   fx?: boolean;
   fxExport?: boolean;
   indexed?: boolean;
+  /** Put the part layers (all, or only the first with `first`) in a group with these properties. */
+  group?: { opacity?: number; visible?: boolean; export?: boolean; first?: boolean };
 }
 
 /**
@@ -87,7 +91,23 @@ function makeStore(o: Opts = {}): DocumentStore {
     },
     { id: I.mirror, group: 'act', direction: 'side_l', mirrorOf: I.anim, overrides: [] },
   ];
-  const layers: Layer[] = [part(I.layArm), part(I.layLeg)];
+  let layers: Layer[] = [part(I.layArm), part(I.layLeg)];
+  if (o.group !== undefined) {
+    const g = o.group;
+    const members = g.first === true ? [part(I.layArm)] : layers;
+    layers = [
+      {
+        kind: 'group',
+        id: I.grp,
+        name: 'rig',
+        visible: g.visible ?? true,
+        opacity: g.opacity ?? 255,
+        export: g.export ?? true,
+        children: members,
+      },
+      ...(g.first === true ? [part(I.layLeg)] : []),
+    ];
+  }
   if (o.fx === true) {
     layers.push({
       kind: 'pixel',
@@ -288,6 +308,58 @@ describe('bakeAnimation (FR-RIG-23)', () => {
     expect(run(A, 'act')).toBe('BAD_ARGUMENT');
     expect(run(A, 'no good')).toBe('BAD_ARGUMENT');
     expect(store.version).toBe(v);
+  });
+
+  it('bakes parts that sit in a translucent group to exactly the pre-bake render (G1-fix 1)', () => {
+    for (const mode of ['new', 'replace'] as const) {
+      const store = prepared({ group: { opacity: 128 } });
+      const before = hashes(store, A, 2);
+      const res = store.transact('bake', (tx) => bakeAnimation(tx, A, { mode }));
+      const ref: AnimRef = mode === 'new' ? { id: res.animationId } : A;
+      expect(hashes(store, ref, 2), mode).toEqual(before);
+      // the baked layer is a top-level layer with its own full opacity, below the group that held the rig
+      const names = store.doc.layers.map((l) => l.name);
+      expect(names, mode).toEqual(['baked', 'rig', 'fx']);
+      expect(store.doc.layers[0]).toMatchObject({ opacity: 255, visible: true, export: true });
+      expect(validate(store).filter((f) => f.severity === 'error')).toEqual([]);
+    }
+  });
+
+  it('bakes when the first part layer is in a hidden or not exported group (G1-fix 1)', () => {
+    for (const group of [{ visible: false }, { export: false }]) {
+      for (const mode of ['new', 'replace'] as const) {
+        const store = prepared({ group: { ...group, first: true } });
+        const before = hashes(store, A, 2);
+        const res = store.transact('bake', (tx) => bakeAnimation(tx, A, { mode }));
+        const ref: AnimRef = mode === 'new' ? { id: res.animationId } : A;
+        const label = `${JSON.stringify(group)} ${mode}`;
+        expect(hashes(store, ref, 2), label).toEqual(before);
+        expect(
+          store.doc.layers.map((l) => l.name),
+          label,
+        ).toEqual(['baked', 'rig', I.layLeg, 'fx']);
+      }
+    }
+  });
+
+  it('hides the rig on every baked frame, so deleting frame 0 keeps the baked pixels (G1-fix 4)', () => {
+    for (const mode of ['new', 'replace'] as const) {
+      const store = prepared();
+      const before = hashes(store, A, 2);
+      const res = store.transact('bake', (tx) => bakeAnimation(tx, A, { mode }));
+      const ref: AnimRef = mode === 'new' ? { id: res.animationId } : A;
+      const anim = store.doc.animations.find((a) => a.id === res.animationId);
+      if (anim === undefined || !('frames' in anim)) throw new Error('animation');
+      const hidden = { [I.partArm]: { visible: false }, [I.partLeg]: { visible: false } };
+      expect(
+        anim.frames.map((f) => f.partKeys),
+        mode,
+      ).toEqual([hidden, hidden]);
+      store.transact('delete frame 0', (tx) => {
+        deleteFrame(tx, ref, 0);
+      });
+      expect(hashes(store, ref, 1), mode).toEqual([before[1]]);
+    }
   });
 
   it('a second bake gets a fresh layer name', () => {
