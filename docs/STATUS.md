@@ -30,8 +30,9 @@ User wants to review the spec and the plan before proceeding past each.
 - ☑ T0.3 testkit. ☑ T1.1 schema (the user signed off on the domain summary on 2026-10-27).
 - ☑ T4.2 .pxf io. ☑ T3.2 rig templates + binding (multiple parts per bone). ☑ T4.4 .aseprite parser. ☑ T4.3 spritesheet I/O. ☑ T3.1 FK + snapping (ADR-012 accepted). ☑ T4.6 .aseprite fixtures. ☑ T2.3 renderFrame (pipeline: core owns steps 5–8; rig hook is parts-only). ☑ T2.2 frame ops + validate. ☑ T1.5 primitives (clean-room ellipse after a licensing catch). ☑ T1.7 post-passes. ☑ T1.2 color. ☑ T1.3 presets (no licence stated on Lospec; see PAL-01). ☑ T1.4 raster. ☑ T3.0 joint-gap contract. ☑ T1.6 RotSprite (reviewed and fixed). ☑ T2.1 document store (reviewed and fixed). ☑ T4.5 .aseprite mapping + re-import (IO-03/IO-04 logged). ☑ T3.9 synthetic hero (golden reviewed). ☑ T3.3 part render + overrides (reviewed and fixed; RIG-03/CORE-03 logged). ☑ T6.0 Godot contract (private mapping → GAME_NOTES §7). ☑ T3.4 jointCheck. ☑ T3.9b hero caps widened (jointCheck clean; hero.pxf has a render cache). ☑ T6.1 Godot importer + GUT harness. ☑ T3.8 attributeEdit (reviewed and fixed; per-stroke attribution).
 - **In flight (2026-10-28):**
-  - T6.2 PixelForgeDriver (sonnet/high), in its own worktree.
-  - T4.1 lint (sonnet/medium), in its own worktree.
+  - T6.2 PixelForgeDriver (sonnet/high), worktree `.claude/worktrees/agent-a6c8fdc63c5e7bcb4`.
+  - T4.1 lint (sonnet/medium), worktree `.claude/worktrees/agent-a5f6dd9001a387743`.
+  - Both stopped at the weekly usage limit (2026-10-28) and were resumed on 2026-11-01.
 - **Next:** T6.3 (haiku, demo + GUT CI job) after T6.2, then D1; T3.6 and T3.7 (sonnet); T5.1 ops framework (opus/high) after T4.1. D1 must check the 0.5 px prop-height and sideways shift (T6.0 notes).
 - Note: verify runs can time out in unrelated raster/io tests when two agents run at once (seen in the T3.8 fix pass). Rerun before treating that as a failure.
 
