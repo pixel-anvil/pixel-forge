@@ -2,11 +2,14 @@
 import { contactSheetFrameOrigin, contactSheetPlan } from '@pixel-forge/io';
 import { decodePng } from '@pixel-forge/png';
 import type { DecodedRgba } from '@pixel-forge/png';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { registry, renderContactSheet } from '../src/index.js';
 import type { RunOptions } from '../src/index.js';
 import { FLAT, openFlat } from './grid-fixtures.js';
 import { HERO_ID, need, openHero, rejection } from './helpers.js';
+
+// Contact sheets render every frame cold; under coverage a shared CI runner passed the 5 s default.
+vi.setConfig({ testTimeout: 30_000 });
 
 interface SheetOut {
   frames: number;

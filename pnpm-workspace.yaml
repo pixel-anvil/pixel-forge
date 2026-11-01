@@ -1,2 +1,7 @@
 packages:
   - packages/*
+
+# esbuild (tsup, for the `pf` bundle) ships its binary as a platform package, so its postinstall is
+# only an optimisation. pnpm fails `install` on an unreviewed build script, so record the decision.
+allowBuilds:
+  esbuild: false
