@@ -30,11 +30,12 @@ User wants to review the spec and the plan before proceeding past each.
 - ☑ T0.3 testkit. ☑ T1.1 schema (the user signed off on the domain summary on 2026-10-27).
 - ☑ T4.2 .pxf io. ☑ T3.2 rig templates + binding (multiple parts per bone). ☑ T4.4 .aseprite parser. ☑ T4.3 spritesheet I/O. ☑ T3.1 FK + snapping (ADR-012 accepted). ☑ T4.6 .aseprite fixtures. ☑ T2.3 renderFrame (pipeline: core owns steps 5–8; rig hook is parts-only). ☑ T2.2 frame ops + validate. ☑ T1.5 primitives (clean-room ellipse after a licensing catch). ☑ T1.7 post-passes. ☑ T1.2 color. ☑ T1.3 presets (no licence stated on Lospec; see PAL-01). ☑ T1.4 raster. ☑ T3.0 joint-gap contract. ☑ T1.6 RotSprite (reviewed and fixed). ☑ T2.1 document store (reviewed and fixed). ☑ T4.5 .aseprite mapping + re-import (IO-03/IO-04 logged). ☑ T3.9 synthetic hero (golden reviewed). ☑ T3.3 part render + overrides (reviewed and fixed; RIG-03/CORE-03 logged). ☑ T6.0 Godot contract (private mapping → GAME_NOTES §7). ☑ T3.4 jointCheck. ☑ T3.9b hero caps widened (jointCheck clean; hero.pxf has a render cache). ☑ T6.1 Godot importer + GUT harness. ☑ T3.8 attributeEdit (reviewed and fixed; per-stroke attribution). ☑ T6.2 PixelForgeDriver (flip_h leaves offset unmirrored, confirmed). ☑ T6.3 Godot demo + CI job (green). ☑ T4.1 lint.
 - **In flight (2026-11-01):**
-  - T5.1 ops framework (opus/high), in its own worktree. A code review and a Sonnet fix pass follow.
-- **Next:** D1 (waiting for the user's go-ahead; it works on a demo branch of the game repo); T3.6 and T3.7 (sonnet); after T5.1: T5.2a/b, T5.3, T5.4. D1 must check the 0.5 px prop-height and sideways shift (T6.0 notes).
+  - T5.1 ops framework: implemented and reviewed (10 findings, all accepted). A Sonnet/high fix pass is running in the same worktree, `.claude/worktrees/agent-a20d5df4d05e1996a`. Reports: `.claude/reports/T5.1.md`, `T5.1-fix.md`.
+  - D1 (approved by the user on 2026-11-01): the generic script `scripts/demo/flat-move.ts` is committed, and its output and local config are in `~/pf-work/` (contact sheet checked: renders equal the game's reference frames). The game side runs as a Sonnet agent in a separate game-repo worktree on the local branch `pixel-forge-demo` (path in GAME_NOTES §1 + `-pf-demo`), leaving the user's main game checkout and its uncommitted work untouched. No push. Its report goes to `~/pf-work/d1/`.
+- **Next:** the user reviews the D1 capture; T3.6 and T3.7 (sonnet); after T5.1: T5.2a/b, T5.3, T5.4. D1 must check the 0.5 px prop-height and the possible 1 px mirror offset.
 - Note: verify runs can time out in unrelated raster/io tests when two agents run at once. Rerun before treating that as a failure.
 
   Max two agents at a time; at most one on Opus.
 
 ## Open questions for the user
-- D1: may the orchestrator create a demo branch in the game repo, install the addon, add the flat `.pxf` and drive the lit billboard for the target move? (asked 2026-11-01)
+- D1: approved 2026-11-01. Pending: the user's review of the capture.
