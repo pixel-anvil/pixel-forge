@@ -1,0 +1,38 @@
+{
+  "steps": [
+    {
+      "id": "open",
+      "op": "doc.open",
+      "input": { "path": "hero.pxf" },
+      "expect": { "output": { "name": "hero", "alreadyOpen": false } }
+    },
+    {
+      "id": "summary",
+      "op": "doc.summary",
+      "input": { "doc": "${open.output.doc}" },
+      "expect": { "output": { "canvas": { "w": 48, "h": 48 }, "dirty": false } }
+    },
+    {
+      "id": "walk",
+      "op": "anim.create",
+      "input": { "doc": "${open.output.doc}", "group": "walk", "frames": 2 }
+    },
+    {
+      "id": "frame",
+      "op": "render.frame",
+      "input": {
+        "doc": "${open.output.doc}",
+        "animation": { "group": "default" },
+        "frame": 0,
+        "scale": 4
+      },
+      "expect": { "output": { "image": { "mimeType": "image/png", "width": 192, "height": 192 } } }
+    },
+    {
+      "id": "unconfirmed",
+      "op": "rig.bake",
+      "input": { "doc": "${open.output.doc}", "animation": { "group": "default" }, "mode": "new" },
+      "expect": { "ok": false, "code": "CONFIRM_REQUIRED" }
+    }
+  ]
+}

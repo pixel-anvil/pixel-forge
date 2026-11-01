@@ -178,7 +178,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T5.3 | ops: text grid read/write + render/contact sheet with overlays | sonnet | high | M | T5.1, T3.8, T4.3 | ∥ | ☑ |
 | T5.4 | server: DocumentHost, lockfiles, discovery, workspace roots | sonnet | high | M | T5.1 | ∥ | ☑ |
 | T5.5 | MCP stdio server | sonnet | high | M | T5.2a, T5.2b, T5.3, T5.4 | | ☑ |
-| T5.6a | CLI shell + `check` harness + `tsup` bundle + `pf` on PATH | sonnet | medium | M | T5.5 | | ☐ |
+| T5.6a | CLI shell + `check` harness + `tsup` bundle + `pf` on PATH | sonnet | medium | M | T5.5 | | ☑ |
 | T5.6b | CLI subcommands from registry metadata (+ override import/list/resolve, `pf godot install`) | haiku | medium | S | T5.6a | ∥ | ☐ |
 | T5.7 | Claude Code setup guide + `.mcp.json` | haiku | low | S | T5.6a | ∥ | ☐ |
 | T5.9 | W-scenario suite (`pf check` scripts for W2, W2b, W3-manual, W4-CLI) in CI | sonnet | medium | M | T5.6b, T3.9 | | ☐ |
@@ -786,9 +786,13 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 #### T5.6a CLI shell + harness + build  [sonnet] [M]
 - **Deliverables**:
   - `pf` (commander) with `mcp`, `check` (steps.json → report.json + PNGs, exit codes 0, 1 and 2), and `version`;
-  - a `tsup` single-file bundle, with `pnpm link --global`, so `pf` is on PATH;
+  - a `tsup` single-file bundle, symlinked onto PATH as `pf` (pnpm 12 has no `link --global`; `pnpm link .` edits tracked files);
   - generic **registry → subcommand** wiring.
 - **Acceptance** — `pf --version` works from any directory. `pf check` runs a sample script.
+- **Notes (2026-11-01)** — ☑ Sonnet/medium; about 207k tokens, 14 min. Orchestrator checked `pf --version`, a usage error (exit 2), `pf check` on the sample and `pf doc summary` from outside the repo. The agent's report file was never written, so its final message and the CLI README are the record. CLI coverage 96%, now enforced.
+  - `pf` is `~/.local/bin/pf` → `packages/cli/bundle/pf.mjs` (gitignored, 1.9 MB, all dependencies inlined; CLI-01). `pnpm build` now bundles and root `pnpm test` builds first.
+  - Script format is in the CLI README, including `${step.output.path}` references and `expect`. Lint never changes the exit code (CLI-04). `--home`/`PF_HOME` sets the lock folder.
+  - Registry subcommands: `--doc <path>`, `--save` to write, `--confirm` for destructive, relative paths made absolute by field name (CLI-02). Only `pf mcp` handles signals (CLI-03).
 
 #### T5.6b generated subcommands  [haiku] [S] ∥
 - **Deliverables** — `render`, `export`, `lint`, `override import|list|resolve` (`import` uses `attributeEdit`), `pack`, `unpack`, and `godot install <res-dir>` (copies the addon at the plugin.cfg version).

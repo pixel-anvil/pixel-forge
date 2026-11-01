@@ -16,8 +16,8 @@ const packages = [
   'cli',
 ];
 
-// Core packages (NFR-04) are held to 85% line coverage. To enforce another package, add it to this list.
-const COVERED = ['png', 'schema', 'color', 'raster', 'rig', 'core', 'io', 'ops', 'server'];
+// Core packages (NFR-04) are held to 85% line coverage (cli: measured in process; the bundle tests add none). To enforce another package, add it to this list.
+const COVERED = ['png', 'schema', 'color', 'raster', 'rig', 'core', 'io', 'ops', 'server', 'cli'];
 const LINES = 85;
 
 export default defineConfig({

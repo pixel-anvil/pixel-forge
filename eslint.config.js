@@ -64,6 +64,7 @@ export default tseslint.config(
   {
     ignores: [
       '**/dist/**',
+      'packages/cli/bundle/**',
       '**/coverage/**',
       '**/.check/**',
       'node_modules/**',
@@ -113,6 +114,7 @@ export default tseslint.config(
     languageOptions: {
       globals: {
         console: 'readonly',
+        URL: 'readonly',
         process: 'readonly',
         module: 'readonly',
         require: 'readonly',

@@ -4,7 +4,7 @@ DocumentHost, lockfiles and discovery, WS sync, HTTP, MCP transports, providers,
 
 **Depends on:** `ops`, `io` (only for the Node `FileSystem` and `Clock` of `@pixel-forge/io/node`), and the npm package `@modelcontextprotocol/sdk` (1.x)
 
-**Status:** T5.4 done (DocumentHost, lockfiles, `server.json` helpers, workspace roots). T5.5 done (MCP stdio server). HTTP, WS sync, providers and keychain are later cards. `pf mcp` (flags, SIGINT/SIGTERM) is T5.6a.
+**Status:** T5.4 done (DocumentHost, lockfiles, `server.json` helpers, workspace roots). T5.5 done (MCP stdio server). HTTP, WS sync, providers and keychain are later cards. `pf mcp` (the `--root`, `--home` and `--trace` flags, SIGINT/SIGTERM) is in `packages/cli` (T5.6a).
 
 ## DocumentHost
 
