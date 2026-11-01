@@ -130,6 +130,29 @@ describe('memory host', () => {
       details: { doc: HERO_ID },
     });
   });
+
+  it('rebinds a document to a free path and refuses a taken one', async () => {
+    const { host, hero } = await openHero();
+    const other = { ...hero.store.doc, meta: { ...hero.store.doc.meta, id: 'doc_other' } };
+    const { DocumentStore } = await import('@pixel-forge/core');
+    const second = await host.adopt({ store: new DocumentStore(other as never) });
+
+    await expect(host.rebind(second.id, HERO_PATH)).rejects.toMatchObject({
+      code: 'CONFLICT',
+      details: { doc: HERO_ID, path: HERO_PATH },
+    });
+    expect(second.path).toBeUndefined();
+
+    await host.rebind(second.id, '/work/second.pxf');
+    expect(host.byPath('/work/second.pxf')).toBe(second);
+    await host.rebind(HERO_ID, '/work/moved.pxf');
+    expect(host.byPath(HERO_PATH)).toBeUndefined();
+    await expect(host.rebind(HERO_ID, '/work/moved.pxf')).resolves.toBe(hero);
+    await expect(host.rebind('doc_gone' as typeof HERO_ID, '/work/x.pxf')).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+      details: { kind: 'doc' },
+    });
+  });
 });
 
 describe('doc.summary', () => {

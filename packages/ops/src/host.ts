@@ -66,6 +66,15 @@ export interface OpHost {
    * @throws OpError `CONFLICT` when a document with the same id or path is already open.
    */
   adopt(init: AdoptInit): Promise<HostedDocument>;
+  /**
+   * Moves an open document to a new normalised path (first save, save-as). The server host locks
+   * `path` first (`DOC_LOCKED`) and only then releases the old path's lock. Rebinding to the
+   * document's current path changes nothing. `file` and `savedVersion` stay as they are; the save
+   * updates them.
+   * @throws OpError `NOT_FOUND` when `id` is not open; `CONFLICT` when another open document has
+   *   this path.
+   */
+  rebind(id: DocId, path: string): Promise<HostedDocument>;
   /** Forgets a document (and releases its lock); `false` if it was not open. */
   close(id: DocId): Promise<boolean>;
 }
@@ -173,6 +182,25 @@ export function createMemoryHost(options: MemoryHostOptions): OpHost {
         savedVersion: init.file === undefined ? undefined : init.store.version,
       };
       docs.set(id, hosted);
+      return Promise.resolve(hosted);
+    },
+    rebind(id, path) {
+      const hosted = docs.get(id);
+      if (hosted === undefined) {
+        return Promise.reject(
+          new OpError('NOT_FOUND', `no open document ${id}`, { kind: 'doc', doc: id }),
+        );
+      }
+      const samePath = byPath(path);
+      if (samePath !== undefined && samePath !== hosted) {
+        return Promise.reject(
+          new OpError('CONFLICT', `${path} is already open as ${samePath.id}`, {
+            doc: samePath.id,
+            path,
+          }),
+        );
+      }
+      hosted.path = path;
       return Promise.resolve(hosted);
     },
     close: (id) => Promise.resolve(docs.delete(id)),

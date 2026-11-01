@@ -7,6 +7,13 @@ How the main session runs the plan cheaply and safely. Read this after `docs/STA
 - **Keep the context short.** When a session gets long, start a fresh one from `docs/STATUS.md`. Nothing is lost: all state lives in the repo, the worktrees and `~/pf-work/`.
 - **Parallelism:** at most two background agents at a time, and at most one of them on Opus. The session usage quota is the real limit.
 
+## Session length
+The orchestrator cannot read its token count, so it counts work instead.
+- After each integrated card, end the message with one line: `Session: <n> cards integrated, ~<m> turns`.
+- **Tell the user to reset** at the first of these: 3 cards integrated; 1 Opus card with its code review; about 60 tool calls; a wave ended; or the harness has summarised the conversation once.
+- Before saying so, get STATUS current (in-flight agents with their ids and worktrees, next step), commit it, then print: `RESET NOW: context is long, STATUS is current. Start a fresh session with: Read docs/STATUS.md and docs/ai/ORCHESTRATOR.md, then continue M1a`.
+- With agents in flight, record them in STATUS first. Do not start a new card after the warning.
+
 ## The loop
 1. Read `docs/STATUS.md` (Current focus / Next), then only the board rows and the cards you're about to run.
 2. **Dispatch** with the Agent tool:

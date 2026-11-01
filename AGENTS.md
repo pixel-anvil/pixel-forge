@@ -11,6 +11,7 @@ Headless core shared by a CLI (`pf`), an MCP server, a later web editor and a Go
 4. The orchestrator verifies (acceptance commands, public API diff, upscaled golden sheets), then commits and merges. Never trust "done" alone.
 5. Parallel (marked with the parallel symbol) cards run in isolated worktrees.
 6. Never use bare `git stash`: the stash stack is shared by every worktree. To set work aside, make a temporary WIP commit in your own worktree.
+7. The orchestrator tracks session length and tells the user when to reset (`docs/ai/ORCHESTRATOR.md`, "Session length"). Never let a long session run on silently.
 
 ## Definition of done
 
