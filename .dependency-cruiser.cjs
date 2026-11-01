@@ -13,7 +13,7 @@ const ALLOWED = {
   core: ['schema', 'raster', 'rig'],
   lint: ['core', 'rig'],
   io: ['core', 'convert', 'png', 'schema', 'raster', 'rig'],
-  ops: ['core', 'lint', 'io', 'rig', 'convert', 'schema'],
+  ops: ['core', 'lint', 'io', 'rig', 'convert', 'schema', 'raster', 'png'], // raster, png: grid and render ops build and encode images (T5.3)
   server: ['ops', 'io'], // io: the Node FileSystem/Clock (`@pixel-forge/io/node`)
   cli: ['server', 'ops'],
 };

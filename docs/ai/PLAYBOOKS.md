@@ -156,7 +156,7 @@ describe('frame.duplicate', () => {
 | `io` | `handler: async (ctx, input) => ...`; paths through `ctx.host.resolvePath(input.path)`, bytes through `ctx.host.fs`, time through `ctx.host.clock`; change the document at most once with `ctx.transact((tx) => ...)`, as the last step. |
 | Ops without a document (`doc.create`, `doc.list`) | No `doc` field (only `read` and `io` may omit it); use `ctx.host` (`adopt`, `list`, `get`). |
 | MCP name from spec 8 differs | `mcp: { name: 'undo' }` (also `redo`, `lint`, `import_file`, `export`); `cli: { command: ['lint'] }` for a CLI name; `hidden: true` to leave a transport out. |
-| Big outputs (grids, renders) | Keep JSON compact; images are T5.3's business (MCP image content), not base64 in the output. |
+| Image outputs (renders) | Put the PNG in a top-level `image` field shaped `ImageOutput` (`{mimeType: 'image/png', data: <base64>, width, height}`, `pngOutput()` in `src/image-output.ts`), long edge at most 1568; transports turn it into image content (T5.5) or a file. Keep the rest of the JSON compact. See `render-frame.ts`. |
 
 **Gotchas (from T5.2a, 2026-11-01):**
 - The worked example `frame.duplicate` now lives in the tree (`packages/ops/src/ops/frame-duplicate.ts`); copy it.

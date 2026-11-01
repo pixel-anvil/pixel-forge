@@ -127,6 +127,11 @@ export {
   partPaintOverlap,
   partSplit,
   registry,
+  pixelsReadGrid,
+  pixelsWriteGrid,
+  renderContactSheet,
+  renderFrame,
+  OverlayBone,
   rigApplyTemplate,
   rigBake,
   rigBindParts,
@@ -137,3 +142,5 @@ export {
   rigSetPose,
   SplitSelectionInput,
 } from './ops/index.js';
+export { ImageOutput, MAX_IMAGE_EDGE, bytesToBase64 } from './image-output.js';
+export { MAX_READ_GRID, MAX_WRITE_GRID } from './grid.js';

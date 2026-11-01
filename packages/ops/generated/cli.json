@@ -921,6 +921,255 @@
       ]
     },
     {
+      "op": "pixels.readGrid",
+      "command": ["pixels", "read-grid"],
+      "summary": "Read a region (at most 64x64 px) of a frame as a text grid: one symbol per pixel, \".\" transparent, with a legend of the colours present.",
+      "safety": "read",
+      "options": [
+        {
+          "name": "doc",
+          "flag": "--doc",
+          "kind": "string",
+          "required": true,
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        },
+        {
+          "name": "animation",
+          "flag": "--animation",
+          "kind": "json",
+          "required": true,
+          "description": "Animation: {\"group\": \"run\", \"direction\": \"side\"} ({\"group\": \"idle\"} for an undirected one) or {\"id\": \"anm_...\"}."
+        },
+        {
+          "name": "frame",
+          "flag": "--frame",
+          "kind": "json",
+          "required": true,
+          "description": "Frame: 0-based index or frame id (\"frm_...\")."
+        },
+        {
+          "name": "layer",
+          "flag": "--layer",
+          "kind": "string",
+          "required": false,
+          "description": "Read this pixel layer's cel instead of the rendered frame (mirror animations: not allowed)."
+        },
+        {
+          "name": "x",
+          "flag": "--x",
+          "kind": "integer",
+          "required": false,
+          "description": "Left column of the region, canvas px (default 0)."
+        },
+        {
+          "name": "y",
+          "flag": "--y",
+          "kind": "integer",
+          "required": false,
+          "description": "Top row of the region, canvas px (default 0)."
+        },
+        {
+          "name": "width",
+          "flag": "--width",
+          "kind": "integer",
+          "required": false,
+          "description": "Region width, 1..64 px (default: to the right edge, if at most 64)."
+        },
+        {
+          "name": "height",
+          "flag": "--height",
+          "kind": "integer",
+          "required": false,
+          "description": "Region height, 1..64 px (default: to the bottom edge, if at most 64)."
+        },
+        {
+          "name": "rulers",
+          "flag": "--rulers",
+          "kind": "boolean",
+          "required": false,
+          "description": "Also return `ruled`: the rows with column and row numbers (default false)."
+        }
+      ]
+    },
+    {
+      "op": "pixels.writeGrid",
+      "command": ["pixels", "write-grid"],
+      "summary": "Paint a text grid (at most 32x32 px) at (x, y) of a frame: \".\" transparent, \"_\" keep, other symbols from \"legend\". Rig frames get overrides; flat frames get a layer cel.",
+      "safety": "mutate",
+      "options": [
+        {
+          "name": "doc",
+          "flag": "--doc",
+          "kind": "string",
+          "required": true,
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        },
+        {
+          "name": "animation",
+          "flag": "--animation",
+          "kind": "json",
+          "required": true,
+          "description": "Animation: {\"group\": \"run\", \"direction\": \"side\"} ({\"group\": \"idle\"} for an undirected one) or {\"id\": \"anm_...\"}."
+        },
+        {
+          "name": "frame",
+          "flag": "--frame",
+          "kind": "json",
+          "required": true,
+          "description": "Frame: 0-based index or frame id (\"frm_...\")."
+        },
+        {
+          "name": "layer",
+          "flag": "--layer",
+          "kind": "string",
+          "required": false,
+          "description": "Pixel layer whose cel to write. Omit on a rig frame (the rendered frame is edited into overrides), or when the document has exactly one pixel layer."
+        },
+        {
+          "name": "x",
+          "flag": "--x",
+          "kind": "integer",
+          "required": false,
+          "description": "Canvas column of the grid's left edge (default 0)."
+        },
+        {
+          "name": "y",
+          "flag": "--y",
+          "kind": "integer",
+          "required": false,
+          "description": "Canvas row of the grid's top edge (default 0)."
+        },
+        {
+          "name": "rows",
+          "flag": "--rows",
+          "kind": "json",
+          "required": true,
+          "description": "Pixel rows, at most 32 rows of at most 32 equally long symbols: \".\" transparent, \"_\" keep, 0-9A-Za-z from the legend."
+        },
+        {
+          "name": "legend",
+          "flag": "--legend",
+          "kind": "json",
+          "required": true,
+          "description": "Symbol (one of 0-9A-Za-z) to colour \"#rrggbb\" or \"#rrggbbaa\". Only symbols used in `rows` need an entry."
+        }
+      ]
+    },
+    {
+      "op": "render.contactSheet",
+      "command": ["render", "contact-sheet"],
+      "summary": "Render the frames of some or all animations as one labelled PNG contact sheet (long edge at most 1568 px), optionally with bone lines and pivot markers.",
+      "safety": "read",
+      "options": [
+        {
+          "name": "doc",
+          "flag": "--doc",
+          "kind": "string",
+          "required": true,
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        },
+        {
+          "name": "animations",
+          "flag": "--animations",
+          "kind": "json",
+          "required": false,
+          "description": "Animations to show, in order (default: all)."
+        },
+        {
+          "name": "scale",
+          "flag": "--scale",
+          "kind": "integer",
+          "required": false,
+          "description": "Integer upscale to start from, 1..16 (default: the largest that fits 1568 px; reduced until it fits)."
+        },
+        {
+          "name": "labels",
+          "flag": "--labels",
+          "kind": "boolean",
+          "required": false,
+          "description": "Write \"GROUP/DIRECTION #n\" under each frame (default true)."
+        },
+        {
+          "name": "skin",
+          "flag": "--skin",
+          "kind": "string",
+          "required": false,
+          "description": "Skin name or id (\"skn_...\"); omit for the base render."
+        },
+        {
+          "name": "bones",
+          "flag": "--bones",
+          "kind": "boolean",
+          "required": false,
+          "description": "Draw a line from each bone pivot to its tip on every tile (default false)."
+        },
+        {
+          "name": "pivots",
+          "flag": "--pivots",
+          "kind": "boolean",
+          "required": false,
+          "description": "Draw a marker on each bone pivot pixel on every tile (default false)."
+        }
+      ]
+    },
+    {
+      "op": "render.frame",
+      "command": ["render", "frame"],
+      "summary": "Render one frame to an upscaled PNG on a checkerboard (long edge at most 1568 px), optionally with bone lines and pivot markers.",
+      "safety": "read",
+      "options": [
+        {
+          "name": "doc",
+          "flag": "--doc",
+          "kind": "string",
+          "required": true,
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        },
+        {
+          "name": "animation",
+          "flag": "--animation",
+          "kind": "json",
+          "required": true,
+          "description": "Animation: {\"group\": \"run\", \"direction\": \"side\"} ({\"group\": \"idle\"} for an undirected one) or {\"id\": \"anm_...\"}."
+        },
+        {
+          "name": "frame",
+          "flag": "--frame",
+          "kind": "json",
+          "required": true,
+          "description": "Frame: 0-based index or frame id (\"frm_...\")."
+        },
+        {
+          "name": "scale",
+          "flag": "--scale",
+          "kind": "integer",
+          "required": false,
+          "description": "Integer upscale 1..16 (default and maximum: the largest that keeps the long edge within 1568 px)."
+        },
+        {
+          "name": "skin",
+          "flag": "--skin",
+          "kind": "string",
+          "required": false,
+          "description": "Skin name or id (\"skn_...\"); omit for the base render."
+        },
+        {
+          "name": "bones",
+          "flag": "--bones",
+          "kind": "boolean",
+          "required": false,
+          "description": "Draw a line from each bone pivot to its tip (default false)."
+        },
+        {
+          "name": "pivots",
+          "flag": "--pivots",
+          "kind": "boolean",
+          "required": false,
+          "description": "Draw a marker on each bone pivot pixel (default false)."
+        }
+      ]
+    },
+    {
       "op": "rig.applyTemplate",
       "command": ["rig", "apply-template"],
       "summary": "Apply a humanoid skeleton template: bones matched by name are reused, missing ones are created.",

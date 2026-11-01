@@ -1,8 +1,17 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
+import { CoreError, createRigRenderer } from '@pixel-forge/core';
 import { encodePng } from '@pixel-forge/png';
 import { describe, expect, it } from 'vitest';
-import { contactSheet, contactSheetPlan, createDocumentFromSpritesheet } from '../src/index.js';
+import {
+  contactSheet,
+  contactSheetFrameOrigin,
+  contactSheetPlan,
+  createDocumentFromSpritesheet,
+  pxfStore,
+  readPxf,
+} from '../src/index.js';
 import { heroDocument, ioCode, need, pngFromRows } from './helpers.js';
 
 const repoRoot = fileURLToPath(new URL('../../../', import.meta.url));
@@ -96,12 +105,26 @@ describe('contactSheet', () => {
     const plan = contactSheetPlan(store, { scale: 4, labels: false });
     const img = contactSheet(store, { scale: 4, labels: false });
     const fx = Math.floor((plan.tileW - 8) / 2);
+    expect(contactSheetFrameOrigin(plan, 2, need(plan.tiles[0]))).toEqual({ x: fx, y: 2 });
     expect(img.get(fx, 2)).toEqual([255, 0, 0, 255]);
     expect(img.get(fx + 3, 5)).toEqual([255, 0, 0, 255]);
     const bg = img.get(fx + 4, 2); // next source pixel is transparent: checkerboard
     expect(bg[0]).toBe(bg[1]);
     expect(bg[3]).toBe(255);
     expect(bg[0]).not.toBe(0);
+  });
+
+  it('renders rig frames through the given renderer, and refuses them without one', () => {
+    const heroPxf = new Uint8Array(
+      readFileSync(fileURLToPath(new URL('../../../fixtures/generated/hero.pxf', import.meta.url))),
+    );
+    const store = pxfStore(readPxf(heroPxf));
+    expect(() => contactSheet(store, { scale: 2 })).toThrow(CoreError);
+    const img = contactSheet(store, { scale: 2, labels: false, rig: createRigRenderer() });
+    const plan = contactSheetPlan(store, { scale: 2, labels: false });
+    const at = contactSheetFrameOrigin(plan, 48, need(plan.tiles[0]));
+    // the eye of the hero head, canvas (27, 4), #1e1e28
+    expect(img.get(at.x + 27 * 2, at.y + 4 * 2)).toEqual([30, 30, 40, 255]);
   });
 
   it('draws origin and marker overlays', () => {

@@ -35,6 +35,10 @@ import { lintRun } from './lint-run.js';
 import { rigApplyTemplate } from './rig-apply-template.js';
 import { rigJointCheck } from './rig-joint-check.js';
 import { rigSetPose } from './rig-set-pose.js';
+import { pixelsReadGrid } from './pixels-read-grid.js';
+import { pixelsWriteGrid } from './pixels-write-grid.js';
+import { renderContactSheet } from './render-contact-sheet.js';
+import { renderFrame } from './render-frame.js';
 
 export { animCreate } from './anim-create.js';
 export { animUpdate } from './anim-update.js';
@@ -66,6 +70,10 @@ export { lintRun } from './lint-run.js';
 export { rigApplyTemplate } from './rig-apply-template.js';
 export { rigJointCheck } from './rig-joint-check.js';
 export { BoneKeyInput, PartKeyInput, rigSetPose } from './rig-set-pose.js';
+export { pixelsReadGrid } from './pixels-read-grid.js';
+export { pixelsWriteGrid } from './pixels-write-grid.js';
+export { renderContactSheet } from './render-contact-sheet.js';
+export { OverlayBone, renderFrame } from './render-frame.js';
 
 /** The built-in ops. */
 export const ALL_OPS: readonly AnyOp[] = [
@@ -99,6 +107,10 @@ export const ALL_OPS: readonly AnyOp[] = [
   rigApplyTemplate,
   rigJointCheck,
   rigSetPose,
+  pixelsReadGrid,
+  pixelsWriteGrid,
+  renderContactSheet,
+  renderFrame,
 ];
 
 /** The registry of the built-in ops, shared by the MCP server, the CLI and the harness. */

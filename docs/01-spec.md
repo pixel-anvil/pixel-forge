@@ -350,7 +350,7 @@ schema   ← color ← raster ← rig ─┐
 | `core` | Document store, transactions, patches, history, frame operations (§3.2), `validate()`, **`renderFrame`** | schema, raster, rig |
 | `lint` | Findings: palette, orphans, joints, stale overrides, rotation residual, opacity | core, rig |
 | `io` | `.pxf` read/write + migrations + render cache, PNG/GIF/JPEG/WebP codecs, spritesheet JSON, `.aseprite` import (+ re-import) | core, convert (for import remaps), png, schema, raster, rig (part-layer names for import) |
-| `ops` | Op registry, definitions, handlers, error types, generators (MCP tool JSON, CLI, docs) | core, lint, io, rig, convert, schema (reference and value schemas for op inputs, T5.1) |
+| `ops` | Op registry, definitions, handlers, error types, generators (MCP tool JSON, CLI, docs) | core, lint, io, rig, convert, schema (reference and value schemas for op inputs, T5.1), raster and png (the grid and render ops build images and encode PNG, T5.3) |
 | `server` | DocumentHost, lockfiles and discovery, WS sync, HTTP, MCP transports, providers, keychain, workspace roots | ops, io (Node `FileSystem`/`Clock` from `@pixel-forge/io/node`) |
 | `cli` | `pf` binary: `serve`, `mcp`, `check` (harness), `convert`, `render`, `export`, `lint`, `override import`, `pack/unpack` | server, ops |
 | `editor` [M2] | React UI | ops (types), core (read-model), raster |

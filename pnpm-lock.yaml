@@ -304,6 +304,12 @@ importers:
       '@pixel-forge/lint':
         specifier: workspace:*
         version: link:../lint
+      '@pixel-forge/png':
+        specifier: workspace:*
+        version: link:../png
+      '@pixel-forge/raster':
+        specifier: workspace:*
+        version: link:../raster
       '@pixel-forge/rig':
         specifier: workspace:*
         version: link:../rig

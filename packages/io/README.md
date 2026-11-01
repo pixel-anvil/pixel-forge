@@ -40,9 +40,9 @@ store.transact('More', (tx) => importSpritesheetTx(tx, { png: other, cell: [64, 
 
 ## Contact sheet (FR-AI-12)
 
-`contactSheet(view, { animations?, scale?, labels = true, maxLongEdge = 1568, skin?, overlay?: { origin?, markers? } }) -> TiledImage`.
+`contactSheet(view, { animations?, scale?, labels = true, maxLongEdge = 1568, skin?, rig?, overlay?: { origin?, markers? } }) -> TiledImage`.
 
-Frames on a grey checkerboard, integer scale (default: the largest 1..16 that fits), label `group/direction #n` (0-based) in a 3x5 bitmap font under each frame (a copy of the testkit font in `src/font.ts`, so io has no dev-only dependency), 2 px gutter. If the requested scale (or a label width) does not fit `maxLongEdge`, the scale (then the font scale 2 -> 1) is reduced; the column count is chosen to minimise the long edge. `contactSheetPlan` returns the layout without rendering. `TOO_LARGE` if even scale 1 does not fit.
+Frames on a grey checkerboard, integer scale (default: the largest 1..16 that fits), label `group/direction #n` (0-based) in a 3x5 bitmap font under each frame (a copy of the testkit font in `src/font.ts`, so io has no dev-only dependency), 2 px gutter. If the requested scale (or a label width) does not fit `maxLongEdge`, the scale (then the font scale 2 -> 1) is reduced; the column count is chosen to minimise the long edge. `rig` is the part renderer (`createRigRenderer()`), required when a shown frame has part layers (KNOWN_ISSUES CORE-03). `contactSheetPlan` returns the layout without rendering; `contactSheetFrameOrigin(plan, canvasW, tile)` gives the top-left of a tile's frame image on the sheet (marks drawn over a tile are placed from it). `TOO_LARGE` if even scale 1 does not fit.
 
 **Status:** scaffold
 

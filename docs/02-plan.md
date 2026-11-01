@@ -175,7 +175,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T5.1 | ops: registry framework + generators + 3 exemplar ops (+ review) | opus | high | M | T4.1, T4.2 | | ☑ |
 | T5.2a | ops (no logic, from table) | haiku | medium | S | T5.1 | ∥ | ☑ |
 | T5.2b | ops with logic + P-06 ops | sonnet | medium | M | T5.1 | ∥ | ☑ |
-| T5.3 | ops: text grid read/write + render/contact sheet with overlays | sonnet | high | M | T5.1, T3.8, T4.3 | ∥ | ☐ |
+| T5.3 | ops: text grid read/write + render/contact sheet with overlays | sonnet | high | M | T5.1, T3.8, T4.3 | ∥ | ☑ |
 | T5.4 | server: DocumentHost, lockfiles, discovery, workspace roots | sonnet | high | M | T5.1 | ∥ | ☑ |
 | T5.5 | MCP stdio server | sonnet | high | M | T5.2a, T5.2b, T5.3, T5.4 | | ☐ |
 | T5.6a | CLI shell + `check` harness + `tsup` bundle + `pf` on PATH | sonnet | medium | M | T5.5 | | ☐ |
@@ -757,6 +757,8 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - reading then writing is a no-op;
   - more than 62 colours is an error;
   - a write on a rig frame creates the expected override (ASCII check).
+- **Notes (2026-11-01)** — ☑ Sonnet/high; about 283k tokens. Four ops; no new golden. `ops` now depends on `raster` and `png`; io gained `ContactSheetOptions.rig` and `contactSheetFrameOrigin`. Beyond the card: `writeGrid` on flat documents rewrites a layer cel, because M1a has no other way to paint pixels.
+  - For T5.5: images are base64 in a top-level `image` field `{mimeType, data, width, height}`, long edge at most 1568. Emit image content and drop `data` from the JSON text. `writeGrid` sees the export render only, so non-exported layers are invisible to it.
 
 #### T5.4 server: DocumentHost + ownership  [sonnet] [M] ∥
 - **Deliverables** — `DocumentHost`, lockfiles, `server.json` discovery, workspace roots, the Node `FileSystem`.

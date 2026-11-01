@@ -66,6 +66,10 @@ Every failure is `{"code", "message", "details"}`, identical on every transport.
 | [`override.resolve`](#overrideresolve) | mutate | `override_resolve` | `pf override resolve` | Resolve overrides: "keep" them, "rebase" onto the current art, or "discard" them. |
 | [`part.paintOverlap`](#partpaintoverlap) | mutate | `part_paint_overlap` | `pf part paint-overlap` | Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite does not change. |
 | [`part.split`](#partsplit) | mutate | `part_split` | `pf part split` | Split a region (rect, lasso or flood, canvas px) of a flat layer's cel on one frame into a new layer, bound to a bone. |
+| [`pixels.readGrid`](#pixelsreadgrid) | read | `pixels_read_grid` | `pf pixels read-grid` | Read a region (at most 64x64 px) of a frame as a text grid: one symbol per pixel, "." transparent, with a legend of the colours present. |
+| [`pixels.writeGrid`](#pixelswritegrid) | mutate | `pixels_write_grid` | `pf pixels write-grid` | Paint a text grid (at most 32x32 px) at (x, y) of a frame: "." transparent, "_" keep, other symbols from "legend". Rig frames get overrides; flat frames get a layer cel. |
+| [`render.contactSheet`](#rendercontactsheet) | read | `render_contact_sheet` | `pf render contact-sheet` | Render the frames of some or all animations as one labelled PNG contact sheet (long edge at most 1568 px), optionally with bone lines and pivot markers. |
+| [`render.frame`](#renderframe) | read | `render_frame` | `pf render frame` | Render one frame to an upscaled PNG on a checkerboard (long edge at most 1568 px), optionally with bone lines and pivot markers. |
 | [`rig.applyTemplate`](#rigapplytemplate) | mutate | `rig_apply_template` | `pf rig apply-template` | Apply a humanoid skeleton template: bones matched by name are reused, missing ones are created. |
 | [`rig.bake`](#rigbake) | destructive | `rig_bake` | `pf rig bake` | Bake a rig animation into one plain pixel layer: as a new animation, or in place. |
 | [`rig.bindParts`](#rigbindparts) | mutate | `rig_bind_parts` | `pf rig bind-parts` | Bind pixel layers to bones as parts, by layer name ("part:<bone>[.<part>][@variant][#view]") or by overlap. |
@@ -942,6 +946,182 @@ Cut the head rectangle of a flat run frame into the head part:
 
 ```json
 {"doc":"doc_g1ed5q","layer":"body","animation":{"group":"run"},"frame":0,"selection":{"kind":"rect","x":24,"y":16,"w":18,"h":12},"partName":"part:head"}
+```
+
+## pixels.readGrid
+
+Read a region (at most 64x64 px) of a frame as a text grid: one symbol per pixel, "." transparent, with a legend of the colours present.
+
+Without "layer" the region is the rendered frame (what pixels.writeGrid edits on a rig frame); with "layer" it is that pixel layer's own cel. Symbols are 0-9A-Za-z, assigned in the order colours first appear and valid for this call only. At most 62 colours per call (an error beyond that: read a smaller region). Set "rulers" for column and row numbers. Feed `rows` and `legend` straight back to pixels.writeGrid (use "_" there to keep a pixel). The grid is for editing and exact values; use render_frame to judge how it looks.
+
+- Safety: `read`
+- MCP tool: `pixels_read_grid`
+- CLI: `pf pixels read-grid`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
+| `frame` | integer >= 0 \| string | yes | Frame: 0-based index or frame id ("frm_..."). |
+| `layer` | string | no | Read this pixel layer's cel instead of the rendered frame (mirror animations: not allowed). |
+| `x` | integer >= 0 | no | Left column of the region, canvas px (default 0). |
+| `y` | integer >= 0 | no | Top row of the region, canvas px (default 0). |
+| `width` | integer >= 1 | no | Region width, 1..64 px (default: to the right edge, if at most 64). |
+| `height` | integer >= 1 | no | Region height, 1..64 px (default: to the bottom edge, if at most 64). |
+| `rulers` | boolean | no | Also return `ruled`: the rows with column and row numbers (default false). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `animation` | string | yes | "group/direction" of the animation read. |
+| `frameIndex` | integer | yes | 0-based index of the frame read. |
+| `source` | "render" \| "cel" | yes | "render": the rendered frame; "cel": one layer's cel. |
+| `x` | integer | yes | Left column of the region, canvas px. |
+| `y` | integer | yes | Top row of the region, canvas px. |
+| `width` | integer | yes | Region width, px. |
+| `height` | integer | yes | Region height, px. |
+| `legend` | map of string | yes | Symbol to colour "#rrggbb" ("#rrggbbaa" when translucent), for this call only. "." (transparent) is not listed. |
+| `rows` | string[] | yes | One string per pixel row, `width` symbols each. |
+| `ruled` | string[] | no | Only with rulers: two header lines of column numbers, then each row prefixed by its row number. |
+
+### Examples
+
+Read the hero head, 8x6 px at (21, 0):
+
+```json
+{"doc":"doc_g1ed5q","animation":{"group":"default"},"frame":0,"x":21,"y":0,"width":8,"height":6}
+```
+
+Output:
+
+```json
+{"animation":"default","frameIndex":0,"source":"render","x":21,"y":0,"width":8,"height":6,"legend":{"0":"#462d1e","1":"#e8be96","2":"#1e1e28"},"rows":["00000000","00000000","00000000","00111111","00111121","00111111"]}
+```
+
+## pixels.writeGrid
+
+Paint a text grid (at most 32x32 px) at (x, y) of a frame: "." transparent, "_" keep, other symbols from "legend". Rig frames get overrides; flat frames get a layer cel.
+
+Pass `rows` (equally long strings) and `legend` (symbol to "#rrggbb" or "#rrggbbaa"), as pixels.readGrid returns them. "." writes a transparent pixel and "_" leaves the pixel as it is. On a document with part layers (a rig) the grid edits the rendered frame and the differences are stored as overrides: a part override where a stroke lies inside one part, a final override otherwise; they survive re-posing and are listed by override.list (a new part override can make an earlier final override stale: see `newlyStale`). Otherwise name the pixel `layer` (optional when there is only one): its cel is rewritten. A palette-locked or indexed document only takes palette colours. Writing what is already there changes nothing. Check the result with render_frame and lint.
+
+- Safety: `mutate`
+- MCP tool: `pixels_write_grid`
+- CLI: `pf pixels write-grid`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
+| `frame` | integer >= 0 \| string | yes | Frame: 0-based index or frame id ("frm_..."). |
+| `layer` | string | no | Pixel layer whose cel to write. Omit on a rig frame (the rendered frame is edited into overrides), or when the document has exactly one pixel layer. |
+| `x` | integer >= 0 | no | Canvas column of the grid's left edge (default 0). |
+| `y` | integer >= 0 | no | Canvas row of the grid's top edge (default 0). |
+| `rows` | string[] | yes | Pixel rows, at most 32 rows of at most 32 equally long symbols: "." transparent, "_" keep, 0-9A-Za-z from the legend. |
+| `legend` | map of string | yes | Symbol (one of 0-9A-Za-z) to colour "#rrggbb" or "#rrggbbaa". Only symbols used in `rows` need an entry. |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `animation` | string | yes | "group/direction" of the animation written. |
+| `frameIndex` | integer | yes | 0-based index of the frame written. |
+| `target` | "overrides" \| "cel" | yes | "overrides": rig frame, edits stored as overrides; "cel": a pixel layer cel was rewritten. |
+| `changed` | integer | yes | Pixels whose colour changed (0: nothing was written). |
+| `layer` | string | no | Name of the layer written; only for target "cel". |
+| `overrides` | string[] | yes | Ids of the overrides created, in order; empty unless target is "overrides". |
+| `newlyStale` | string[] | yes | Ids of earlier overrides this edit made stale (still applied; re-base or discard them). |
+
+### Examples
+
+Move the hero's eye one pixel left (an override on the head):
+
+```json
+{"doc":"doc_g1ed5q","animation":{"group":"default"},"frame":0,"x":26,"y":4,"rows":["21"],"legend":{"1":"#e8be96","2":"#1e1e28"}}
+```
+
+## render.contactSheet
+
+Render the frames of some or all animations as one labelled PNG contact sheet (long edge at most 1568 px), optionally with bone lines and pivot markers.
+
+Use it to judge motion across frames (before/after a re-pose, a whole walk cycle): vision judges gesture and readability, lint owns precision (1 px gaps, off-palette pixels). Each tile is labelled "GROUP/DIRECTION #n" (n = 0-based frame index, the same number frames are addressed by). The scale is the largest that fits 1568 px, or lower than `scale` when that does not fit. The image is `output.image` (PNG, base64). `bones` draws yellow bone lines and `pivots` red pivot squares on every tile (they need a rig).
+
+- Safety: `read`
+- MCP tool: `render_contact_sheet`
+- CLI: `pf render contact-sheet`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `animations` | {group, direction} \| {id}[] | no | Animations to show, in order (default: all). |
+| `scale` | integer >= 1 | no | Integer upscale to start from, 1..16 (default: the largest that fits 1568 px; reduced until it fits). |
+| `labels` | boolean | no | Write "GROUP/DIRECTION #n" under each frame (default true). |
+| `skin` | string | no | Skin name or id ("skn_..."); omit for the base render. |
+| `bones` | boolean | no | Draw a line from each bone pivot to its tip on every tile (default false). |
+| `pivots` | boolean | no | Draw a marker on each bone pivot pixel on every tile (default false). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `frames` | integer | yes | Number of frames on the sheet. |
+| `columns` | integer | yes | Tiles per row. |
+| `rows` | integer | yes | Tile rows. |
+| `scale` | integer | yes | The upscale used. |
+| `image` | {mimeType, data, width, height} | yes | The contact sheet PNG. |
+
+### Examples
+
+Show every frame of the hero with the skeleton drawn:
+
+```json
+{"doc":"doc_g1ed5q","bones":true,"pivots":true}
+```
+
+## render.frame
+
+Render one frame to an upscaled PNG on a checkerboard (long edge at most 1568 px), optionally with bone lines and pivot markers.
+
+Use it to look at the result of an edit: vision judges gesture, proportions and readability, while lint owns precision (1 px gaps, off-palette pixels), so run lint.run for those. The image is `output.image` (PNG, base64): transports that support images show it as an image. Overlay: `bones` draws a yellow line from each bone pivot to its tip, `pivots` draws a red square on each snapped pivot pixel; both need a rig, and `output.bones` lists the same points as numbers. Transparent pixels show a grey checkerboard. Mirror animations are rendered mirrored, with the overlay mirrored too.
+
+- Safety: `read`
+- MCP tool: `render_frame`
+- CLI: `pf render frame`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
+| `frame` | integer >= 0 \| string | yes | Frame: 0-based index or frame id ("frm_..."). |
+| `scale` | integer >= 1 | no | Integer upscale 1..16 (default and maximum: the largest that keeps the long edge within 1568 px). |
+| `skin` | string | no | Skin name or id ("skn_..."); omit for the base render. |
+| `bones` | boolean | no | Draw a line from each bone pivot to its tip (default false). |
+| `pivots` | boolean | no | Draw a marker on each bone pivot pixel (default false). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `animation` | string | yes | "group/direction" of the rendered animation. |
+| `frameIndex` | integer | yes | 0-based index of the rendered frame. |
+| `scale` | integer | yes | The upscale used (may be lower than requested to fit 1568 px). |
+| `image` | {mimeType, data, width, height} | yes | The rendered PNG. |
+| `bones` | {name, parent, pivot, tip}[] | no | The overlay bones in canvas pixels; present when bones or pivots was set. |
+
+### Examples
+
+Look at frame 0 of the hero with the skeleton drawn:
+
+```json
+{"doc":"doc_g1ed5q","animation":{"group":"default"},"frame":0,"scale":8,"bones":true,"pivots":true}
 ```
 
 ## rig.applyTemplate

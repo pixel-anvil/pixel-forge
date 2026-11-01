@@ -4,7 +4,7 @@
  * budget).
  * @packageDocumentation
  */
-import type { DocumentView, SkinRef } from '@pixel-forge/core';
+import type { DocumentView, RigRenderer, SkinRef } from '@pixel-forge/core';
 import { TiledImage } from '@pixel-forge/raster';
 import type { AnimRef } from '@pixel-forge/schema';
 import { MAX_SCALE, blank, blitScaled, checkScale, fillRect } from './dense.js';
@@ -33,6 +33,8 @@ export interface ContactSheetOptions {
   skin?: SkinRef | 'base';
   /** Render only export layers. Default true. */
   exportOnly?: boolean;
+  /** The rig part renderer; required when a shown frame has part layers (KNOWN_ISSUES CORE-03). */
+  rig?: RigRenderer;
   /** Marks drawn on each frame: the document origin (magenta) and/or the frame's markers (cyan). */
   overlay?: { origin?: boolean; markers?: boolean };
 }
@@ -148,6 +150,21 @@ export function contactSheetPlan(
   );
 }
 
+/**
+ * Where the frame image of `tile` starts on the sheet (its top-left pixel), in sheet pixels. The frame
+ * is `canvasW * plan.scale` wide; marks drawn over a tile (bones, markers) are positioned from it.
+ */
+export function contactSheetFrameOrigin(
+  plan: ContactSheetPlan,
+  canvasW: number,
+  tile: ContactSheetTile,
+): { x: number; y: number } {
+  return {
+    x: tile.x + Math.floor((plan.tileW - canvasW * plan.scale) / 2),
+    y: tile.y + PAD,
+  };
+}
+
 function drawText(
   dst: Dense,
   text: string,
@@ -197,13 +214,16 @@ export function contactSheet(view: DocumentView, options: ContactSheetOptions = 
   const origin = view.doc.meta.origin;
 
   for (const tile of plan.tiles) {
-    const fx = tile.x + Math.floor((plan.tileW - cw * k) / 2);
-    const fy = tile.y + PAD;
+    const { x: fx, y: fy } = contactSheetFrameOrigin(plan, cw, tile);
     fillRect(out, tile.x, tile.y, plan.tileW, plan.tileH, [44, 44, 50, 255]);
     drawChecker(out, fx, fy, cw * k, ch * k);
     blitScaled(
       out,
-      renderDense(view, tile.anim, tile.index, { skin: options.skin, exportOnly }),
+      renderDense(view, tile.anim, tile.index, {
+        skin: options.skin,
+        exportOnly,
+        rig: options.rig,
+      }),
       fx,
       fy,
       k,

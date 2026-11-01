@@ -23,6 +23,8 @@
     "@pixel-forge/core": "workspace:*",
     "@pixel-forge/io": "workspace:*",
     "@pixel-forge/lint": "workspace:*",
+    "@pixel-forge/png": "workspace:*",
+    "@pixel-forge/raster": "workspace:*",
     "@pixel-forge/rig": "workspace:*",
     "@pixel-forge/schema": "workspace:*",
     "zod": "^4.6.7"
