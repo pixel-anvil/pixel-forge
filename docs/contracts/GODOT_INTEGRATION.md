@@ -274,6 +274,17 @@ Numerically, `x` equals the game's current maths exactly when `origin.x = canvas
 contract measures from its centre. D1 must check any game test that pins a prop height with a tolerance
 tighter than half a pixel.
 
+### 6.3 Pixel-edge convention (`PixelForgeDriver.pixel_edge_origin`, D1, 2026-11-01)
+
+The default origin point is the centre-bottom of the origin pixel, `(ox + 0.5, oy + 1)` (section 1), and markers are measured at pixel centres. A game whose own maths mirrors about the canvas edge (Godot `flip_h` on an even-width canvas, offset 0) sees two half-pixel differences: the picture moves 0.5 px sideways and markers sit 0.5 px lower. D1 measured exactly these.
+
+With `pixel_edge_origin = true` the driver uses the game's convention:
+
+- origin point `(ox, oy + 1)`: `frame_offset().x = s · (tl.x + w/2 − ox)`;
+- markers at the pixel's top-left corner: `marker() = (s · (mx − ox), my − oy − 1)`, `marker_metres() = (s · (mx − ox), oy + 1 − my) / ppu`.
+
+Pixels are unchanged; only the anchor moves. `.pxf` content and the mirror animations rendered by pixel-forge (FR-RIG-16, axis at the pixel centre) are unaffected.
+
 ## 7. Per-frame rise and root motion
 
 The game's per-frame **rise** ("rows the figure is lifted (+) or lowered (−) in this frame") moved the

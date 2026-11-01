@@ -244,3 +244,19 @@ func test_auto_direction_without_a_camera_does_nothing() -> void:
 	driver.direction = &"up"
 	driver.advance(0.0)  # no camera in this headless tree
 	assert_eq(driver.direction, &"up")
+
+
+func test_pixel_edge_origin_moves_the_point_to_the_pixel_edge() -> void:
+	# Same frames as above with the pixel-edge convention (contract section 6.3):
+	# frame offset x loses the 0.5; markers are measured at the pixel's top-left corner.
+	driver.pixel_edge_origin = true
+	driver.play(&"lin")
+	assert_eq(driver.marker(&"m"), Vector2(1, -1), "pixel (9, 15): (9 - 8, 15 - 15 - 1)")
+	assert_eq(driver.marker_metres(&"m"), Vector2(1, 1) / 16.0)
+	driver.mirror = true
+	assert_eq(driver.marker(&"m"), Vector2(-1, -1))
+	driver.mirror = false
+	driver.set_frame(1)
+	assert_eq(driver.frame_offset(), Vector2(-6.0, -14.0), "c = (2 - 8, 2 - 15 - 1)")
+	driver.mirror = true
+	assert_eq(driver.frame_offset(), Vector2(6.0, -14.0))

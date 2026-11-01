@@ -115,20 +115,22 @@ func has_marker(frame_index: int, name: StringName) -> bool:
 ## The marker in pixels, y down, relative to the origin point `(origin.x + 0.5, origin.y + 1)`
 ## (contract section 6.1): `(s * (mx - ox), my - oy - 0.5)` with `s = -1` when `mirror`. An absent
 ## marker returns `Vector2.ZERO`; check `has_marker` first.
-func marker_px(frame_index: int, name: StringName, mirror: bool) -> Vector2:
+## `pixel_edge`: measure the marker at its pixel's top-left corner instead of its centre, i.e.
+## `(s * (mx - ox), my - oy - 1)` (the pixel-edge convention, contract section 6.3).
+func marker_px(frame_index: int, name: StringName, mirror: bool, pixel_edge := false) -> Vector2:
 	if not has_marker(frame_index, name):
 		return Vector2.ZERO
 	var m: Vector2i = markers[frame_index][name]
 	var s := -1.0 if mirror else 1.0
-	return Vector2(s * float(m.x - origin.x), float(m.y - origin.y) - 0.5)
+	return Vector2(s * float(m.x - origin.x), float(m.y - origin.y) - (1.0 if pixel_edge else 0.5))
 
 
 ## The marker in metres, y up, relative to the origin point (contract section 6.1):
 ## `(s * (mx - ox), oy + 0.5 - my) / pixels_per_unit`. Absent markers return `Vector2.ZERO`.
-func marker_metres(frame_index: int, name: StringName, mirror: bool) -> Vector2:
+func marker_metres(frame_index: int, name: StringName, mirror: bool, pixel_edge := false) -> Vector2:
 	if not has_marker(frame_index, name):
 		return Vector2.ZERO
-	var px := marker_px(frame_index, name, mirror)
+	var px := marker_px(frame_index, name, mirror, pixel_edge)
 	return Vector2(px.x, -px.y) / pixels_per_unit
 
 

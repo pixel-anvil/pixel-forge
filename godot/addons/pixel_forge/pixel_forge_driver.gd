@@ -46,6 +46,11 @@ signal frame_changed(index: int)
 	set = _set_mirror
 ## `true` stops the clock. The frame stays and is re-applied when `skin`, `direction` or `mirror`
 ## change; `seek_ms` and `set_frame` still work.
+## Pixel-edge convention (contract section 6.3): the origin point is `(origin.x, origin.y + 1)`, the
+## left edge of the origin pixel, and markers are measured at their pixel's top-left corner. Use it
+## for a game whose own maths mirrors about the canvas edge (Godot `flip_h` on an even-width
+## canvas). Default `false`: the contract's pixel-centre point `(origin.x + 0.5, origin.y + 1)`.
+@export var pixel_edge_origin: bool = false
 @export var paused: bool = false
 ## `true`: stop on the last frame of the first forward pass, whatever the loop mode.
 @export var hold_last: bool = false:
@@ -247,7 +252,7 @@ func has_marker(marker_name: StringName) -> bool:
 func marker(marker_name: StringName) -> Vector2:
 	if _anim_frame < 0:
 		return Vector2.ZERO
-	return asset.marker_px(frame_index, marker_name, is_flipped())
+	return asset.marker_px(frame_index, marker_name, is_flipped(), pixel_edge_origin)
 
 
 ## The marker in metres, y up, relative to the origin point (the node's origin), flipped when
@@ -255,7 +260,7 @@ func marker(marker_name: StringName) -> Vector2:
 func marker_metres(marker_name: StringName) -> Vector2:
 	if _anim_frame < 0:
 		return Vector2.ZERO
-	return asset.marker_metres(frame_index, marker_name, is_flipped())
+	return asset.marker_metres(frame_index, marker_name, is_flipped(), pixel_edge_origin)
 
 
 ## Event names of the displayed frame (the event-as-flag query, contract section 4.3).
@@ -283,7 +288,7 @@ func frame_offset() -> Vector2:
 	var top_left: Vector2i = f["offset_px"]
 	var s := -1.0 if is_flipped() else 1.0
 	return Vector2(
-		s * (top_left.x + region.size.x / 2.0 - asset.origin.x - 0.5),
+		s * (top_left.x + region.size.x / 2.0 - asset.origin.x - (0.0 if pixel_edge_origin else 0.5)),
 		top_left.y + region.size.y / 2.0 - asset.origin.y - 1.0
 	)
 
