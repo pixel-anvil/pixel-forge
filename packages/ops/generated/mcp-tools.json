@@ -4514,7 +4514,7 @@
   {
     "name": "rig_joint_check",
     "title": "rig.jointCheck",
-    "description": "Sweep each joint of one rig view and report the pixel gaps that open on the outer side of a bend.\n\nRead-only. A rig passes when summary.gapCount is 0. The sweep uses the default range and step. Fix gaps by adjusting the part pivots or overrides, then check again. Checks the view that draws the first direction of the given view (default: the first view).\n\nRead-only. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Check the first view of the hero): {\"doc\":\"doc_g1ed5q\"}",
+    "description": "Sweep each joint of one rig view and report the pixel gaps that open on the outer side of a bend.\n\nRead-only. A rig passes when summary.gapCount is 0. The sweep defaults to the params in the output; set them only to narrow a check. Fix gaps by adjusting the part pivots or overrides, then check again. Checks the view that draws the first direction of the given view (default: the first view).\n\nRead-only. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Check the first view of the hero): {\"doc\":\"doc_g1ed5q\"}",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -4527,6 +4527,21 @@
           "description": "Rig view to check (default: the first view).",
           "type": "string",
           "minLength": 1
+        },
+        "rangeDeg": {
+          "description": "Sweep range, degrees either side of rest.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "stepDeg": {
+          "description": "Sweep step, degrees.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "radius": {
+          "description": "Window radius of the check, px.",
+          "type": "integer",
+          "minimum": 1
         }
       },
       "required": ["doc"],

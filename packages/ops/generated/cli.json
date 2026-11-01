@@ -1442,6 +1442,27 @@
           "kind": "string",
           "required": false,
           "description": "Rig view to check (default: the first view)."
+        },
+        {
+          "name": "rangeDeg",
+          "flag": "--range-deg",
+          "kind": "number",
+          "required": false,
+          "description": "Sweep range, degrees either side of rest."
+        },
+        {
+          "name": "stepDeg",
+          "flag": "--step-deg",
+          "kind": "number",
+          "required": false,
+          "description": "Sweep step, degrees."
+        },
+        {
+          "name": "radius",
+          "flag": "--radius",
+          "kind": "integer",
+          "required": false,
+          "description": "Window radius of the check, px."
         }
       ]
     },

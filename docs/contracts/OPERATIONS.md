@@ -1390,7 +1390,7 @@ Add a tail bone under the torso, then lengthen the head:
 
 Sweep each joint of one rig view and report the pixel gaps that open on the outer side of a bend.
 
-Read-only. A rig passes when summary.gapCount is 0. The sweep uses the default range and step. Fix gaps by adjusting the part pivots or overrides, then check again. Checks the view that draws the first direction of the given view (default: the first view).
+Read-only. A rig passes when summary.gapCount is 0. The sweep defaults to the params in the output; set them only to narrow a check. Fix gaps by adjusting the part pivots or overrides, then check again. Checks the view that draws the first direction of the given view (default: the first view).
 
 - Safety: `read`
 - MCP tool: `rig_joint_check`
@@ -1402,6 +1402,9 @@ Read-only. A rig passes when summary.gapCount is 0. The sweep uses the default r
 | --- | --- | --- | --- |
 | `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
 | `view` | string | no | Rig view to check (default: the first view). |
+| `rangeDeg` | number | no | Sweep range, degrees either side of rest. |
+| `stepDeg` | number | no | Sweep step, degrees. |
+| `radius` | integer >= 1 | no | Window radius of the check, px. |
 
 ### Output
 

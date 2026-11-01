@@ -1,0 +1,278 @@
+{
+  "steps": [
+    {
+      "id": "c",
+      "op": "doc.create",
+      "input": {
+        "name": "flat",
+        "width": 48,
+        "height": 48
+      }
+    },
+    {
+      "id": "imp",
+      "op": "io.import",
+      "input": {
+        "doc": "${c.output.doc}",
+        "file": "flat.png",
+        "cell": [48, 48],
+        "animations": [
+          {
+            "group": "flat",
+            "cells": [[0, 0]]
+          }
+        ]
+      }
+    },
+    {
+      "id": "orig",
+      "op": "render.frame",
+      "input": {
+        "doc": "${c.output.doc}",
+        "animation": {
+          "group": "flat"
+        },
+        "frame": 0,
+        "scale": 1
+      }
+    },
+    {
+      "id": "tpl",
+      "op": "rig.applyTemplate",
+      "input": {
+        "doc": "${c.output.doc}",
+        "template": "humanoid-side",
+        "height": 47
+      }
+    },
+    {
+      "id": "head",
+      "op": "part.split",
+      "input": {
+        "doc": "${c.output.doc}",
+        "layer": "body",
+        "animation": {
+          "group": "flat"
+        },
+        "frame": 0,
+        "selection": {
+          "kind": "rect",
+          "x": 20,
+          "y": 0,
+          "w": 10,
+          "h": 10
+        },
+        "partName": "part:head",
+        "zByBone": {
+          "head": 3
+        }
+      }
+    },
+    {
+      "id": "neck",
+      "op": "part.split",
+      "input": {
+        "doc": "${c.output.doc}",
+        "layer": "body",
+        "animation": {
+          "group": "flat"
+        },
+        "frame": 0,
+        "selection": {
+          "kind": "rect",
+          "x": 20,
+          "y": 10,
+          "w": 10,
+          "h": 2
+        },
+        "partName": "part:neck",
+        "zByBone": {
+          "neck": 4
+        }
+      }
+    },
+    {
+      "id": "torso",
+      "op": "part.split",
+      "input": {
+        "doc": "${c.output.doc}",
+        "layer": "body",
+        "animation": {
+          "group": "flat"
+        },
+        "frame": 0,
+        "selection": {
+          "kind": "rect",
+          "x": 20,
+          "y": 12,
+          "w": 10,
+          "h": 12
+        },
+        "partName": "part:torso",
+        "zByBone": {
+          "torso": 5
+        }
+      }
+    },
+    {
+      "id": "pelvis",
+      "op": "part.split",
+      "input": {
+        "doc": "${c.output.doc}",
+        "layer": "body",
+        "animation": {
+          "group": "flat"
+        },
+        "frame": 0,
+        "selection": {
+          "kind": "rect",
+          "x": 20,
+          "y": 24,
+          "w": 10,
+          "h": 6
+        },
+        "partName": "part:pelvis",
+        "zByBone": {
+          "pelvis": 6
+        }
+      }
+    },
+    {
+      "id": "thigh",
+      "op": "part.split",
+      "input": {
+        "doc": "${c.output.doc}",
+        "layer": "body",
+        "animation": {
+          "group": "flat"
+        },
+        "frame": 0,
+        "selection": {
+          "kind": "rect",
+          "x": 20,
+          "y": 30,
+          "w": 10,
+          "h": 10
+        },
+        "partName": "part:thigh_r",
+        "zByBone": {
+          "thigh_r": 5
+        }
+      }
+    },
+    {
+      "id": "shin",
+      "op": "part.split",
+      "input": {
+        "doc": "${c.output.doc}",
+        "layer": "body",
+        "animation": {
+          "group": "flat"
+        },
+        "frame": 0,
+        "selection": {
+          "kind": "rect",
+          "x": 20,
+          "y": 40,
+          "w": 10,
+          "h": 5
+        },
+        "partName": "part:shin_r",
+        "zByBone": {
+          "shin_r": 4
+        }
+      }
+    },
+    {
+      "id": "foot",
+      "op": "part.split",
+      "input": {
+        "doc": "${c.output.doc}",
+        "layer": "body",
+        "animation": {
+          "group": "flat"
+        },
+        "frame": 0,
+        "selection": {
+          "kind": "rect",
+          "x": 20,
+          "y": 45,
+          "w": 12,
+          "h": 3
+        },
+        "partName": "part:foot_r",
+        "zByBone": {
+          "foot_r": 3
+        }
+      }
+    },
+    {
+      "id": "split",
+      "op": "render.frame",
+      "input": {
+        "doc": "${c.output.doc}",
+        "animation": {
+          "group": "flat"
+        },
+        "frame": 0,
+        "scale": 1
+      },
+      "expect": {
+        "output": {
+          "image": {
+            "data": "${orig.output.image.data}"
+          }
+        }
+      }
+    },
+    {
+      "id": "before",
+      "op": "rig.jointCheck",
+      "input": {
+        "doc": "${c.output.doc}"
+      }
+    },
+    {
+      "id": "paint",
+      "op": "part.paintOverlap",
+      "input": {
+        "doc": "${c.output.doc}"
+      }
+    },
+    {
+      "id": "painted",
+      "op": "render.frame",
+      "input": {
+        "doc": "${c.output.doc}",
+        "animation": {
+          "group": "flat"
+        },
+        "frame": 0,
+        "scale": 1
+      },
+      "expect": {
+        "output": {
+          "image": {
+            "data": "${orig.output.image.data}"
+          }
+        }
+      }
+    },
+    {
+      "id": "after",
+      "op": "rig.jointCheck",
+      "input": {
+        "doc": "${c.output.doc}"
+      },
+      "expect": {
+        "output": {
+          "summary": {
+            "jointsWithGaps": 0,
+            "gapCount": 0,
+            "unionCount": 0
+          }
+        }
+      }
+    }
+  ]
+}

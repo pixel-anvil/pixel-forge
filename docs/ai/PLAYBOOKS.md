@@ -210,6 +210,12 @@ it('renders the scene', () => {
 4. On failure see `.golden-diff/<name>.{actual,expected,diff}.png` (magenta = differs, cyan = alpha only). Update only with `UPDATE_GOLDEN=1` plus a card note.
 5. Commit the `__golden__` PNG with the test. Never hand-edit a golden.
 
+## Add or run a W-scenario
+
+`pnpm scenarios` (after `pnpm build`; CI runs it after `pnpm verify` on both OSes) runs W2, W2-joint, W2b, W3-manual and W4-CLI. Each is a `scenarios/<name>.steps.json` in the `pf check` format (`packages/cli/README.md`), run by the real `pf` bundle in a temp folder. `scripts/scenarios.mjs` copies the script and its inputs there, does the non-op setup (for example the 3-px edit of an exported PNG for W4-CLI), runs `pf`, and checks what a step script cannot: counts, the hand-written oracles in `fixtures/joint/`, and the CLI round trip. Nothing is written into the repo. One line per scenario is printed, exit 1 on any failure; the temp folder is kept on failure (or with `PF_SCENARIOS_KEEP=1`) and holds each `report.json` and the rendered PNGs.
+
+To add one: write the steps file, add a function to `scripts/scenarios.mjs` that calls `workspace(...)` and `check(...)`, and register it in `SCENARIOS_RUN`. Prefer an `expect` in the script; put a check in the runner only when it needs a count, a file or a second process. Inputs come from `fixtures/` (synthetic or CC0 only, never pack art). Bases for `pf override import` must come from `pf export` at scale 1 (CLI-05).
+
 ## Add a migration
 Filled in by card T4.2.
 

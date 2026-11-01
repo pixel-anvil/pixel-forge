@@ -181,7 +181,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T5.6a | CLI shell + `check` harness + `tsup` bundle + `pf` on PATH | sonnet | medium | M | T5.5 | | ☑ |
 | T5.6b | CLI subcommands from registry metadata (+ override import/list/resolve, `pf godot install`) | sonnet | medium | S | T5.6a | ∥ | ☑ |
 | T5.7 | Claude Code setup guide + `.mcp.json` | haiku | low | S | T5.6a | ∥ | ☑ |
-| T5.9 | W-scenario suite (`pf check` scripts for W2, W2b, W3-manual, W4-CLI) in CI | sonnet | medium | M | T5.6b, T3.9 | | ☐ |
+| T5.9 | W-scenario suite (`pf check` scripts for W2, W2b, W3-manual, W4-CLI) in CI | sonnet | medium | M | T5.6b, T3.9 | | ☑ |
 | T5.8 | **MCP dogfood evaluation** (CC0 character + synthetic hero) | opus | high | M | T5.9, T0.5 | | ☐ |
 | T6.4 | Target-move rebuild from pack art (with the user) | opus orchestrating | high | session | T5.8, D1 | | ☐ |
 | T6.5 | Swap the rigged target move into the first consumer game (user approval) | sonnet | medium | S | T6.4 | | ☐ |
@@ -815,6 +815,10 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 #### T5.9 W-scenario suite  [sonnet] [M]
 - **Deliverables** — `scenarios/*.steps.json` for W2 (`hero_parts.aseprite` + `gappy`/`clean`), W2b, W3-manual (poses are scripted, not from an LLM) and W4-CLI, run by `pnpm scenarios` in CI.
 - **Acceptance** — all pass in CI.
+- **Notes (2026-11-01)** — ☑ Sonnet/medium; about 204k tokens, 12 min. `pnpm scenarios` (`scripts/scenarios.mjs`) runs the real `pf` bundle in a temp folder, 5/5 in about 1.7 s, as a CI step after `pnpm verify`. W2 has two scripts: `W2` (hero_parts) and `W2-joint` (6 fixtures).
+  - The agent could only show "found", not "exactly 3". The orchestrator added optional `rangeDeg`, `stepDeg` and `radius` to `rig.jointCheck` and compares seeded angles exactly. Unseeded mirror angles are not compared: gappy_knee has no -10 frame and a sweep does report a gap there.
+  - W4: the torso lean sets neck -5 so the head moves without rotating; the edited pixels are chosen so that one override stays valid and one goes stale (SCN-04).
+  - For T5.8: import the `.aseprite` after the template (SCN-01). For T6.4: paint overlap only with the child below its parent (SCN-03).
 
 #### T5.8 MCP dogfood evaluation  [opus] [M]
 - **Do**:

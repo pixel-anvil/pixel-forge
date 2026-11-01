@@ -19,6 +19,7 @@
     "depcruise": "depcruise packages --config .dependency-cruiser.cjs",
     "gen": "node scripts/gen.mjs",
     "gen:check": "node scripts/gen.mjs --check",
+    "scenarios": "node scripts/scenarios.mjs",
     "bench": "tsc -b && node scripts/bench.mjs",
     "fixtures": "tsc -b && node packages/testkit/bin/fixtures.mjs",
     "fixtures:check": "tsc -b && node packages/testkit/bin/fixtures.mjs --check",

@@ -1,0 +1,167 @@
+{
+  "steps": [
+    {
+      "id": "open",
+      "op": "doc.open",
+      "input": {
+        "path": "hero.pxf"
+      }
+    },
+    {
+      "id": "create",
+      "op": "anim.create",
+      "input": {
+        "doc": "${open.output.doc}",
+        "group": "run",
+        "direction": "side",
+        "frames": 6,
+        "durationMs": 83
+      }
+    },
+    {
+      "id": "pose0",
+      "op": "rig.setPose",
+      "input": {
+        "doc": "${open.output.doc}",
+        "animation": {
+          "group": "run",
+          "direction": "side"
+        },
+        "frame": 0,
+        "bones": {
+          "torso": {
+            "angle": -4
+          },
+          "upper_arm_r": {
+            "angle": 25
+          },
+          "lower_arm_r": {
+            "angle": -35
+          }
+        }
+      }
+    },
+    {
+      "id": "pose1",
+      "op": "rig.setPose",
+      "input": {
+        "doc": "${open.output.doc}",
+        "animation": {
+          "group": "run",
+          "direction": "side"
+        },
+        "frame": 1,
+        "bones": {
+          "torso": {
+            "angle": 6
+          },
+          "upper_arm_r": {
+            "angle": 25
+          },
+          "lower_arm_r": {
+            "angle": -35
+          }
+        }
+      }
+    },
+    {
+      "id": "pose2",
+      "op": "rig.setPose",
+      "input": {
+        "doc": "${open.output.doc}",
+        "animation": {
+          "group": "run",
+          "direction": "side"
+        },
+        "frame": 2,
+        "bones": {
+          "torso": {
+            "angle": 8
+          },
+          "upper_arm_r": {
+            "angle": 10
+          },
+          "lower_arm_r": {
+            "angle": -35
+          }
+        }
+      }
+    },
+    {
+      "id": "pose3",
+      "op": "rig.setPose",
+      "input": {
+        "doc": "${open.output.doc}",
+        "animation": {
+          "group": "run",
+          "direction": "side"
+        },
+        "frame": 3,
+        "bones": {
+          "torso": {
+            "angle": 6
+          },
+          "upper_arm_r": {
+            "angle": 25
+          },
+          "lower_arm_r": {
+            "angle": -35
+          }
+        }
+      }
+    },
+    {
+      "id": "pose4",
+      "op": "rig.setPose",
+      "input": {
+        "doc": "${open.output.doc}",
+        "animation": {
+          "group": "run",
+          "direction": "side"
+        },
+        "frame": 4,
+        "bones": {
+          "torso": {
+            "angle": 6
+          },
+          "upper_arm_r": {
+            "angle": 25
+          },
+          "lower_arm_r": {
+            "angle": -35
+          }
+        }
+      }
+    },
+    {
+      "id": "pose5",
+      "op": "rig.setPose",
+      "input": {
+        "doc": "${open.output.doc}",
+        "animation": {
+          "group": "run",
+          "direction": "side"
+        },
+        "frame": 5,
+        "bones": {
+          "torso": {
+            "angle": 8
+          },
+          "upper_arm_r": {
+            "angle": 25
+          },
+          "lower_arm_r": {
+            "angle": -35
+          }
+        }
+      }
+    },
+    {
+      "id": "save",
+      "op": "doc.save",
+      "input": {
+        "doc": "${open.output.doc}"
+      }
+    }
+  ]
+}

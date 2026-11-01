@@ -22,11 +22,18 @@ export const rigJointCheck = defineOp({
   summary:
     'Sweep each joint of one rig view and report the pixel gaps that open on the outer side of a bend.',
   description:
-    'Read-only. A rig passes when summary.gapCount is 0. The sweep uses the default range and step. Fix gaps by adjusting the part pivots or overrides, then check again. Checks the view that draws the first direction of the given view (default: the first view).',
+    'Read-only. A rig passes when summary.gapCount is 0. The sweep defaults to the params in the output; set them only to narrow a check. Fix gaps by adjusting the part pivots or overrides, then check again. Checks the view that draws the first direction of the given view (default: the first view).',
   mcp: { name: 'rig_joint_check' },
   input: z.strictObject({
     doc: DocRef,
     view: ViewRef.optional().describe('Rig view to check (default: the first view).'),
+    rangeDeg: z
+      .number()
+      .positive()
+      .optional()
+      .describe('Sweep range, degrees either side of rest.'),
+    stepDeg: z.number().positive().optional().describe('Sweep step, degrees.'),
+    radius: z.int().min(1).optional().describe('Window radius of the check, px.'),
   }),
   output: z.strictObject({
     view: z.string().describe('Name of the checked view.'),
@@ -81,6 +88,9 @@ export const rigJointCheck = defineOp({
       canvas: doc.meta.canvas,
       ...(direction === undefined ? {} : { direction }),
       ...(palette === undefined ? {} : { palette }),
+      ...(input.rangeDeg === undefined ? {} : { rangeDeg: input.rangeDeg }),
+      ...(input.stepDeg === undefined ? {} : { stepDeg: input.stepDeg }),
+      ...(input.radius === undefined ? {} : { radius: input.radius }),
     });
     // The report's pixels are readonly tuples; the output wants plain arrays (same values).
     const px = (p: readonly [number, number]): [number, number] => [p[0], p[1]];

@@ -37,6 +37,24 @@ describe('rig.jointCheck', () => {
     expect(byName).toEqual(byDefault);
   });
 
+  it('passes the sweep inputs to the check and reports them', async () => {
+    const { run } = await openHero();
+    const out = await registry.execute(
+      'rig.jointCheck',
+      { doc: HERO_ID, rangeDeg: 10, stepDeg: 10, radius: 2 },
+      run,
+    );
+    expect(out).toMatchObject({ params: { rangeDeg: 10, stepDeg: 10, radius: 2 } });
+  });
+
+  it('rejects a radius below 1', async () => {
+    const { run } = await openHero();
+    const err = await rejection(
+      registry.execute('rig.jointCheck', { doc: HERO_ID, radius: 0 }, run),
+    );
+    expect(err.code).toBe('BAD_INPUT');
+  });
+
   it('reports an unknown view with the views that exist', async () => {
     const { run } = await openHero();
     const err = await rejection(
