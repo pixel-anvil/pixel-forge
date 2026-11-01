@@ -174,7 +174,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T4.1 | lint: rules + structured findings | sonnet | medium | M | T3.4, T3.3 | ∥ | ☑ |
 | T5.1 | ops: registry framework + generators + 3 exemplar ops (+ review) | opus | high | M | T4.1, T4.2 | | ☑ |
 | T5.2a | ops (no logic, from table) | haiku | medium | S | T5.1 | ∥ | ☑ |
-| T5.2b | ops with logic + P-06 ops | sonnet | medium | M | T5.1 | ∥ | ☐ |
+| T5.2b | ops with logic + P-06 ops | sonnet | medium | M | T5.1 | ∥ | ☑ |
 | T5.3 | ops: text grid read/write + render/contact sheet with overlays | sonnet | high | M | T5.1, T3.8, T4.3 | ∥ | ☐ |
 | T5.4 | server: DocumentHost, lockfiles, discovery, workspace roots | sonnet | high | M | T5.1 | ∥ | ☑ |
 | T5.5 | MCP stdio server | sonnet | high | M | T5.2a, T5.2b, T5.3, T5.4 | | ☐ |
@@ -743,6 +743,9 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 #### T5.2b ops with logic  [sonnet] [M] ∥
 - **Ops** — `doc.create`, `doc.save` (roots, lock, atomic), `doc.setColorMode`, `anim.create`, `anim.update` (I6), `frame.setMeta`, `layer.update`, `cel.link`, `part.split`, `rig.bindParts`, `rig.editBones`, `rig.setPivot`, `rig.mirrorAnimation`, `rig.bake` (confirm), `override.list`, `override.resolve`, `io.import` (including cell ranges), `io.export`.
 - **Acceptance** — each op is tested. `gen --check` is clean.
+- **Notes (2026-11-01)** — ☑ Sonnet/medium; about 437k tokens. 19 ops (the card's 18 plus `part.paintOverlap`), ops coverage 98.7%. Accepted beyond the card, since ops cannot import raster or png: core `paintOverlapTx` and `setColorMode`, io `ExportSheetOptions.rig`, ops `confirmText` on destructive ops, and `PngError` mapped to `BAD_FILE`.
+  - `doc.save` builds first, refuses an existing file at a new path without `overwrite`, then rebinds and writes atomically; a failed write re-binds the old path (OPS-03). `rig.bake` asks for `confirm` in both modes (OPS-02). `override.list` returns `stale`, `errors` and `valid` apart.
+  - For T5.5: the longest tool descriptions run 750–1100 characters (`rig_bake`, `import_file`, `part_split`); trim them if context matters.
 
 #### T5.3 text grid + render ops  [sonnet] [M] ∥
 - **Spec** — FR-AI-12/13.

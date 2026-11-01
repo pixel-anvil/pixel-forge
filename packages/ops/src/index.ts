@@ -33,6 +33,7 @@ export { OP_ERROR_CODES, OpError, inputError, toOpError } from './errors.js';
 export type { InputIssue, OpErrorCode, OpErrorDetails, OpErrorJson } from './errors.js';
 export { silentLogger } from './context.js';
 export type { OpContext, OpLogger, RenderedFrame } from './context.js';
+export { partRenderer } from './part-renderer.js';
 export { createMemoryHost, normalizePath } from './host.js';
 export type { AdoptInit, HostedDocument, MemoryHostOptions, OpHost } from './host.js';
 export {
@@ -96,19 +97,43 @@ export type {
 } from './generate.js';
 export {
   ALL_OPS,
+  animCreate,
+  animUpdate,
+  BoneEdit,
   BoneKeyInput,
-  DocSummary,
-  PartKeyInput,
+  celLink,
+  CellSpec,
+  docCreate,
   docOpen,
   docRedo,
+  docSave,
+  docSetColorMode,
   docSummary,
+  DocSummary,
   docUndo,
+  expandCells,
   frameAdd,
   frameDelete,
   frameDuplicate,
+  frameSetMeta,
+  ioExport,
+  ioImport,
+  layerUpdate,
   lintRun,
+  MAX_CELLS,
+  overrideList,
+  overrideResolve,
+  PartKeyInput,
+  partPaintOverlap,
+  partSplit,
   registry,
   rigApplyTemplate,
+  rigBake,
+  rigBindParts,
+  rigEditBones,
   rigJointCheck,
+  rigMirrorAnimation,
+  rigSetPivot,
   rigSetPose,
+  SplitSelectionInput,
 } from './ops/index.js';

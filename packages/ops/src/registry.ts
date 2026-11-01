@@ -255,8 +255,8 @@ function parseInput(op: AnyOp, raw: unknown): ParsedInput {
   if (op.safety === 'destructive' && confirm !== true) {
     throw new OpError(
       'CONFIRM_REQUIRED',
-      `${op.name} is destructive: call it again with "confirm": true to proceed`,
-      { op: op.name },
+      `${op.name} is destructive${op.confirmText === undefined ? '' : `: ${op.confirmText}`}. Call it again with "confirm": true to proceed`,
+      { op: op.name, ...(op.confirmText === undefined ? {} : { warning: op.confirmText }) },
     );
   }
   return parsed.data;

@@ -4,7 +4,7 @@
  * @packageDocumentation
  */
 import { renderFrame, resolveAnimation } from '@pixel-forge/core';
-import type { DocumentView, SkinRef } from '@pixel-forge/core';
+import type { DocumentView, RigRenderer, SkinRef } from '@pixel-forge/core';
 import { encodePng } from '@pixel-forge/png';
 import type { AnimRef } from '@pixel-forge/schema';
 import { blank, blitScaled, checkScale } from './dense.js';
@@ -30,6 +30,8 @@ export interface ExportSheetOptions {
   exportOnly?: boolean;
   /** The `meta.image` file name written to the JSON. Default `spritesheet.png`. */
   imageName?: string;
+  /** The part renderer; required when a frame draws a part layer (the host's, `OpContext.renderer`). */
+  rig?: RigRenderer;
 }
 
 /** A rectangle in Aseprite JSON. */
@@ -144,10 +146,11 @@ export function renderDense(
   view: DocumentView,
   ref: AnimRef,
   index: number,
-  opts: { skin?: SkinRef | 'base' | undefined; exportOnly: boolean },
+  opts: { skin?: SkinRef | 'base' | undefined; exportOnly: boolean; rig?: RigRenderer | undefined },
 ): Dense {
   const img = renderFrame(view, ref, index, {
     ...(opts.skin !== undefined ? { skin: opts.skin } : {}),
+    ...(opts.rig !== undefined ? { rig: opts.rig } : {}),
     exportOnly: opts.exportOnly,
   });
   const { width, height, data } = img.toRGBA();
@@ -205,7 +208,7 @@ export function exportSpritesheet(view: DocumentView, options: ExportSheetOption
       const col = options.layout === 'rows' ? n : seq % columns;
       const row = options.layout === 'rows' ? ai : Math.floor(seq / columns);
       const rect = { x: col * fw, y: row * fh, w: fw, h: fh };
-      const img = renderDense(view, ref, n, { skin: options.skin, exportOnly });
+      const img = renderDense(view, ref, n, { skin: options.skin, exportOnly, rig: options.rig });
       blitScaled(sheet, img, rect.x, rect.y, scale, false);
       frames[`${anim.label} ${String(n)}`] = {
         frame: rect,

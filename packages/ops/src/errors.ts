@@ -217,6 +217,7 @@ export function inputError(error: z.ZodError, op?: string): OpError {
  * - `CoreError` `BAD_ARGUMENT` with a `details.reason` of `unknown-*` becomes `NOT_FOUND` (with
  *   `details.kind`), other reasons `REFUSED`; every other core code per its meaning (KNOWN_ISSUES
  *   CORE-02: the core reasons stay strings, the op layer gives them codes);
+ * - `PngError` (a PNG that does not decode, matched by name) is `BAD_FILE`;
  * - `IoError`, `AseError` (`BAD_FILE`), `RigError` (its `reason` kept; `UNKNOWN_BONE`, `UNKNOWN_FRAME`,
  *   `UNKNOWN_VIEW` and `UNKNOWN_VARIANT` are `NOT_FOUND` with `details.kind`, like the core path), `JointCheckError`
  *   (`INVALID_VALUE`) and `ZodError` (`BAD_INPUT`) by code;
@@ -283,6 +284,17 @@ export function toOpError(error: unknown): OpError {
     );
   }
   if (error instanceof z.ZodError) return inputError(error);
+  // `png` is not an ops dependency (spec 6.2): its error is recognised by name. A PNG that cannot be
+  // decoded is a bad file, not a bug.
+  if (error instanceof Error && error.name === 'PngError') {
+    const code = (error as { code?: unknown }).code;
+    return new OpError(
+      'BAD_FILE',
+      error.message,
+      { cause: { error: 'PngError', ...(typeof code === 'string' ? { code } : {}) } },
+      { cause: error },
+    );
+  }
   const message = error instanceof Error ? error.message : String(error);
   return new OpError(
     'INTERNAL',

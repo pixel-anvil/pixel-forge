@@ -1,7 +1,15 @@
 // Shared test helpers: a memory host seeded with the synthetic hero (fixtures/generated/hero.pxf).
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { MemoryFileSystem, fixedClock } from '@pixel-forge/io';
+import {
+  MemoryFileSystem,
+  createDocumentFromSpritesheet,
+  fixedClock,
+  importSpritesheetTx,
+} from '@pixel-forge/io';
+import type { DocumentStore } from '@pixel-forge/core';
+import { humanoidSide } from '@pixel-forge/rig';
+import { applySkeletonTemplate } from '@pixel-forge/core';
 import type { DocId } from '@pixel-forge/schema';
 import { createMemoryHost, registry } from '../src/index.js';
 import type { HostedDocument, OpHost, OpRegistry, RunOptions } from '../src/index.js';
@@ -59,4 +67,79 @@ export async function rejection(p: Promise<unknown>): Promise<{
     return { code: err.code, message: err.message, details: err.details };
   }
   throw new Error('expected a rejection');
+}
+
+/** Reads a committed fixture (`fixtures/<rel>`). */
+export function fixtureBytes(rel: string): Uint8Array {
+  return new Uint8Array(
+    readFileSync(fileURLToPath(new URL(`../../../fixtures/${rel}`, import.meta.url))),
+  );
+}
+
+/** The labels of a document's undo history, oldest first. */
+export function stepLabels(hosted: HostedDocument): string[] {
+  return hosted.store.historyInfo().entries.map((e) => e.label);
+}
+
+/**
+ * A host with a flat (not rigged) document that has the hero's id: the CC0 swordsman run cells as
+ * animation `run` (4 frames) and `run_copy` (the same first cell as a separate image), layer `body`.
+ * `/work` also holds `run.png` and `idle.png` for `io.import`.
+ */
+export async function flatHost(rig = false): Promise<{
+  host: OpHost;
+  fs: MemoryFileSystem;
+  hosted: HostedDocument;
+  run: RunOptions;
+  store: DocumentStore;
+}> {
+  const fs = new MemoryFileSystem();
+  fs.seed('/work/run.png', fixtureBytes('cc0/hero_swordsman/run.png'));
+  fs.seed('/work/idle.png', fixtureBytes('cc0/hero_swordsman/idle.png'));
+  const host = createMemoryHost({
+    fs,
+    clock: fixedClock('2026-11-01T00:00:00Z'),
+    roots: ['/work'],
+  });
+  const png = fixtureBytes('cc0/hero_swordsman/run.png');
+  const { store } = createDocumentFromSpritesheet(
+    {
+      png,
+      cell: [64, 64],
+      animations: [
+        {
+          group: 'run',
+          frames: [
+            [0, 0],
+            [0, 1],
+            [0, 2],
+            [1, 0],
+          ],
+        },
+      ],
+    },
+    { name: 'flat', idSeed: 9 },
+  );
+  store.transact('copy', (tx) =>
+    importSpritesheetTx(tx, {
+      png,
+      cell: [64, 64],
+      animations: [{ group: 'run_copy', frames: [[0, 0]] }],
+    }),
+  );
+  if (rig) {
+    store.transact('rig', (tx) => {
+      applySkeletonTemplate(tx, humanoidSide({ origin: tx.doc.meta.origin, height: 60 }));
+    });
+  }
+  store.clearHistory();
+  const hosted = await host.adopt({ store });
+  return { host, fs, hosted, run: { host }, store };
+}
+
+/** The `{path, message}` issues of a `BAD_INPUT` rejection. */
+export function issues(r: {
+  details: Record<string, unknown>;
+}): { path: string; message: string }[] {
+  return (r.details.issues ?? []) as { path: string; message: string }[];
 }

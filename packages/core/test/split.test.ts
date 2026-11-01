@@ -5,7 +5,7 @@ import type { Rgba } from '@pixel-forge/raster';
 import { rotatePoint } from '@pixel-forge/raster';
 import { humanoidSide, jointCheck, overlapMasks, snapSkeleton } from '@pixel-forge/rig';
 import { SCHEMA_VERSION, createIdGenerator } from '@pixel-forge/schema';
-import type { Document, FrameId, ImageId, LayerId } from '@pixel-forge/schema';
+import type { BoneId, Document, FrameId, ImageId, LayerId } from '@pixel-forge/schema';
 import { describe, expect, it } from 'vitest';
 import {
   CoreError,
@@ -13,6 +13,8 @@ import {
   applySkeletonTemplate,
   createRigRenderer,
   documentHash,
+  paintOverlapTx,
+  setColorMode,
   renderFrame,
   splitRegion,
   validate,
@@ -703,33 +705,39 @@ describe('binding', () => {
   });
 });
 
+/** The W2b scene: a flat two-segment limb split into upper and lower arm parts, with a gap at the elbow. */
+function w2bSplit(): { s: DocumentStore; before: string; lowerId: BoneId | undefined } {
+  const s = makeStore({ art: 'blank' });
+  const r0 = s.doc.rig;
+  const view = r0?.views[0];
+  const lower = r0?.bones.find((b) => b.name === 'lower_arm_r');
+  if (r0 === undefined || view === undefined || lower === undefined) throw new Error('rig');
+  const elbow = snapSkeleton(r0, view, new Map()).bones.get(lower.id);
+  if (elbow === undefined) throw new Error('elbow');
+  expect(elbow.restAngle).toBe(90); // the side-view arm hangs straight down
+  const { x, y } = elbow.pivot;
+  s.transact('draw', (tx) => {
+    tx.writeImage(I.img, (im) => {
+      const t = im as TiledImage;
+      rect(t, x - 2, y - 8, 4, 8, GREEN); // upper arm, ends just above the elbow
+      rect(t, x - 2, y, 4, 8, BLUE); // forearm, starts at the elbow row
+    });
+  });
+  const before = hashOf(s);
+  split(s, { kind: 'rect', x: x - 2, y: y - 8, w: 4, h: 8 }, { partName: 'part:upper_arm_r' });
+  split(
+    s,
+    { kind: 'rect', x: x - 2, y, w: 4, h: 8 },
+    { partName: 'part:lower_arm_r', zByBone: { lower_arm_r: -1 } },
+  );
+  expect(hashOf(s)).toBe(before); // W2b: the parts recomposite the source frame
+
+  return { s, before, lowerId: lower.id };
+}
+
 describe('W2b end to end: split, find the gaps, paint the overlap, composite unchanged', () => {
   it('splits a flat two-segment limb, paints the hidden overlap and closes the joint', () => {
-    const s = makeStore({ art: 'blank' });
-    const r0 = s.doc.rig;
-    const view = r0?.views[0];
-    const lower = r0?.bones.find((b) => b.name === 'lower_arm_r');
-    if (r0 === undefined || view === undefined || lower === undefined) throw new Error('rig');
-    const elbow = snapSkeleton(r0, view, new Map()).bones.get(lower.id);
-    if (elbow === undefined) throw new Error('elbow');
-    expect(elbow.restAngle).toBe(90); // the side-view arm hangs straight down
-    const { x, y } = elbow.pivot;
-    s.transact('draw', (tx) => {
-      tx.writeImage(I.img, (im) => {
-        const t = im as TiledImage;
-        rect(t, x - 2, y - 8, 4, 8, GREEN); // upper arm, ends just above the elbow
-        rect(t, x - 2, y, 4, 8, BLUE); // forearm, starts at the elbow row
-      });
-    });
-    const before = hashOf(s);
-    split(s, { kind: 'rect', x: x - 2, y: y - 8, w: 4, h: 8 }, { partName: 'part:upper_arm_r' });
-    split(
-      s,
-      { kind: 'rect', x: x - 2, y, w: 4, h: 8 },
-      { partName: 'part:lower_arm_r', zByBone: { lower_arm_r: -1 } },
-    );
-    expect(hashOf(s)).toBe(before); // W2b: the parts recomposite the source frame
-
+    const { s, before } = w2bSplit();
     const check = (): ReturnType<typeof jointCheck> => {
       const rig = s.doc.rig;
       if (rig === undefined) throw new Error('rig');
@@ -745,33 +753,110 @@ describe('W2b end to end: split, find the gaps, paint the overlap, composite unc
     expect([j.bone, j.paint]).toEqual(['lower_arm_r', 'child']);
     expect(j.mask.length).toBeGreaterThan(0);
 
-    // Paint the mask onto the forearm's variant, growing its image as a paint op would.
-    s.transact('paint overlap', (tx) => {
-      const part = tx.doc.rig?.parts.find((p) => p.id === j.partId);
-      const v = part?.variants.find((q) => q.id === j.variantId);
-      const old = v === undefined ? undefined : tx.image(v.imageId);
-      if (v === undefined || !(old instanceof TiledImage)) throw new Error('variant');
-      const minX = Math.min(0, ...j.local.map((p) => p[0]));
-      const minY = Math.min(0, ...j.local.map((p) => p[1]));
-      const maxX = Math.max(old.width - 1, ...j.local.map((p) => p[0]));
-      const maxY = Math.max(old.height - 1, ...j.local.map((p) => p[1]));
-      const grown = new TiledImage(maxX - minX + 1, maxY - minY + 1);
-      for (let yy = 0; yy < old.height; yy++) {
-        for (let xx = 0; xx < old.width; xx++) grown.set(xx - minX, yy - minY, old.get(xx, yy));
-      }
-      for (const [px, py] of j.local) grown.set(px - minX, py - minY, BLUE);
-      const id = tx.createImage(grown);
-      tx.update((d) => {
-        const dv = d.rig?.parts
-          .find((p) => p.id === j.partId)
-          ?.variants.find((q) => q.id === j.variantId);
-        if (dv === undefined) return;
-        dv.imageId = id;
-        dv.pivot = { x: dv.pivot.x - minX, y: dv.pivot.y - minY };
-      });
-    });
+    // Paint the mask onto the forearm's variant (grows the image, shifts the pivot).
+    const lowerId = rig.bones.find((b) => b.name === 'lower_arm_r')?.id;
+    const done = s.transact('paint overlap', (tx) =>
+      paintOverlapTx(tx, { color: BLUE, ...(lowerId === undefined ? {} : { bones: [lowerId] }) }),
+    );
+    expect(done.painted.map((p) => [p.partId, p.variantId, p.bones])).toEqual([
+      [j.partId, j.variantId, ['lower_arm_r']],
+    ]);
+    expect(done.painted[0]?.pixels).toBe(j.local.length);
     expect(hashOf(s)).toBe(before); // painting inside the mask leaves the composite at rest unchanged
     expect(errorsOf(s)).toEqual([]);
     expect(check().summary.gapCount).toBe(0); // and the joint is closed
+  });
+  it('paints in an indexed document (palette index colour) and converts both ways without changing the render', () => {
+    const { s, before } = w2bSplit();
+    s.transact('palette', (tx) => {
+      tx.update((d) => {
+        const p = d.palettes[0];
+        if (p !== undefined) p.colors = [[0, 0, 0, 0], [...GREEN], [...BLUE]];
+      });
+    });
+    const out = s.transact('to indexed', (tx) =>
+      setColorMode(tx, { colorMode: 'indexed', paletteLocked: true }),
+    );
+    expect(out).toMatchObject({ colorMode: 'indexed', paletteLocked: true });
+    expect(out.converted).toBeGreaterThan(1);
+    expect(hashOf(s)).toBe(before);
+    expect(errorsOf(s)).toEqual([]);
+    const wrong = () => s.transact('x', (tx) => paintOverlapTx(tx, { color: BLUE }));
+    expect(wrong).toThrow(/palette index/);
+    const done = s.transact('paint', (tx) => paintOverlapTx(tx, { color: 2 }));
+    expect(done.painted).toHaveLength(1);
+    expect(hashOf(s)).toBe(before);
+    const rig = s.doc.rig;
+    if (rig === undefined) throw new Error('rig');
+    expect(
+      jointCheck({
+        rig,
+        images: s,
+        canvas: s.doc.meta.canvas,
+        palette: [[0, 0, 0, 0], GREEN, BLUE],
+      }).summary.gapCount,
+    ).toBe(0);
+    expect(errorsOf(s)).toEqual([]);
+    s.transact('back', (tx) => setColorMode(tx, { colorMode: 'rgba' }));
+    expect(s.doc.meta.colorMode).toBe('rgba');
+    expect(hashOf(s)).toBe(before);
+  });
+
+  it('refuses without a rig, with unknown views and bones, and with a colour of the wrong kind', () => {
+    const s = makeStore({ art: 'blank' });
+    const noGap = s.transact('none', (tx) => paintOverlapTx(tx));
+    expect(noGap).toEqual({ painted: [], uncovered: [], skipped: [] });
+    const reason = (fn: () => unknown): unknown => {
+      try {
+        fn();
+      } catch (e) {
+        return (e as CoreError).details?.reason;
+      }
+      return undefined;
+    };
+    expect(
+      reason(() => s.transact('x', (tx) => paintOverlapTx(tx, { viewId: 'viw_nope00' as never }))),
+    ).toBe('unknown-view');
+    expect(
+      reason(() => s.transact('x', (tx) => paintOverlapTx(tx, { bones: ['bon_nope00' as never] }))),
+    ).toBe('unknown-bone');
+    const { s: gap } = w2bSplit();
+    expect(reason(() => gap.transact('x', (tx) => paintOverlapTx(tx, { color: 3 })))).toBe(
+      'bad-color',
+    );
+    s.transact('strip', (tx) => {
+      tx.update((d) => {
+        delete d.rig;
+      });
+    });
+    expect(reason(() => s.transact('x', (tx) => paintOverlapTx(tx)))).toBe('no-rig');
+  });
+
+  it('refuses a colour mode change without a palette or a transparent entry, or with a colour it lacks', () => {
+    const { s } = w2bSplit();
+    const reason = (opts: Parameters<typeof setColorMode>[1]): unknown => {
+      try {
+        s.transact('x', (tx) => setColorMode(tx, opts));
+      } catch (e) {
+        return (e as CoreError).details?.reason;
+      }
+      return undefined;
+    };
+    expect(reason({ colorMode: 'indexed' })).toBe('not-indexable'); // the palette lacks GREEN and BLUE
+    s.transact('palette', (tx) => {
+      tx.update((d) => {
+        const p = d.palettes[0];
+        if (p !== undefined) p.colors = [[...GREEN], [...BLUE]];
+      });
+    });
+    expect(reason({ colorMode: 'indexed' })).toBe('bad-palette');
+    s.transact('no palette', (tx) => {
+      tx.update((d) => {
+        delete d.activePaletteId;
+      });
+    });
+    expect(reason({ colorMode: 'indexed' })).toBe('no-palette');
+    expect(reason({ paletteLocked: true })).toBe('no-palette');
+    expect(reason({})).toBeUndefined(); // nothing to change
   });
 });

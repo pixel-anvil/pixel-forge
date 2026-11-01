@@ -164,6 +164,15 @@ describe('frame.duplicate', () => {
 - Readonly tuples/arrays returned by rig/core must be copied (`[...x]`) before they go into a zod output.
 - `pnpm changeset` is interactive; write `.changeset/<name>.md` by hand (frontmatter `'@pixel-forge/<pkg>': minor`, then one line).
 
+**Gotchas (from T5.2b, 2026-11-01):**
+- Vitest resolves `@pixel-forge/*` through `dist`: run `pnpm build` after changing another package, or the ops tests see the old code.
+- `ops` may not import `png` or `raster` (spec 6.2). Document logic that needs pixels goes into `core` (`paintOverlapTx`, `setColorMode`); a PNG's size is read from its IHDR (`pngSize` in `src/file-io.ts`); `toOpError` recognises `PngError` by name. `ops` has no `TextEncoder`: use `utf8()` from `src/file-io.ts`.
+- `io` ops: read and decode first, call `ctx.transact` last (OPS-01), and build the output from its result. Files only through `ctx.host.fs`; `saveAtomic` writes the temp file and renames.
+- `destructive` ops may set `confirmText`: it is added to the tool description and to the `CONFIRM_REQUIRED` message. The text cannot depend on the input (`rig.bake` asks for confirmation in mode `new` too).
+- Overrides need the host's `PartRenderer`: use `partRenderer(ctx)` (falls back to a private renderer for a plain `RigRenderer`).
+- Examples that need a flat layer or another precondition: `flatHost()` in `test/helpers.ts` builds a document with the hero's id (CC0 swordsman cells, layer `body`, optional rig), so the example input runs unchanged. `store.clearHistory()` after setup keeps the undo assertions simple.
+- `OverlapJoint.boneId` is the **painted** part's bone, not the joint's child bone; filter joints by `bone` (the child's name).
+
 ## Add a lint rule
 Rules live in `packages/lint/src/rules.ts`; `lint(view, opts)` runs them in `RULE_IDS` order.
 1. Add the id to `RULE_IDS` in `packages/lint/src/types.ts` (`area.name`; the position fixes the report order).

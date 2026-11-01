@@ -1,5 +1,534 @@
 [
   {
+    "name": "anim_create",
+    "title": "anim.create",
+    "description": "Create an animation (group + optional direction) with empty frames of equal duration.\n\n(group, direction) must be unique (I6). Names are lower-case a-z 0-9 _ - up to 48 characters; leave direction out for an undirected animation. Frames have no keys or cels: pose them with rig_set_pose, draw into them, or add more with frame_add. For a flipped copy of a side animation use rig_mirror_animation.\n\nChanges the document as one undo step. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (A 4-frame side run loop at 100 ms): {\"doc\":\"doc_g1ed5q\",\"group\":\"run\",\"direction\":\"side\",\"frames\":4}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        },
+        "group": {
+          "type": "string",
+          "pattern": "^[a-z0-9_-]{1,48}$",
+          "description": "Animation group, e.g. \"run\"."
+        },
+        "direction": {
+          "description": "Direction, e.g. \"side\" (omit for undirected).",
+          "type": "string",
+          "pattern": "^[a-z0-9_-]{1,48}$"
+        },
+        "loop": {
+          "default": "loop",
+          "description": "\"loop\" (default), \"once\" or \"pingpong\".",
+          "type": "string",
+          "enum": ["loop", "once", "pingpong"]
+        },
+        "frames": {
+          "default": 1,
+          "description": "Number of empty frames (default 1).",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "durationMs": {
+          "default": 100,
+          "description": "Duration of every frame in ms (default 100).",
+          "type": "integer",
+          "minimum": 1
+        },
+        "angleQuantum": {
+          "description": "Rig angle quantum, deg (a multiple of 0.25 that divides 360; default 1).",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 90
+        }
+      },
+      "required": ["doc", "group"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "animation": {
+          "type": "string",
+          "description": "Animation id."
+        },
+        "label": {
+          "type": "string",
+          "description": "\"group/direction\", or \"group\" when undirected."
+        },
+        "frameIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Frame ids in play order."
+        }
+      },
+      "required": ["animation", "label", "frameIds"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "anim.create",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "anim.create",
+      "pixel-forge/safety": "mutate"
+    }
+  },
+  {
+    "name": "anim_update",
+    "title": "anim.update",
+    "description": "Rename an animation (group, direction), set its loop mode, angle quantum or post-passes.\n\n(group, direction) must stay unique (I6). Renaming the group of a source animation renames its mirrors too (a mirror shares its source's group); a mirror's group cannot be changed on its own. Loop, angleQuantum and postPasses belong to the source: a mirror has none. null clears direction, angleQuantum or postPasses. Frame durations, markers and events: frame_set_meta.\n\nChanges the document as one undo step. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Make the hero idle a ping-pong): {\"doc\":\"doc_g1ed5q\",\"animation\":{\"group\":\"default\"},\"loop\":\"pingpong\"}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        },
+        "animation": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "group": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                },
+                "direction": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                }
+              },
+              "required": ["group"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^anm_[0-9a-z]{1,24}$"
+                }
+              },
+              "required": ["id"],
+              "additionalProperties": false
+            }
+          ],
+          "description": "Animation: {\"group\": \"run\", \"direction\": \"side\"} ({\"group\": \"idle\"} for an undirected one) or {\"id\": \"anm_...\"}."
+        },
+        "group": {
+          "description": "New group name.",
+          "type": "string",
+          "pattern": "^[a-z0-9_-]{1,48}$"
+        },
+        "direction": {
+          "description": "New direction; null makes it undirected.",
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[a-z0-9_-]{1,48}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "loop": {
+          "description": "\"loop\", \"once\" or \"pingpong\".",
+          "type": "string",
+          "enum": ["loop", "once", "pingpong"]
+        },
+        "angleQuantum": {
+          "description": "Rig angle quantum, deg (multiple of 0.25 dividing 360); null restores the default.",
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 90
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "postPasses": {
+          "description": "Post-passes after the rig render: {removeOrphans: {}, outline: {color: [r,g,b,a], outsideOnly?, corners?}}; null removes them.",
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "removeOrphans": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                },
+                "outline": {
+                  "type": "object",
+                  "properties": {
+                    "color": {
+                      "type": "array",
+                      "prefixItems": [
+                        {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
+                        },
+                        {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
+                        },
+                        {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
+                        },
+                        {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
+                        }
+                      ],
+                      "items": false,
+                      "minItems": 4,
+                      "maxItems": 4
+                    },
+                    "outsideOnly": {
+                      "type": "boolean"
+                    },
+                    "corners": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["color"],
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": ["doc", "animation"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "animation": {
+          "type": "string",
+          "description": "Animation id."
+        },
+        "label": {
+          "type": "string",
+          "description": "\"group/direction\" afterwards."
+        },
+        "changed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Fields that changed; empty when nothing did."
+        },
+        "mirrors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Labels of the mirror animations renamed with it."
+        }
+      },
+      "required": ["animation", "label", "changed", "mirrors"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "anim.update",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "anim.update",
+      "pixel-forge/safety": "mutate"
+    }
+  },
+  {
+    "name": "cel_link",
+    "title": "cel.link",
+    "description": "Link a layer's cel to another frame's cel (mode \"link\"), make a linked cel independent (\"unlink\"), or link all identical cels (\"linkIdentical\").\n\nA linked cel shows the same pixels as its target (edit one, both change; links go across animations, one hop only: linking to a link links to its target). \"link\" needs animation, frame (the cel that becomes the link) and source.frame (the cel it shows; source.animation defaults to animation). \"unlink\" copies the pixels into the cel (animation, frame). \"linkIdentical\" links, per layer, every cel with the same pixels, offset and opacity to the first one in document order (animation limits the scan to one animation).\n\nChanges the document as one undo step. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Link the hero layer cels that have identical pixels): {\"doc\":\"doc_g1ed5q\",\"layer\":\"body\",\"mode\":\"linkIdentical\"}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        },
+        "layer": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Layer id (\"lay_...\") or layer name."
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["link", "unlink", "linkIdentical"],
+          "description": "What to do."
+        },
+        "animation": {
+          "description": "link/unlink: animation of the cel. linkIdentical: limits the scan (default: all).",
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "group": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                },
+                "direction": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                }
+              },
+              "required": ["group"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^anm_[0-9a-z]{1,24}$"
+                }
+              },
+              "required": ["id"],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "frame": {
+          "description": "link/unlink: the cel's frame.",
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^frm_[0-9a-z]{1,24}$"
+            }
+          ]
+        },
+        "source": {
+          "description": "link: the frame whose cel is shown.",
+          "type": "object",
+          "properties": {
+            "animation": {
+              "description": "Animation of the source frame (default: animation).",
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "group": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9_-]{1,48}$"
+                    },
+                    "direction": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9_-]{1,48}$"
+                    }
+                  },
+                  "required": ["group"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^anm_[0-9a-z]{1,24}$"
+                    }
+                  },
+                  "required": ["id"],
+                  "additionalProperties": false
+                }
+              ]
+            },
+            "frame": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^frm_[0-9a-z]{1,24}$"
+                }
+              ],
+              "description": "Frame: 0-based index or frame id (\"frm_...\")."
+            }
+          },
+          "required": ["frame"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["doc", "layer", "mode"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["link", "unlink", "linkIdentical"]
+        },
+        "changed": {
+          "type": "integer",
+          "description": "Cels that were linked or unlinked (0 for a no-op)."
+        },
+        "imagesDeleted": {
+          "type": "integer",
+          "description": "Images that nothing used any more."
+        }
+      },
+      "required": ["mode", "changed", "imagesDeleted"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "cel.link",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "cel.link",
+      "pixel-forge/safety": "mutate"
+    }
+  },
+  {
+    "name": "doc_create",
+    "title": "doc.create",
+    "description": "Create a new empty RGBA document (no layers, no animations) and open it. Save it with doc_save.\n\nThe origin defaults to the bottom-centre pixel of the canvas (where the feet go). Import art with import_file, add animations with anim_create, or apply a skeleton with rig_apply_template. Use doc_set_color_mode for indexed colour.\n\nReads or writes files through the host. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (A 48x48 canvas): {\"name\":\"hero\",\"width\":48,\"height\":48}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "default": "untitled",
+          "description": "Display name (default \"untitled\").",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096,
+          "description": "Canvas width, int px."
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096,
+          "description": "Canvas height, int px."
+        },
+        "origin": {
+          "description": "Origin pixel on the canvas, int px (default: bottom-centre).",
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "integer"
+            },
+            "y": {
+              "type": "integer"
+            }
+          },
+          "required": ["x", "y"],
+          "additionalProperties": false
+        },
+        "pixelsPerUnit": {
+          "default": 16,
+          "description": "Pixels per engine unit (default 16).",
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "idSeed": {
+          "description": "Seed of the id generator (default: derived from the host clock).",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1073741823
+        }
+      },
+      "required": ["width", "height"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id for the other ops."
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name."
+        },
+        "canvas": {
+          "type": "object",
+          "properties": {
+            "w": {
+              "type": "integer"
+            },
+            "h": {
+              "type": "integer"
+            }
+          },
+          "required": ["w", "h"],
+          "additionalProperties": false,
+          "description": "Canvas size, px."
+        },
+        "origin": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "integer"
+            },
+            "y": {
+              "type": "integer"
+            }
+          },
+          "required": ["x", "y"],
+          "additionalProperties": false,
+          "description": "Origin pixel."
+        }
+      },
+      "required": ["doc", "name", "canvas", "origin"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "doc.create",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "doc.create",
+      "pixel-forge/safety": "io"
+    }
+  },
+  {
     "name": "doc_open",
     "title": "doc.open",
     "description": "Open a .pxf file and return its document id, which every other op takes as \"doc\".\n\nOpening a file that is already open returns the same id (alreadyOpen: true) without re-reading it. Follow with doc_summary to see layers, rig and animations.\n\nReads or writes files through the host. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Open the synthetic hero): {\"path\":\"/work/hero.pxf\"}",
@@ -96,6 +625,122 @@
     },
     "_meta": {
       "pixel-forge/op": "doc.redo",
+      "pixel-forge/safety": "mutate"
+    }
+  },
+  {
+    "name": "doc_save",
+    "title": "doc.save",
+    "description": "Save the document to its .pxf file, or to a new path (first save, save as).\n\nThe path must be inside the workspace roots. Writes a temp file in the same folder and renames it over the target, so a crash never leaves a torn file. A new path takes the document's lock first (DOC_LOCKED if another process owns it) and releases the old one. An existing file at a new path is refused unless overwrite is true. Saving an unchanged, already saved document writes nothing.\n\nReads or writes files through the host. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Save the hero under a new name): {\"doc\":\"doc_g1ed5q\",\"path\":\"/work/hero-v2.pxf\"}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        },
+        "path": {
+          "description": "Target .pxf path (absolute, inside the workspace roots). Default: the current path.",
+          "type": "string",
+          "minLength": 1
+        },
+        "overwrite": {
+          "default": false,
+          "description": "Replace an existing file at a new path (default false).",
+          "type": "boolean"
+        }
+      },
+      "required": ["doc"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Normalised path saved to."
+        },
+        "wrote": {
+          "type": "boolean",
+          "description": "False when the document was unchanged and nothing was written."
+        },
+        "bytes": {
+          "type": "integer",
+          "description": "Size of the file written, bytes (0 when nothing was written)."
+        },
+        "version": {
+          "type": "integer",
+          "description": "Store version that was saved."
+        }
+      },
+      "required": ["path", "wrote", "bytes", "version"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "doc.save",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "doc.save",
+      "pixel-forge/safety": "io"
+    }
+  },
+  {
+    "name": "doc_set_color_mode",
+    "title": "doc.setColorMode",
+    "description": "Switch the document between \"rgba\" and \"indexed\" pixels, and/or lock it to its palette.\n\nConverting is exact: to \"indexed\" every colour must be an entry of the active palette (the first alpha-0 entry is the transparent index), else the call is refused and nothing changes; to \"rgba\" indices resolve through the palette. Both need an active palette. The lock does not recolour: lint (palette.offPalette) judges the render.\n\nChanges the document as one undo step. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Lock a document that has a palette to it): {\"doc\":\"doc_g1ed5q\",\"paletteLocked\":true}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        },
+        "colorMode": {
+          "description": "\"rgba\" or \"indexed\" (default: unchanged).",
+          "type": "string",
+          "enum": ["rgba", "indexed"]
+        },
+        "paletteLocked": {
+          "description": "Lock colours to the active palette (default: unchanged).",
+          "type": "boolean"
+        }
+      },
+      "required": ["doc"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "colorMode": {
+          "type": "string",
+          "enum": ["rgba", "indexed"],
+          "description": "Mode afterwards."
+        },
+        "paletteLocked": {
+          "type": "boolean",
+          "description": "Lock afterwards."
+        },
+        "converted": {
+          "type": "integer",
+          "description": "Drawings (cels, variants, override images) converted."
+        }
+      },
+      "required": ["colorMode", "paletteLocked", "converted"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "doc.setColorMode",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "doc.setColorMode",
       "pixel-forge/safety": "mutate"
     }
   },
@@ -722,6 +1367,602 @@
     }
   },
   {
+    "name": "frame_set_meta",
+    "title": "frame.setMeta",
+    "description": "Set one frame's duration (ms), markers (name -> int px), events (names) and root motion (int px).\n\nOnly the fields you give change. markers merge by name (null removes one); events replace the whole list; rootMotion is the move the game applies when this frame is played (int px, y down). New marker and event names are added to the document's markerDefs / eventDefs. Mirror animations have no frames: edit the source.\n\nChanges the document as one undo step. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Hold the hero frame 200 ms and fire a footstep event): {\"doc\":\"doc_g1ed5q\",\"animation\":{\"group\":\"default\"},\"frame\":0,\"durationMs\":200,\"events\":[\"footstep\"]}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        },
+        "animation": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "group": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                },
+                "direction": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                }
+              },
+              "required": ["group"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^anm_[0-9a-z]{1,24}$"
+                }
+              },
+              "required": ["id"],
+              "additionalProperties": false
+            }
+          ],
+          "description": "Animation: {\"group\": \"run\", \"direction\": \"side\"} ({\"group\": \"idle\"} for an undirected one) or {\"id\": \"anm_...\"}."
+        },
+        "frame": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^frm_[0-9a-z]{1,24}$"
+            }
+          ],
+          "description": "Frame: 0-based index or frame id (\"frm_...\")."
+        },
+        "durationMs": {
+          "description": "Frame duration, ms.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "markers": {
+          "description": "Markers by name, canvas px (e.g. \"hand_r\": {\"x\": 30, \"y\": 20}); null removes one.",
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^[a-z0-9_-]{1,48}$"
+          },
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "integer"
+                  },
+                  "y": {
+                    "type": "integer"
+                  }
+                },
+                "required": ["x", "y"],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "events": {
+          "description": "Event names fired on this frame; replaces the list.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9_-]{1,48}$"
+          }
+        },
+        "rootMotion": {
+          "description": "Root motion of this frame, int px.",
+          "type": "object",
+          "properties": {
+            "dx": {
+              "type": "integer"
+            },
+            "dy": {
+              "type": "integer"
+            }
+          },
+          "required": ["dx", "dy"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["doc", "animation", "frame"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "animation": {
+          "type": "string",
+          "description": "\"group/direction\" of the animation."
+        },
+        "frameIndex": {
+          "type": "integer"
+        },
+        "frameId": {
+          "type": "string"
+        },
+        "changed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Fields that changed; empty when nothing did."
+        }
+      },
+      "required": ["animation", "frameIndex", "frameId", "changed"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "frame.setMeta",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "frame.setMeta",
+      "pixel-forge/safety": "mutate"
+    }
+  },
+  {
+    "name": "export",
+    "title": "io.export",
+    "description": "Export animations as a spritesheet PNG plus a JSON description (Aseprite hash format).\n\nRenders every frame like the game would see it (export layers only; rig, overrides and post-passes applied; mirrors flipped) and writes <name>.png and <name>.json next to each other, atomically. layout \"rows\" puts one animation per row; \"packed\" fills a near-square grid. scale is an integer 1..16. The JSON lists a frame per cell with its duration, and one tag per animation (\"group\" or \"group/direction\").\n\nReads or writes files through the host. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Export the hero as a 2x sheet): {\"doc\":\"doc_g1ed5q\",\"path\":\"/work/out/hero.png\",\"scale\":2}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\.png$",
+          "description": "Output PNG path (absolute, inside the workspace roots); the JSON goes beside it."
+        },
+        "animations": {
+          "description": "Animations to export, in order (default: all).",
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "group": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9_-]{1,48}$"
+                  },
+                  "direction": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9_-]{1,48}$"
+                  }
+                },
+                "required": ["group"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^anm_[0-9a-z]{1,24}$"
+                  }
+                },
+                "required": ["id"],
+                "additionalProperties": false
+              }
+            ],
+            "description": "Animation: {\"group\": \"run\", \"direction\": \"side\"} ({\"group\": \"idle\"} for an undirected one) or {\"id\": \"anm_...\"}."
+          }
+        },
+        "layout": {
+          "default": "rows",
+          "description": "\"rows\" (default) or \"packed\".",
+          "type": "string",
+          "enum": ["rows", "packed"]
+        },
+        "scale": {
+          "default": 1,
+          "description": "Integer scale, 1..16 (default 1).",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
+        },
+        "skin": {
+          "default": "base",
+          "description": "Skin name, or \"base\" (default).",
+          "type": "string",
+          "minLength": 1
+        },
+        "exportOnly": {
+          "default": true,
+          "description": "Only layers with export: true (default true).",
+          "type": "boolean"
+        }
+      },
+      "required": ["doc", "path"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "png": {
+          "type": "string",
+          "description": "Path of the written PNG."
+        },
+        "json": {
+          "type": "string",
+          "description": "Path of the written JSON."
+        },
+        "size": {
+          "type": "object",
+          "properties": {
+            "w": {
+              "type": "integer"
+            },
+            "h": {
+              "type": "integer"
+            }
+          },
+          "required": ["w", "h"],
+          "additionalProperties": false,
+          "description": "Sheet size, px."
+        },
+        "frames": {
+          "type": "integer",
+          "description": "Frames exported."
+        },
+        "animations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Animation tags in sheet order."
+        }
+      },
+      "required": ["png", "json", "size", "frames", "animations"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "io.export",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "io.export",
+      "pixel-forge/safety": "io"
+    }
+  },
+  {
+    "name": "import_file",
+    "title": "io.import",
+    "description": "Import a PNG / grid spritesheet (pick cells and ranges per animation) or an .aseprite file into a document.\n\nformat is guessed from the extension (.png -> spritesheet, .aseprite/.ase -> aseprite). Spritesheet: cell is [w, h] px (omit it for a single image: the whole PNG is one cell) and animations maps cells to animations, e.g. {\"group\": \"move_gather\", \"cells\": [{\"row\": 4, \"col\": \"3-6\"}]}; repeated cells become linked cels, empty cells empty frames; the cell's bottom-centre lands on the document origin. An optional outlineFile (same size) becomes a second layer. Aseprite: adds layers, tags (as animations) and the palette; reimport: true updates a file imported earlier, in place, by name. The canvas of an aseprite file must equal the document's. A failed import changes nothing.\n\nReads or writes files through the host. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Cut row 0, columns 0 to 2 of a 64x64 sheet into move_gather at 12 fps): {\"doc\":\"doc_g1ed5q\",\"file\":\"/work/run.png\",\"cell\":[64,64],\"animations\":[{\"group\":\"move_gather\",\"cells\":[{\"row\":0,\"col\":\"0-2\"}],\"fps\":12}]}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        },
+        "file": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Path of the file (absolute, inside the workspace roots)."
+        },
+        "format": {
+          "description": "Default: from the file extension.",
+          "type": "string",
+          "enum": ["spritesheet", "aseprite"]
+        },
+        "cell": {
+          "description": "spritesheet: cell size [w, h] px (default: the whole image is one cell).",
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 1
+            }
+          ],
+          "items": false,
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "animations": {
+          "description": "spritesheet: the animations to cut (required for a spritesheet).",
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "group": {
+                "type": "string",
+                "pattern": "^[a-z0-9_-]{1,48}$",
+                "description": "Animation group, e.g. \"move_gather\"."
+              },
+              "direction": {
+                "description": "Direction (omit for undirected).",
+                "type": "string",
+                "pattern": "^[a-z0-9_-]{1,48}$"
+              },
+              "cells": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "prefixItems": [
+                        {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      ],
+                      "items": false,
+                      "minItems": 2,
+                      "maxItems": 2
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "row": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            {
+                              "type": "string",
+                              "pattern": "^\\d+(-\\d+)?$"
+                            }
+                          ],
+                          "description": "Row (0-based, row 0 on top), or a range \"from-to\"."
+                        },
+                        "col": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            {
+                              "type": "string",
+                              "pattern": "^\\d+(-\\d+)?$"
+                            }
+                          ],
+                          "description": "Column (0-based), or a range \"from-to\"."
+                        }
+                      },
+                      "required": ["row", "col"],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "description": "Cells in play order: [row, col], or {\"row\": 4, \"col\": \"3-6\"} for row 4, columns 3 to 6."
+              },
+              "durationMs": {
+                "description": "Frame duration, ms (wins over fps).",
+                "type": "integer",
+                "minimum": 1
+              },
+              "fps": {
+                "description": "Frames per second.",
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "loop": {
+                "description": "\"loop\" (default), \"once\" or \"pingpong\".",
+                "type": "string",
+                "enum": ["loop", "once", "pingpong"]
+              }
+            },
+            "required": ["group", "cells"],
+            "additionalProperties": false
+          }
+        },
+        "outlineFile": {
+          "description": "spritesheet: matching outline sheet, same size.",
+          "type": "string",
+          "minLength": 1
+        },
+        "layerName": {
+          "description": "spritesheet: layer for the cels (default \"body\"; reused if it exists).",
+          "type": "string",
+          "pattern": "^[a-z0-9_-]{1,48}$"
+        },
+        "outlineLayerName": {
+          "description": "spritesheet: layer of the outline sheet (default \"outline\").",
+          "type": "string",
+          "pattern": "^[a-z0-9_-]{1,48}$"
+        },
+        "defaultDurationMs": {
+          "description": "spritesheet: frame duration when an animation gives none (default 100).",
+          "type": "integer",
+          "minimum": 1
+        },
+        "reimport": {
+          "default": false,
+          "description": "aseprite: update a file imported earlier instead of adding (default false).",
+          "type": "boolean"
+        },
+        "view": {
+          "description": "aseprite: rig view for \"part:\" layers without #view (default: the first).",
+          "type": "string",
+          "minLength": 1
+        },
+        "paletteName": {
+          "description": "aseprite: name of the imported palette.",
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": ["doc", "file"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "type": "string",
+          "enum": ["spritesheet", "aseprite"]
+        },
+        "animations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Animations created or matched, as \"group/direction\"."
+        },
+        "layers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Layers that received the pixels (names)."
+        },
+        "frames": {
+          "type": "integer",
+          "description": "Frames created (re-import: frames in the file)."
+        },
+        "images": {
+          "type": "integer",
+          "description": "Images created."
+        },
+        "parts": {
+          "description": "aseprite: \"part:\" layers bound, updated (re-import) or left as pixel layers.",
+          "type": "object",
+          "properties": {
+            "bound": {
+              "type": "integer"
+            },
+            "updated": {
+              "type": "integer"
+            },
+            "unbound": {
+              "type": "integer"
+            }
+          },
+          "required": ["bound", "updated", "unbound"],
+          "additionalProperties": false
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Non-fatal findings."
+        }
+      },
+      "required": ["format", "animations", "layers", "frames", "images", "warnings"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "io.import",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "io.import",
+      "pixel-forge/safety": "io"
+    }
+  },
+  {
+    "name": "layer_update",
+    "title": "layer.update",
+    "description": "Rename a layer, or set its visible flag, opacity (0..255) or export flag.\n\nOnly the fields you give change. Names are lower-case a-z 0-9 _ - up to 48 characters and unique among siblings; a part layer's name is the part's name and must be unique in the whole document. A reference layer is never exported. Hidden or non-exported layers are skipped by the export render (io_export, lint, bake).\n\nChanges the document as one undo step. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Hide the hero's head part from the editor render): {\"doc\":\"doc_g1ed5q\",\"layer\":\"head\",\"visible\":false}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        },
+        "layer": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Layer id (\"lay_...\") or layer name."
+        },
+        "name": {
+          "description": "New layer name.",
+          "type": "string",
+          "pattern": "^[a-z0-9_-]{1,48}$"
+        },
+        "visible": {
+          "description": "Show or hide the layer in the editor render.",
+          "type": "boolean"
+        },
+        "opacity": {
+          "description": "Layer opacity, 0..255.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "export": {
+          "description": "Include the layer in exports and bakes.",
+          "type": "boolean"
+        }
+      },
+      "required": ["doc", "layer"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "layer": {
+          "type": "string",
+          "description": "Layer id."
+        },
+        "path": {
+          "type": "string",
+          "description": "Name path from the root afterwards (e.g. \"body/arm\")."
+        },
+        "changed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Fields that changed; empty when nothing did."
+        }
+      },
+      "required": ["layer", "path", "changed"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "layer.update",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "layer.update",
+      "pixel-forge/safety": "mutate"
+    }
+  },
+  {
     "name": "lint",
     "title": "lint.run",
     "description": "Check the document and list findings (palette, orphan pixels, joint gaps, stale overrides, empty frames).\n\nRead-only. Frames are rendered and checked; findings come sorted by rule, then document order. Narrow the check with enable, disable, animations or skins. Severity \"error\" means an invariant is broken; fix warnings before a delivery.\n\nRead-only. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Lint the hero, joint and palette rules only): {\"doc\":\"doc_g1ed5q\",\"enable\":[\"rig.jointGap\",\"palette.offPalette\"]}",
@@ -975,6 +2216,790 @@
     }
   },
   {
+    "name": "override_list",
+    "title": "override.list",
+    "description": "List overrides: stale ones (art under them changed) and ones that fail to render, apart.\n\nRead-only; renders the frames that have overrides. \"stale\" overrides are still applied; decide with override_resolve (keep, rebase = accept the current art, discard). \"errors\" cannot be judged because their frame does not render (missing image, no view for the direction...): fix the rig first, they cannot be rebased until it renders. Part overrides of mirror animations are never rendered and not listed.\n\nRead-only. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (List the hero overrides): {\"doc\":\"doc_g1ed5q\"}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        },
+        "animations": {
+          "description": "Only these animations (default: all).",
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "group": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9_-]{1,48}$"
+                  },
+                  "direction": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9_-]{1,48}$"
+                  }
+                },
+                "required": ["group"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^anm_[0-9a-z]{1,24}$"
+                  }
+                },
+                "required": ["id"],
+                "additionalProperties": false
+              }
+            ],
+            "description": "Animation: {\"group\": \"run\", \"direction\": \"side\"} ({\"group\": \"idle\"} for an undirected one) or {\"id\": \"anm_...\"}."
+          }
+        }
+      },
+      "required": ["doc"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "counts": {
+          "type": "object",
+          "properties": {
+            "total": {
+              "type": "integer"
+            },
+            "valid": {
+              "type": "integer"
+            },
+            "stale": {
+              "type": "integer",
+              "description": "Stale, excluding render errors."
+            },
+            "errors": {
+              "type": "integer",
+              "description": "Overrides whose render failed."
+            }
+          },
+          "required": ["total", "valid", "stale", "errors"],
+          "additionalProperties": false
+        },
+        "stale": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Override id (for override_resolve)."
+              },
+              "animation": {
+                "type": "string",
+                "description": "\"group/direction\" of the animation owning it."
+              },
+              "frameIndex": {
+                "type": "integer",
+                "description": "Frame index in the animation (the source's for a mirror)."
+              },
+              "frameId": {
+                "type": "string"
+              },
+              "target": {
+                "type": "string",
+                "description": "\"final\" (whole composite) or the part layer name."
+              },
+              "mirror": {
+                "type": "boolean",
+                "description": "True for a mirror animation's own final override."
+              },
+              "reason": {
+                "description": "\"hash\": the pixels under it changed; \"no-target\": nothing to compare with (hidden part, deleted frame); \"error\": it could not be rendered.",
+                "type": "string",
+                "enum": ["hash", "no-target", "error"]
+              },
+              "errorCode": {
+                "description": "reason \"error\": the core error code.",
+                "type": "string"
+              },
+              "errorMessage": {
+                "description": "reason \"error\": why the render failed.",
+                "type": "string"
+              }
+            },
+            "required": ["id", "animation", "frameIndex", "frameId", "target", "mirror"],
+            "additionalProperties": false
+          },
+          "description": "Stale overrides (reason \"hash\" or \"no-target\")."
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Override id (for override_resolve)."
+              },
+              "animation": {
+                "type": "string",
+                "description": "\"group/direction\" of the animation owning it."
+              },
+              "frameIndex": {
+                "type": "integer",
+                "description": "Frame index in the animation (the source's for a mirror)."
+              },
+              "frameId": {
+                "type": "string"
+              },
+              "target": {
+                "type": "string",
+                "description": "\"final\" (whole composite) or the part layer name."
+              },
+              "mirror": {
+                "type": "boolean",
+                "description": "True for a mirror animation's own final override."
+              },
+              "reason": {
+                "description": "\"hash\": the pixels under it changed; \"no-target\": nothing to compare with (hidden part, deleted frame); \"error\": it could not be rendered.",
+                "type": "string",
+                "enum": ["hash", "no-target", "error"]
+              },
+              "errorCode": {
+                "description": "reason \"error\": the core error code.",
+                "type": "string"
+              },
+              "errorMessage": {
+                "description": "reason \"error\": why the render failed.",
+                "type": "string"
+              }
+            },
+            "required": ["id", "animation", "frameIndex", "frameId", "target", "mirror"],
+            "additionalProperties": false
+          },
+          "description": "Overrides whose render failed (reason \"error\")."
+        },
+        "valid": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Ids of the overrides that are up to date."
+        }
+      },
+      "required": ["counts", "stale", "errors", "valid"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "override.list",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "override.list",
+      "pixel-forge/safety": "read"
+    }
+  },
+  {
+    "name": "override_resolve",
+    "title": "override.resolve",
+    "description": "Resolve overrides: \"keep\" them, \"rebase\" onto the current art, or \"discard\" them.\n\nName overrides by id (from override_list) or pass allStale: true for every stale one. \"keep\" changes nothing (a stale override is still applied) and just confirms the ids exist. \"rebase\" accepts the art under the override as the new base, so it stops being stale; it needs the frame to render. \"discard\" deletes the override and its pixels. With allStale, overrides that fail to render are left out of a rebase and reported in skipped.\n\nChanges the document as one undo step. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Re-base every stale override after reviewing the render): {\"doc\":\"doc_g1ed5q\",\"action\":\"rebase\",\"allStale\":true}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        },
+        "action": {
+          "type": "string",
+          "enum": ["keep", "rebase", "discard"],
+          "description": "What to do with them."
+        },
+        "overrides": {
+          "description": "Override ids (\"ovr_...\").",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "allStale": {
+          "default": false,
+          "description": "Also include every stale override of the document (default false).",
+          "type": "boolean"
+        }
+      },
+      "required": ["doc", "action"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["keep", "rebase", "discard"]
+        },
+        "resolved": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Override ids the action applied to."
+        },
+        "skipped": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "allStale rebase: ids left out because they fail to render."
+        }
+      },
+      "required": ["action", "resolved", "skipped"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "override.resolve",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "override.resolve",
+      "pixel-forge/safety": "mutate"
+    }
+  },
+  {
+    "name": "part_paint_overlap",
+    "title": "part.paintOverlap",
+    "description": "Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite does not change.\n\nFor each joint with gaps (rig_joint_check), paints only pixels the upper part covers at rest, growing the variant image and shifting its pivot to keep the part in place. The colour is the variant's most frequent opaque one unless you pass color ([r,g,b,a] in RGBA documents, a palette index in indexed ones). Existing pixels are kept. \"uncovered\" lists joints that no hidden paint can close (they need a visible art change); \"skipped\" joints with several parts per bone or a part drawn rotated at rest. Check with rig_joint_check afterwards.\n\nChanges the document as one undo step. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Close the elbow gap of the hero): {\"doc\":\"doc_g1ed5q\",\"bones\":[\"lower_arm_r\"]}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        },
+        "view": {
+          "description": "Rig view to check (default: the first view).",
+          "type": "string",
+          "minLength": 1
+        },
+        "bones": {
+          "description": "Only joints whose child bone is one of these (default: all joints with gaps).",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bone name (e.g. \"upper_arm_r\") or id (\"bon_...\")."
+          }
+        },
+        "color": {
+          "description": "Paint colour: [r,g,b,a], or a palette index in an indexed document.",
+          "anyOf": [
+            {
+              "type": "array",
+              "prefixItems": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255
+                },
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255
+                },
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255
+                },
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255
+                }
+              ],
+              "items": false,
+              "minItems": 4,
+              "maxItems": 4
+            },
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            }
+          ]
+        }
+      },
+      "required": ["doc"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "painted": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "part": {
+                "type": "string",
+                "description": "Part layer name."
+              },
+              "variant": {
+                "type": "string",
+                "description": "Variant id that received paint."
+              },
+              "bones": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Child bones of the joints it serves."
+              },
+              "pixels": {
+                "type": "integer",
+                "description": "Pixels painted."
+              },
+              "grew": {
+                "type": "object",
+                "properties": {
+                  "left": {
+                    "type": "integer"
+                  },
+                  "top": {
+                    "type": "integer"
+                  },
+                  "right": {
+                    "type": "integer"
+                  },
+                  "bottom": {
+                    "type": "integer"
+                  }
+                },
+                "required": ["left", "top", "right", "bottom"],
+                "additionalProperties": false,
+                "description": "Pixels the variant image grew on each side."
+              },
+              "pivot": {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "integer"
+                  },
+                  "y": {
+                    "type": "integer"
+                  }
+                },
+                "required": ["x", "y"],
+                "additionalProperties": false,
+                "description": "Variant pivot afterwards."
+              }
+            },
+            "required": ["part", "variant", "bones", "pixels", "grew", "pivot"],
+            "additionalProperties": false
+          },
+          "description": "Variants that were painted (empty when no joint has gaps)."
+        },
+        "uncovered": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "bone": {
+                "type": "string"
+              },
+              "pixels": {
+                "type": "integer"
+              }
+            },
+            "required": ["bone", "pixels"],
+            "additionalProperties": false
+          },
+          "description": "Joints with gap pixels no hidden paint can close."
+        },
+        "skipped": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "bone": {
+                "type": "string"
+              },
+              "parent": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string",
+                "enum": ["ambiguous-parts", "rotated-rest"]
+              }
+            },
+            "required": ["bone", "parent", "reason"],
+            "additionalProperties": false
+          },
+          "description": "Joints the helper cannot handle."
+        }
+      },
+      "required": ["painted", "uncovered", "skipped"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "part.paintOverlap",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "part.paintOverlap",
+      "pixel-forge/safety": "mutate"
+    }
+  },
+  {
+    "name": "part_split",
+    "title": "part.split",
+    "description": "Split a region (rect, lasso or flood, canvas px) of a flat layer's cel on one frame into a new layer, bound to a bone.\n\nThe pixels move into a new layer above the source and leave transparency behind; at rest the remainder plus the parts recomposite the source frame exactly. Name the target with partName (\"part:upper_arm_r\", \"part:hand_r@open#side\", or a bone name), else it binds by overlap with the bones when there is a clear winner (ambiguous or no overlap: it stays a pixel layer, see ambiguous/skipped). The part draws in every frame that renders the rig, not only this one: key it visible=false (rig_set_pose) on other frames. Then run rig_joint_check and part_paint_overlap.\n\nChanges the document as one undo step. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Cut the head rectangle of a flat run frame into the head part): {\"doc\":\"doc_g1ed5q\",\"layer\":\"body\",\"animation\":{\"group\":\"run\"},\"frame\":0,\"selection\":{\"kind\":\"rect\",\"x\":24,\"y\":16,\"w\":18,\"h\":12},\"partName\":\"part:head\"}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        },
+        "layer": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The flat pixel layer to cut from (id or name)."
+        },
+        "animation": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "group": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                },
+                "direction": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                }
+              },
+              "required": ["group"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^anm_[0-9a-z]{1,24}$"
+                }
+              },
+              "required": ["id"],
+              "additionalProperties": false
+            }
+          ],
+          "description": "Animation: {\"group\": \"run\", \"direction\": \"side\"} ({\"group\": \"idle\"} for an undirected one) or {\"id\": \"anm_...\"}."
+        },
+        "frame": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^frm_[0-9a-z]{1,24}$"
+            }
+          ],
+          "description": "The frame whose cel is cut."
+        },
+        "selection": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "rect"
+                },
+                "x": {
+                  "type": "integer",
+                  "description": "Left pixel."
+                },
+                "y": {
+                  "type": "integer",
+                  "description": "Top pixel."
+                },
+                "w": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Width, px."
+                },
+                "h": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Height, px."
+                }
+              },
+              "required": ["kind", "x", "y", "w", "h"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "lasso"
+                },
+                "points": {
+                  "minItems": 3,
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "prefixItems": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "integer"
+                      }
+                    ],
+                    "items": false,
+                    "minItems": 2,
+                    "maxItems": 2
+                  },
+                  "description": "Closed polygon through canvas pixels [[x, y], ...] (the last joins the first)."
+                }
+              },
+              "required": ["kind", "points"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "flood"
+                },
+                "x": {
+                  "type": "integer",
+                  "description": "Seed pixel x."
+                },
+                "y": {
+                  "type": "integer",
+                  "description": "Seed pixel y."
+                },
+                "boundary": {
+                  "description": "Colours ([r,g,b,a], or palette indices) that stop the flood; default: only the seed colour.",
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "array",
+                        "prefixItems": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 255
+                          },
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 255
+                          },
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 255
+                          },
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 255
+                          }
+                        ],
+                        "items": false,
+                        "minItems": 4,
+                        "maxItems": 4
+                      },
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 255
+                      }
+                    ]
+                  }
+                },
+                "connectivity": {
+                  "default": 4,
+                  "description": "4 (default) or 8 neighbours.",
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "const": 4
+                    },
+                    {
+                      "type": "number",
+                      "const": 8
+                    }
+                  ]
+                },
+                "includeBoundary": {
+                  "default": false,
+                  "description": "Also take the boundary-coloured pixels touching the region (an outline).",
+                  "type": "boolean"
+                }
+              },
+              "required": ["kind", "x", "y"],
+              "additionalProperties": false
+            }
+          ],
+          "description": "The region to cut."
+        },
+        "partName": {
+          "description": "Bind as \"part:<bone>[.<part>][@variant][#view]\" or a bone name.",
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "description": "Name of the new layer while it is not a part (default \"split\").",
+          "type": "string",
+          "minLength": 1
+        },
+        "bind": {
+          "default": true,
+          "description": "Without partName: try to bind by overlap (default true).",
+          "type": "boolean"
+        },
+        "view": {
+          "description": "View for names without #view and for overlap (default: the first).",
+          "type": "string",
+          "minLength": 1
+        },
+        "zByBone": {
+          "description": "Default z of the new part by part-layer name, then bone name; higher draws on top.",
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "integer"
+          }
+        }
+      },
+      "required": ["doc", "layer", "animation", "frame", "selection"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "layer": {
+          "type": "string",
+          "description": "Layer holding the moved pixels (the part layer once bound)."
+        },
+        "image": {
+          "type": "string",
+          "description": "Image id of the moved pixels."
+        },
+        "bounds": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "integer"
+            },
+            "y": {
+              "type": "integer"
+            },
+            "w": {
+              "type": "integer"
+            },
+            "h": {
+              "type": "integer"
+            }
+          },
+          "required": ["x", "y", "w", "h"],
+          "additionalProperties": false,
+          "description": "Canvas rectangle of the moved pixels."
+        },
+        "pixels": {
+          "type": "integer",
+          "description": "Pixels moved."
+        },
+        "bound": {
+          "description": "Present when the layer became (part of) a part.",
+          "type": "object",
+          "properties": {
+            "part": {
+              "type": "string",
+              "description": "Part id."
+            },
+            "variant": {
+              "type": "string",
+              "description": "Variant id."
+            },
+            "bone": {
+              "type": "string",
+              "description": "Bone name."
+            },
+            "view": {
+              "type": "string",
+              "description": "View name."
+            },
+            "how": {
+              "type": "string",
+              "enum": ["name", "overlap"]
+            },
+            "merged": {
+              "type": "boolean",
+              "description": "True when folded into an existing part as a variant."
+            }
+          },
+          "required": ["part", "variant", "bone", "view", "how", "merged"],
+          "additionalProperties": false
+        },
+        "ambiguous": {
+          "description": "Bones tied for the overlap (nothing bound).",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "skipped": {
+          "description": "Why automatic binding was skipped (kebab-case).",
+          "type": "string"
+        },
+        "unlinked": {
+          "type": "integer",
+          "description": "Other frames whose linked cel now owns the original drawing."
+        }
+      },
+      "required": ["layer", "image", "bounds", "pixels", "unlinked"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "part.split",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "part.split",
+      "pixel-forge/safety": "mutate"
+    }
+  },
+  {
     "name": "rig_apply_template",
     "title": "rig.applyTemplate",
     "description": "Apply a humanoid skeleton template: bones matched by name are reused, missing ones are created.\n\nTemplates: humanoid-side (view \"side\"), humanoid-front (\"front\"), humanoid-back (\"back\"). With no view a new view is created (named after the template, or viewName); with view the rest pose is set in that view. Creates the rig when the document has none. The template origin is the document origin. Bones that exist with another parent are refused.\n\nChanges the document as one undo step. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Set the rest pose of the hero in its existing side view): {\"doc\":\"doc_g1ed5q\",\"template\":\"humanoid-side\",\"view\":\"side\"}",
@@ -1047,6 +3072,595 @@
     },
     "_meta": {
       "pixel-forge/op": "rig.applyTemplate",
+      "pixel-forge/safety": "mutate"
+    }
+  },
+  {
+    "name": "rig_bake",
+    "title": "rig.bake",
+    "description": "Bake a rig animation into one plain pixel layer: as a new animation, or in place.\n\nRenders every frame (parts, part and final overrides, post-passes, other exported layers) into a new pixel layer \"baked\" at the rig's position, one full-canvas cel per frame, and hides all parts for the baked animation. mode \"new\" adds animation <group>_baked (or name) and leaves the source untouched. mode \"replace\" bakes the source in place (ids kept, so mirrors keep working). A mirror cannot be baked: bake its source; mirrors stay derived. After a bake the pixels no longer follow the rig.\n\nDestructive: pass \"confirm\": true. Changes the document as one undo step. mode \"replace\" drops the animation's bone keys, part keys, overrides and post-passes, and consumes the cels of the other exported pixel layers at those frames (they are merged into the baked layer); one undo restores it. mode \"new\" only adds an animation and a layer. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Bake the hero idle as a new animation): {\"doc\":\"doc_g1ed5q\",\"animation\":{\"group\":\"default\"},\"mode\":\"new\",\"confirm\":true}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        },
+        "animation": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "group": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                },
+                "direction": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                }
+              },
+              "required": ["group"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^anm_[0-9a-z]{1,24}$"
+                }
+              },
+              "required": ["id"],
+              "additionalProperties": false
+            }
+          ],
+          "description": "Animation: {\"group\": \"run\", \"direction\": \"side\"} ({\"group\": \"idle\"} for an undirected one) or {\"id\": \"anm_...\"}."
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["new", "replace"],
+          "description": "\"new\" keeps the source; \"replace\" bakes it in place."
+        },
+        "name": {
+          "description": "mode \"new\": group of the baked animation (default <group>_baked).",
+          "type": "string",
+          "pattern": "^[a-z0-9_-]{1,48}$"
+        },
+        "confirm": {
+          "type": "boolean",
+          "description": "Must be true: this operation is destructive."
+        }
+      },
+      "required": ["doc", "animation", "mode"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "animation": {
+          "type": "string",
+          "description": "Id of the baked animation."
+        },
+        "layer": {
+          "type": "string",
+          "description": "Id of the new pixel layer holding the baked pixels."
+        },
+        "frames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Frame ids of the baked animation, in play order."
+        },
+        "dropped": {
+          "type": "object",
+          "properties": {
+            "boneKeys": {
+              "type": "integer",
+              "description": "Bone keys dropped (replace only)."
+            },
+            "partKeys": {
+              "type": "integer",
+              "description": "Part keys dropped (replace only)."
+            },
+            "overrides": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Override ids dropped (replace only)."
+            },
+            "postPasses": {
+              "type": "boolean",
+              "description": "Whether post-passes were dropped."
+            },
+            "cels": {
+              "type": "integer",
+              "description": "Cels of other exported pixel layers consumed at the baked frames."
+            }
+          },
+          "required": ["boneKeys", "partKeys", "overrides", "postPasses", "cels"],
+          "additionalProperties": false,
+          "description": "What a \"replace\" bake removed (all zero for \"new\")."
+        }
+      },
+      "required": ["animation", "layer", "frames", "dropped"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "rig.bake",
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "rig.bake",
+      "pixel-forge/safety": "destructive"
+    }
+  },
+  {
+    "name": "rig_bind_parts",
+    "title": "rig.bindParts",
+    "description": "Bind pixel layers to bones as parts, by layer name (\"part:<bone>[.<part>][@variant][#view]\") or by overlap.\n\nBy name: a layer called part:upper_arm_r (or just a bone name) becomes that bone's part; @variant adds another variant of the same part, #view another view. By overlap: remaining layers bind to the bone their opaque pixels cover, only with a clear winner (ties are listed as ambiguous, nothing is guessed). Layers with several drawings cannot bind (animated). Running it again changes nothing. Cut flat art into layers first with part_split.\n\nChanges the document as one undo step. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Bind every layer named after a bone, no overlap guessing): {\"doc\":\"doc_g1ed5q\",\"byOverlap\":false}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        },
+        "layers": {
+          "description": "Only these layers (default: every pixel layer).",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Layer id (\"lay_...\") or layer name."
+          }
+        },
+        "byName": {
+          "default": true,
+          "description": "Bind by layer name (default true).",
+          "type": "boolean"
+        },
+        "byOverlap": {
+          "default": true,
+          "description": "Bind the rest by overlap with the bones (default true).",
+          "type": "boolean"
+        },
+        "rawNames": {
+          "description": "Source names to parse instead of layer names, by layer: {\"arm\": \"part:upper_arm_r@open#side\"}.",
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Layer id (\"lay_...\") or layer name."
+          },
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "view": {
+          "description": "View for names without #view and for overlap (default: the first).",
+          "type": "string",
+          "minLength": 1
+        },
+        "zByBone": {
+          "description": "Default z of new parts by part-layer name, then bone name; higher draws on top.",
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "integer"
+          }
+        }
+      },
+      "required": ["doc"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "bound": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "layer": {
+                "type": "string",
+                "description": "Layer id."
+              },
+              "part": {
+                "type": "string",
+                "description": "Part id."
+              },
+              "variant": {
+                "type": "string",
+                "description": "Variant id."
+              },
+              "bone": {
+                "type": "string",
+                "description": "Bone id."
+              },
+              "view": {
+                "type": "string",
+                "description": "View id."
+              },
+              "how": {
+                "type": "string",
+                "enum": ["name", "overlap"]
+              },
+              "merged": {
+                "type": "boolean",
+                "description": "True when folded into an existing part as a variant."
+              }
+            },
+            "required": ["layer", "part", "variant", "bone", "view", "how", "merged"],
+            "additionalProperties": false
+          },
+          "description": "Layers that became (part of) a part."
+        },
+        "ambiguous": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "layer": {
+                "type": "string"
+              },
+              "candidates": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Bone ids."
+              }
+            },
+            "required": ["layer", "candidates"],
+            "additionalProperties": false
+          },
+          "description": "Layers whose overlap has no clear winner (left alone)."
+        },
+        "skipped": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "layer": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string",
+                "description": "Kebab-case reason, e.g. \"animated\"."
+              }
+            },
+            "required": ["layer", "reason"],
+            "additionalProperties": false
+          },
+          "description": "Layers left alone, with the reason."
+        }
+      },
+      "required": ["bound", "ambiguous", "skipped"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "rig.bindParts",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "rig.bindParts",
+      "pixel-forge/safety": "mutate"
+    }
+  },
+  {
+    "name": "rig_edit_bones",
+    "title": "rig.editBones",
+    "description": "Edit the skeleton: add/delete/reparent/rename bones, set length and rest pose per view, add/rename/delete views.\n\nEdits run in order inside one undo step; one failure undoes the whole call, and later edits can name bones or views added earlier. Deleting never destroys art: a bone with parts or (without cascade) children is refused. Reparenting keeps the art in place. Rest x/y: root = canvas pivot, child = offset from the parent pivot; angle in deg clockwise relative to the parent. For a standard skeleton use rig_apply_template. Bone and part keys of deleted bones go with them.\n\nChanges the document as one undo step. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Add a tail bone under the torso, then lengthen the head): {\"doc\":\"doc_g1ed5q\",\"edits\":[{\"action\":\"addBone\",\"name\":\"tail\",\"parent\":\"torso\",\"length\":8},{\"action\":\"setLength\",\"bone\":\"head\",\"length\":9}]}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        },
+        "edits": {
+          "minItems": 1,
+          "maxItems": 100,
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "const": "addBone"
+                  },
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9_-]{1,48}$",
+                    "description": "New bone name."
+                  },
+                  "parent": {
+                    "description": "Parent bone (omit for a root).",
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "length": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Length, int px (pivot to tip)."
+                  },
+                  "rest": {
+                    "description": "Rest pose in one view (without it the bone is unused in every view).",
+                    "type": "object",
+                    "properties": {
+                      "view": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "View of the rest pose."
+                      },
+                      "x": {
+                        "type": "integer",
+                        "description": "Root: canvas pivot x. Child: offset x from the parent pivot, int px."
+                      },
+                      "y": {
+                        "type": "integer",
+                        "description": "Root: canvas pivot y. Child: offset y from the parent pivot, int px."
+                      },
+                      "angle": {
+                        "type": "number",
+                        "description": "Bone direction relative to its parent, deg clockwise (0 = +x, 90 = down)."
+                      }
+                    },
+                    "required": ["view", "x", "y", "angle"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["action", "name", "length"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "const": "deleteBone"
+                  },
+                  "bone": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Bone name (e.g. \"upper_arm_r\") or id (\"bon_...\")."
+                  },
+                  "cascade": {
+                    "default": false,
+                    "description": "Also delete all descendants (default: refused when it has children).",
+                    "type": "boolean"
+                  }
+                },
+                "required": ["action", "bone"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "const": "reparent"
+                  },
+                  "bone": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Bone name (e.g. \"upper_arm_r\") or id (\"bon_...\")."
+                  },
+                  "parent": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Bone name (e.g. \"upper_arm_r\") or id (\"bon_...\")."
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "New parent, or null to make it a root. The art stays put."
+                  }
+                },
+                "required": ["action", "bone", "parent"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "const": "rename"
+                  },
+                  "bone": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Bone name (e.g. \"upper_arm_r\") or id (\"bon_...\")."
+                  },
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9_-]{1,48}$",
+                    "description": "New name."
+                  }
+                },
+                "required": ["action", "bone", "name"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "const": "setLength"
+                  },
+                  "bone": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Bone name (e.g. \"upper_arm_r\") or id (\"bon_...\")."
+                  },
+                  "length": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Length, int px."
+                  }
+                },
+                "required": ["action", "bone", "length"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "const": "setRest"
+                  },
+                  "bone": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Bone name (e.g. \"upper_arm_r\") or id (\"bon_...\")."
+                  },
+                  "view": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Rig view name (e.g. \"side\") or id (\"viw_...\")."
+                  },
+                  "x": {
+                    "type": "integer",
+                    "description": "Root: canvas pivot x. Child: offset x from the parent pivot, int px."
+                  },
+                  "y": {
+                    "type": "integer",
+                    "description": "Root: canvas pivot y. Child: offset y from the parent pivot, int px."
+                  },
+                  "angle": {
+                    "type": "number",
+                    "description": "Bone direction relative to its parent, deg clockwise (0 = +x, 90 = down)."
+                  }
+                },
+                "required": ["action", "bone", "view", "x", "y", "angle"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "const": "addView"
+                  },
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9_-]{1,48}$",
+                    "description": "New view name."
+                  },
+                  "directions": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9_-]{1,48}$"
+                    },
+                    "description": "Directions it draws (each in one view only)."
+                  }
+                },
+                "required": ["action", "name", "directions"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "const": "renameView"
+                  },
+                  "view": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Rig view name (e.g. \"side\") or id (\"viw_...\")."
+                  },
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9_-]{1,48}$",
+                    "description": "New name."
+                  }
+                },
+                "required": ["action", "view", "name"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "const": "deleteView"
+                  },
+                  "view": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Rig view name (e.g. \"side\") or id (\"viw_...\")."
+                  }
+                },
+                "required": ["action", "view"],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "description": "Edits, applied in order."
+        }
+      },
+      "required": ["doc", "edits"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "description": "The edit's action."
+              },
+              "id": {
+                "description": "Id of the bone or view the edit created.",
+                "type": "string"
+              }
+            },
+            "required": ["action"],
+            "additionalProperties": false
+          },
+          "description": "One entry per edit, in order."
+        },
+        "bones": {
+          "type": "integer",
+          "description": "Bone count afterwards."
+        }
+      },
+      "required": ["results", "bones"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "rig.editBones",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "rig.editBones",
       "pixel-forge/safety": "mutate"
     }
   },
@@ -1221,6 +3835,188 @@
     "_meta": {
       "pixel-forge/op": "rig.jointCheck",
       "pixel-forge/safety": "read"
+    }
+  },
+  {
+    "name": "rig_mirror_animation",
+    "title": "rig.mirrorAnimation",
+    "description": "Add a mirror of an animation under a new direction: same group, flipped around the origin.\n\nThe mirror stores no frames or pixels: it plays the source flipped horizontally about the document origin (markers flip too, names stay), so editing the source updates it. Asymmetric art needs a separate animation. The mirror takes the source's group and loop; the direction must be new for that group (I6). A source cannot be a mirror itself. Final overrides of the mirror can be added later with pixels_write_grid on the mirror.\n\nChanges the document as one undo step. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Mirror the hero idle as its left-facing twin): {\"doc\":\"doc_g1ed5q\",\"source\":{\"group\":\"default\"},\"direction\":\"left\"}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        },
+        "source": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "group": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                },
+                "direction": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                }
+              },
+              "required": ["group"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^anm_[0-9a-z]{1,24}$"
+                }
+              },
+              "required": ["id"],
+              "additionalProperties": false
+            }
+          ],
+          "description": "The animation to mirror (an authored one, not itself a mirror)."
+        },
+        "direction": {
+          "type": "string",
+          "pattern": "^[a-z0-9_-]{1,48}$",
+          "description": "Direction of the mirror, e.g. \"left\" for a \"right\" source."
+        }
+      },
+      "required": ["doc", "source", "direction"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "animation": {
+          "type": "string",
+          "description": "Id of the new mirror animation."
+        },
+        "label": {
+          "type": "string",
+          "description": "\"group/direction\" of the mirror."
+        },
+        "mirrorOf": {
+          "type": "string",
+          "description": "Label of the source."
+        }
+      },
+      "required": ["animation", "label", "mirrorOf"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "rig.mirrorAnimation",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "rig.mirrorAnimation",
+      "pixel-forge/safety": "mutate"
+    }
+  },
+  {
+    "name": "rig_set_pivot",
+    "title": "rig.setPivot",
+    "description": "Set a part variant's pivot: the pixel (int px, in the variant image) that sits on the bone pivot.\n\nCoordinates are in the variant image, origin top-left, pixel centre; the pivot may lie outside the image (a floating hand). Moving the pivot moves the part's art relative to the bone, so run rig_joint_check afterwards. Variant names repeat across views: pass view when the name is ambiguous.\n\nChanges the document as one undo step. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Move the forearm pivot two pixels right): {\"doc\":\"doc_g1ed5q\",\"part\":\"lower_arm_r\",\"pivot\":{\"x\":3,\"y\":1}}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        },
+        "part": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Part: its part-layer name (e.g. \"head\"), part id (\"prt_...\") or layer id."
+        },
+        "variant": {
+          "default": "default",
+          "description": "Variant name or id (default \"default\").",
+          "type": "string",
+          "minLength": 1
+        },
+        "view": {
+          "description": "Resolve the variant name among this view's variants.",
+          "type": "string",
+          "minLength": 1
+        },
+        "pivot": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "integer"
+            },
+            "y": {
+              "type": "integer"
+            }
+          },
+          "required": ["x", "y"],
+          "additionalProperties": false,
+          "description": "New pivot, int px in the variant image."
+        }
+      },
+      "required": ["doc", "part", "pivot"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "part": {
+          "type": "string",
+          "description": "Part layer name."
+        },
+        "variant": {
+          "type": "string",
+          "description": "Variant id."
+        },
+        "pivot": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "integer"
+            },
+            "y": {
+              "type": "integer"
+            }
+          },
+          "required": ["x", "y"],
+          "additionalProperties": false,
+          "description": "Pivot afterwards."
+        },
+        "previous": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "integer"
+            },
+            "y": {
+              "type": "integer"
+            }
+          },
+          "required": ["x", "y"],
+          "additionalProperties": false,
+          "description": "Pivot before."
+        }
+      },
+      "required": ["part", "variant", "pivot", "previous"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "rig.setPivot",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "rig.setPivot",
+      "pixel-forge/safety": "mutate"
     }
   },
   {

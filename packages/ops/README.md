@@ -4,7 +4,7 @@ Op registry, definitions, handlers, error types and generators (MCP tool JSON, C
 
 **Depends on:** `core`, `lint`, `io`, `rig`, `convert`, plus `schema` (reference and value schemas; added to the dependency-cruiser table in T5.1) and `zod`. No Node built-ins (eslint and dependency-cruiser enforce it): files go through the host's `FileSystem` port.
 
-**Status:** T5.1: `defineOp`, the registry, `OpContext`, `OpError`, safety classes, `confirm`, reference resolution, the `OpHost` interface with an in-memory host, the generators, and the exemplar ops `doc.open`, `doc.summary`, `rig.setPose`. T5.2a: the thin wrappers `doc.undo`, `doc.redo`, `frame.add`, `frame.delete`, `frame.duplicate`, `lint.run`, `rig.jointCheck`, `rig.applyTemplate`. Adding an op: `docs/ai/PLAYBOOKS.md`, "Add an op". Reference of every op: `docs/contracts/OPERATIONS.md` (generated).
+**Status:** T5.1: `defineOp`, the registry, `OpContext`, `OpError`, safety classes, `confirm`, reference resolution, the `OpHost` interface with an in-memory host, the generators, and the exemplar ops `doc.open`, `doc.summary`, `rig.setPose`. T5.2a: the thin wrappers `doc.undo`, `doc.redo`, `frame.add`, `frame.delete`, `frame.duplicate`, `lint.run`, `rig.jointCheck`, `rig.applyTemplate`. T5.2b: `doc.create`, `doc.save`, `doc.setColorMode`, `anim.create`, `anim.update`, `frame.setMeta`, `layer.update`, `cel.link`, `part.split`, `part.paintOverlap`, `rig.bindParts`, `rig.editBones`, `rig.setPivot`, `rig.mirrorAnimation`, `rig.bake` (destructive, `confirmText`), `override.list`, `override.resolve`, `io.import` (MCP `import_file`), `io.export` (MCP `export`). Adding an op: `docs/ai/PLAYBOOKS.md`, "Add an op". Reference of every op: `docs/contracts/OPERATIONS.md` (generated).
 
 ## Use
 

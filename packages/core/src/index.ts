@@ -127,3 +127,12 @@ export type {
   SplitRegionResult,
   SplitSelection,
 } from './split.js';
+export { paintOverlapTx } from './paint-overlap.js';
+export type {
+  PaintOverlapOptions,
+  PaintOverlapReason,
+  PaintOverlapResult,
+  PaintedVariant,
+} from './paint-overlap.js';
+export { setColorMode } from './color-mode.js';
+export type { ColorModeReason, SetColorModeOptions, SetColorModeResult } from './color-mode.js';

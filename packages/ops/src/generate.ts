@@ -78,7 +78,9 @@ const SAFETY_NOTE: Readonly<Record<Safety, string>> = {
 export function toolDescription(op: AnyOp): string {
   const parts = [op.summary];
   if (op.description !== undefined) parts.push(op.description.trim());
-  parts.push(`${SAFETY_NOTE[op.safety]} ${CONVENTIONS}`);
+  parts.push(
+    `${SAFETY_NOTE[op.safety]}${op.confirmText === undefined ? '' : ` ${op.confirmText}`} ${CONVENTIONS}`,
+  );
   const ex = op.examples[0];
   if (ex !== undefined) {
     parts.push(`Example (${ex.title}): ${JSON.stringify(exampleInput(op, ex.input))}`);

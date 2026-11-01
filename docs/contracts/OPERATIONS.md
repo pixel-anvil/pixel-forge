@@ -44,17 +44,194 @@ Every failure is `{"code", "message", "details"}`, identical on every transport.
 
 | Op | Safety | MCP tool | CLI | Summary |
 | --- | --- | --- | --- | --- |
+| [`anim.create`](#animcreate) | mutate | `anim_create` | `pf anim create` | Create an animation (group + optional direction) with empty frames of equal duration. |
+| [`anim.update`](#animupdate) | mutate | `anim_update` | `pf anim update` | Rename an animation (group, direction), set its loop mode, angle quantum or post-passes. |
+| [`cel.link`](#cellink) | mutate | `cel_link` | `pf cel link` | Link a layer's cel to another frame's cel (mode "link"), make a linked cel independent ("unlink"), or link all identical cels ("linkIdentical"). |
+| [`doc.create`](#doccreate) | io | `doc_create` | `pf doc create` | Create a new empty RGBA document (no layers, no animations) and open it. Save it with doc_save. |
 | [`doc.open`](#docopen) | io | `doc_open` | `pf doc open` | Open a .pxf file and return its document id, which every other op takes as "doc". |
 | [`doc.redo`](#docredo) | mutate | `redo` | `pf doc redo` | Redo the newest undone change of the document (one history entry). |
+| [`doc.save`](#docsave) | io | `doc_save` | `pf doc save` | Save the document to its .pxf file, or to a new path (first save, save as). |
+| [`doc.setColorMode`](#docsetcolormode) | mutate | `doc_set_color_mode` | `pf doc set-color-mode` | Switch the document between "rgba" and "indexed" pixels, and/or lock it to its palette. |
 | [`doc.summary`](#docsummary) | read | `doc_summary` | `pf doc summary` | Summarise an open document: canvas, palette, layers, rig (bones, parts, views) and animations. |
 | [`doc.undo`](#docundo) | mutate | `undo` | `pf doc undo` | Undo the newest applied change of the document (one history entry). |
 | [`frame.add`](#frameadd) | mutate | `frame_add` | `pf frame add` | Insert an empty frame before or after a frame; the new frame gets no bone or part keys. |
 | [`frame.delete`](#framedelete) | mutate | `frame_delete` | `pf frame delete` | Delete one frame with its bone and part keys, cels and overrides; the last frame cannot go. |
 | [`frame.duplicate`](#frameduplicate) | mutate | `frame_duplicate` | `pf frame duplicate` | Duplicate one frame; the copy goes right after it, with linked cels and copied keys. |
+| [`frame.setMeta`](#framesetmeta) | mutate | `frame_set_meta` | `pf frame set-meta` | Set one frame's duration (ms), markers (name -> int px), events (names) and root motion (int px). |
+| [`io.export`](#ioexport) | io | `export` | `pf export` | Export animations as a spritesheet PNG plus a JSON description (Aseprite hash format). |
+| [`io.import`](#ioimport) | io | `import_file` | `pf import` | Import a PNG / grid spritesheet (pick cells and ranges per animation) or an .aseprite file into a document. |
+| [`layer.update`](#layerupdate) | mutate | `layer_update` | `pf layer update` | Rename a layer, or set its visible flag, opacity (0..255) or export flag. |
 | [`lint.run`](#lintrun) | read | `lint` | `pf lint` | Check the document and list findings (palette, orphan pixels, joint gaps, stale overrides, empty frames). |
+| [`override.list`](#overridelist) | read | `override_list` | `pf override list` | List overrides: stale ones (art under them changed) and ones that fail to render, apart. |
+| [`override.resolve`](#overrideresolve) | mutate | `override_resolve` | `pf override resolve` | Resolve overrides: "keep" them, "rebase" onto the current art, or "discard" them. |
+| [`part.paintOverlap`](#partpaintoverlap) | mutate | `part_paint_overlap` | `pf part paint-overlap` | Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite does not change. |
+| [`part.split`](#partsplit) | mutate | `part_split` | `pf part split` | Split a region (rect, lasso or flood, canvas px) of a flat layer's cel on one frame into a new layer, bound to a bone. |
 | [`rig.applyTemplate`](#rigapplytemplate) | mutate | `rig_apply_template` | `pf rig apply-template` | Apply a humanoid skeleton template: bones matched by name are reused, missing ones are created. |
+| [`rig.bake`](#rigbake) | destructive | `rig_bake` | `pf rig bake` | Bake a rig animation into one plain pixel layer: as a new animation, or in place. |
+| [`rig.bindParts`](#rigbindparts) | mutate | `rig_bind_parts` | `pf rig bind-parts` | Bind pixel layers to bones as parts, by layer name ("part:<bone>[.<part>][@variant][#view]") or by overlap. |
+| [`rig.editBones`](#rigeditbones) | mutate | `rig_edit_bones` | `pf rig edit-bones` | Edit the skeleton: add/delete/reparent/rename bones, set length and rest pose per view, add/rename/delete views. |
 | [`rig.jointCheck`](#rigjointcheck) | read | `rig_joint_check` | `pf rig joint-check` | Sweep each joint of one rig view and report the pixel gaps that open on the outer side of a bend. |
+| [`rig.mirrorAnimation`](#rigmirroranimation) | mutate | `rig_mirror_animation` | `pf rig mirror-animation` | Add a mirror of an animation under a new direction: same group, flipped around the origin. |
+| [`rig.setPivot`](#rigsetpivot) | mutate | `rig_set_pivot` | `pf rig set-pivot` | Set a part variant's pivot: the pixel (int px, in the variant image) that sits on the bone pivot. |
 | [`rig.setPose`](#rigsetpose) | mutate | `rig_set_pose` | `pf rig set-pose` | Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z, visible) on one frame. |
+
+## anim.create
+
+Create an animation (group + optional direction) with empty frames of equal duration.
+
+(group, direction) must be unique (I6). Names are lower-case a-z 0-9 _ - up to 48 characters; leave direction out for an undirected animation. Frames have no keys or cels: pose them with rig_set_pose, draw into them, or add more with frame_add. For a flipped copy of a side animation use rig_mirror_animation.
+
+- Safety: `mutate`
+- MCP tool: `anim_create`
+- CLI: `pf anim create`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `group` | string | yes | Animation group, e.g. "run". |
+| `direction` | string | no | Direction, e.g. "side" (omit for undirected). |
+| `loop` | "loop" \| "once" \| "pingpong" | no | "loop" (default), "once" or "pingpong". |
+| `frames` | integer >= 1 | no | Number of empty frames (default 1). |
+| `durationMs` | integer >= 1 | no | Duration of every frame in ms (default 100). |
+| `angleQuantum` | number | no | Rig angle quantum, deg (a multiple of 0.25 that divides 360; default 1). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `animation` | string | yes | Animation id. |
+| `label` | string | yes | "group/direction", or "group" when undirected. |
+| `frameIds` | string[] | yes | Frame ids in play order. |
+
+### Examples
+
+A 4-frame side run loop at 100 ms:
+
+```json
+{"doc":"doc_g1ed5q","group":"run","direction":"side","frames":4}
+```
+
+## anim.update
+
+Rename an animation (group, direction), set its loop mode, angle quantum or post-passes.
+
+(group, direction) must stay unique (I6). Renaming the group of a source animation renames its mirrors too (a mirror shares its source's group); a mirror's group cannot be changed on its own. Loop, angleQuantum and postPasses belong to the source: a mirror has none. null clears direction, angleQuantum or postPasses. Frame durations, markers and events: frame_set_meta.
+
+- Safety: `mutate`
+- MCP tool: `anim_update`
+- CLI: `pf anim update`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
+| `group` | string | no | New group name. |
+| `direction` | string \| null | no | New direction; null makes it undirected. |
+| `loop` | "loop" \| "once" \| "pingpong" | no | "loop", "once" or "pingpong". |
+| `angleQuantum` | number \| null | no | Rig angle quantum, deg (multiple of 0.25 dividing 360); null restores the default. |
+| `postPasses` | {removeOrphans, outline} \| null | no | Post-passes after the rig render: {removeOrphans: {}, outline: {color: [r,g,b,a], outsideOnly?, corners?}}; null removes them. |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `animation` | string | yes | Animation id. |
+| `label` | string | yes | "group/direction" afterwards. |
+| `changed` | string[] | yes | Fields that changed; empty when nothing did. |
+| `mirrors` | string[] | yes | Labels of the mirror animations renamed with it. |
+
+### Examples
+
+Make the hero idle a ping-pong:
+
+```json
+{"doc":"doc_g1ed5q","animation":{"group":"default"},"loop":"pingpong"}
+```
+
+Output:
+
+```json
+{"animation":"anm_5q60kk","label":"default","changed":["loop"],"mirrors":[]}
+```
+
+## cel.link
+
+Link a layer's cel to another frame's cel (mode "link"), make a linked cel independent ("unlink"), or link all identical cels ("linkIdentical").
+
+A linked cel shows the same pixels as its target (edit one, both change; links go across animations, one hop only: linking to a link links to its target). "link" needs animation, frame (the cel that becomes the link) and source.frame (the cel it shows; source.animation defaults to animation). "unlink" copies the pixels into the cel (animation, frame). "linkIdentical" links, per layer, every cel with the same pixels, offset and opacity to the first one in document order (animation limits the scan to one animation).
+
+- Safety: `mutate`
+- MCP tool: `cel_link`
+- CLI: `pf cel link`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `layer` | string | yes | Layer id ("lay_...") or layer name. |
+| `mode` | "link" \| "unlink" \| "linkIdentical" | yes | What to do. |
+| `animation` | {group, direction} \| {id} | no | link/unlink: animation of the cel. linkIdentical: limits the scan (default: all). |
+| `frame` | integer >= 0 \| string | no | link/unlink: the cel's frame. |
+| `source` | {animation, frame} | no | link: the frame whose cel is shown. |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `mode` | "link" \| "unlink" \| "linkIdentical" | yes |  |
+| `changed` | integer | yes | Cels that were linked or unlinked (0 for a no-op). |
+| `imagesDeleted` | integer | yes | Images that nothing used any more. |
+
+### Examples
+
+Link the hero layer cels that have identical pixels:
+
+```json
+{"doc":"doc_g1ed5q","layer":"body","mode":"linkIdentical"}
+```
+
+## doc.create
+
+Create a new empty RGBA document (no layers, no animations) and open it. Save it with doc_save.
+
+The origin defaults to the bottom-centre pixel of the canvas (where the feet go). Import art with import_file, add animations with anim_create, or apply a skeleton with rig_apply_template. Use doc_set_color_mode for indexed colour.
+
+- Safety: `io`
+- MCP tool: `doc_create`
+- CLI: `pf doc create`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | string | no | Display name (default "untitled"). |
+| `width` | integer >= 1 | yes | Canvas width, int px. |
+| `height` | integer >= 1 | yes | Canvas height, int px. |
+| `origin` | {x, y} | no | Origin pixel on the canvas, int px (default: bottom-centre). |
+| `pixelsPerUnit` | number | no | Pixels per engine unit (default 16). |
+| `idSeed` | integer >= 0 | no | Seed of the id generator (default: derived from the host clock). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id for the other ops. |
+| `name` | string | yes | Display name. |
+| `canvas` | {w, h} | yes | Canvas size, px. |
+| `origin` | {x, y} | yes | Origin pixel. |
+
+### Examples
+
+A 48x48 canvas:
+
+```json
+{"name":"hero","width":48,"height":48}
+```
 
 ## doc.open
 
@@ -131,6 +308,75 @@ Output:
 
 ```json
 {"redone":false,"label":null}
+```
+
+## doc.save
+
+Save the document to its .pxf file, or to a new path (first save, save as).
+
+The path must be inside the workspace roots. Writes a temp file in the same folder and renames it over the target, so a crash never leaves a torn file. A new path takes the document's lock first (DOC_LOCKED if another process owns it) and releases the old one. An existing file at a new path is refused unless overwrite is true. Saving an unchanged, already saved document writes nothing.
+
+- Safety: `io`
+- MCP tool: `doc_save`
+- CLI: `pf doc save`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `path` | string | no | Target .pxf path (absolute, inside the workspace roots). Default: the current path. |
+| `overwrite` | boolean | no | Replace an existing file at a new path (default false). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `path` | string | yes | Normalised path saved to. |
+| `wrote` | boolean | yes | False when the document was unchanged and nothing was written. |
+| `bytes` | integer | yes | Size of the file written, bytes (0 when nothing was written). |
+| `version` | integer | yes | Store version that was saved. |
+
+### Examples
+
+Save the hero under a new name:
+
+```json
+{"doc":"doc_g1ed5q","path":"/work/hero-v2.pxf"}
+```
+
+## doc.setColorMode
+
+Switch the document between "rgba" and "indexed" pixels, and/or lock it to its palette.
+
+Converting is exact: to "indexed" every colour must be an entry of the active palette (the first alpha-0 entry is the transparent index), else the call is refused and nothing changes; to "rgba" indices resolve through the palette. Both need an active palette. The lock does not recolour: lint (palette.offPalette) judges the render.
+
+- Safety: `mutate`
+- MCP tool: `doc_set_color_mode`
+- CLI: `pf doc set-color-mode`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `colorMode` | "rgba" \| "indexed" | no | "rgba" or "indexed" (default: unchanged). |
+| `paletteLocked` | boolean | no | Lock colours to the active palette (default: unchanged). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `colorMode` | "rgba" \| "indexed" | yes | Mode afterwards. |
+| `paletteLocked` | boolean | yes | Lock afterwards. |
+| `converted` | integer | yes | Drawings (cels, variants, override images) converted. |
+
+### Examples
+
+Lock a document that has a palette to it:
+
+```json
+{"doc":"doc_g1ed5q","paletteLocked":true}
 ```
 
 ## doc.summary
@@ -337,6 +583,175 @@ Output:
 {"frameId":"frm_j83g8j","frameIndex":1,"frames":2}
 ```
 
+## frame.setMeta
+
+Set one frame's duration (ms), markers (name -> int px), events (names) and root motion (int px).
+
+Only the fields you give change. markers merge by name (null removes one); events replace the whole list; rootMotion is the move the game applies when this frame is played (int px, y down). New marker and event names are added to the document's markerDefs / eventDefs. Mirror animations have no frames: edit the source.
+
+- Safety: `mutate`
+- MCP tool: `frame_set_meta`
+- CLI: `pf frame set-meta`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
+| `frame` | integer >= 0 \| string | yes | Frame: 0-based index or frame id ("frm_..."). |
+| `durationMs` | integer >= 1 | no | Frame duration, ms. |
+| `markers` | map of {x, y} \| null | no | Markers by name, canvas px (e.g. "hand_r": {"x": 30, "y": 20}); null removes one. |
+| `events` | string[] | no | Event names fired on this frame; replaces the list. |
+| `rootMotion` | {dx, dy} | no | Root motion of this frame, int px. |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `animation` | string | yes | "group/direction" of the animation. |
+| `frameIndex` | integer | yes |  |
+| `frameId` | string | yes |  |
+| `changed` | string[] | yes | Fields that changed; empty when nothing did. |
+
+### Examples
+
+Hold the hero frame 200 ms and fire a footstep event:
+
+```json
+{"doc":"doc_g1ed5q","animation":{"group":"default"},"frame":0,"durationMs":200,"events":["footstep"]}
+```
+
+## io.export
+
+Export animations as a spritesheet PNG plus a JSON description (Aseprite hash format).
+
+Renders every frame like the game would see it (export layers only; rig, overrides and post-passes applied; mirrors flipped) and writes <name>.png and <name>.json next to each other, atomically. layout "rows" puts one animation per row; "packed" fills a near-square grid. scale is an integer 1..16. The JSON lists a frame per cell with its duration, and one tag per animation ("group" or "group/direction").
+
+- Safety: `io`
+- MCP tool: `export`
+- CLI: `pf export`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `path` | string | yes | Output PNG path (absolute, inside the workspace roots); the JSON goes beside it. |
+| `animations` | {group, direction} \| {id}[] | no | Animations to export, in order (default: all). |
+| `layout` | "rows" \| "packed" | no | "rows" (default) or "packed". |
+| `scale` | integer >= 1 | no | Integer scale, 1..16 (default 1). |
+| `skin` | string | no | Skin name, or "base" (default). |
+| `exportOnly` | boolean | no | Only layers with export: true (default true). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `png` | string | yes | Path of the written PNG. |
+| `json` | string | yes | Path of the written JSON. |
+| `size` | {w, h} | yes | Sheet size, px. |
+| `frames` | integer | yes | Frames exported. |
+| `animations` | string[] | yes | Animation tags in sheet order. |
+
+### Examples
+
+Export the hero as a 2x sheet:
+
+```json
+{"doc":"doc_g1ed5q","path":"/work/out/hero.png","scale":2}
+```
+
+Output:
+
+```json
+{"png":"/work/out/hero.png","json":"/work/out/hero.json","size":{"w":96,"h":96},"frames":1,"animations":["default"]}
+```
+
+## io.import
+
+Import a PNG / grid spritesheet (pick cells and ranges per animation) or an .aseprite file into a document.
+
+format is guessed from the extension (.png -> spritesheet, .aseprite/.ase -> aseprite). Spritesheet: cell is [w, h] px (omit it for a single image: the whole PNG is one cell) and animations maps cells to animations, e.g. {"group": "move_gather", "cells": [{"row": 4, "col": "3-6"}]}; repeated cells become linked cels, empty cells empty frames; the cell's bottom-centre lands on the document origin. An optional outlineFile (same size) becomes a second layer. Aseprite: adds layers, tags (as animations) and the palette; reimport: true updates a file imported earlier, in place, by name. The canvas of an aseprite file must equal the document's. A failed import changes nothing.
+
+- Safety: `io`
+- MCP tool: `import_file`
+- CLI: `pf import`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `file` | string | yes | Path of the file (absolute, inside the workspace roots). |
+| `format` | "spritesheet" \| "aseprite" | no | Default: from the file extension. |
+| `cell` | array | no | spritesheet: cell size [w, h] px (default: the whole image is one cell). |
+| `animations` | {group, direction, cells, durationMs, fps, loop}[] | no | spritesheet: the animations to cut (required for a spritesheet). |
+| `outlineFile` | string | no | spritesheet: matching outline sheet, same size. |
+| `layerName` | string | no | spritesheet: layer for the cels (default "body"; reused if it exists). |
+| `outlineLayerName` | string | no | spritesheet: layer of the outline sheet (default "outline"). |
+| `defaultDurationMs` | integer >= 1 | no | spritesheet: frame duration when an animation gives none (default 100). |
+| `reimport` | boolean | no | aseprite: update a file imported earlier instead of adding (default false). |
+| `view` | string | no | aseprite: rig view for "part:" layers without #view (default: the first). |
+| `paletteName` | string | no | aseprite: name of the imported palette. |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `format` | "spritesheet" \| "aseprite" | yes |  |
+| `animations` | string[] | yes | Animations created or matched, as "group/direction". |
+| `layers` | string[] | yes | Layers that received the pixels (names). |
+| `frames` | integer | yes | Frames created (re-import: frames in the file). |
+| `images` | integer | yes | Images created. |
+| `parts` | {bound, updated, unbound} | no | aseprite: "part:" layers bound, updated (re-import) or left as pixel layers. |
+| `warnings` | string[] | yes | Non-fatal findings. |
+
+### Examples
+
+Cut row 0, columns 0 to 2 of a 64x64 sheet into move_gather at 12 fps:
+
+```json
+{"doc":"doc_g1ed5q","file":"/work/run.png","cell":[64,64],"animations":[{"group":"move_gather","cells":[{"row":0,"col":"0-2"}],"fps":12}]}
+```
+
+## layer.update
+
+Rename a layer, or set its visible flag, opacity (0..255) or export flag.
+
+Only the fields you give change. Names are lower-case a-z 0-9 _ - up to 48 characters and unique among siblings; a part layer's name is the part's name and must be unique in the whole document. A reference layer is never exported. Hidden or non-exported layers are skipped by the export render (io_export, lint, bake).
+
+- Safety: `mutate`
+- MCP tool: `layer_update`
+- CLI: `pf layer update`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `layer` | string | yes | Layer id ("lay_...") or layer name. |
+| `name` | string | no | New layer name. |
+| `visible` | boolean | no | Show or hide the layer in the editor render. |
+| `opacity` | integer >= 0 | no | Layer opacity, 0..255. |
+| `export` | boolean | no | Include the layer in exports and bakes. |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `layer` | string | yes | Layer id. |
+| `path` | string | yes | Name path from the root afterwards (e.g. "body/arm"). |
+| `changed` | string[] | yes | Fields that changed; empty when nothing did. |
+
+### Examples
+
+Hide the hero's head part from the editor render:
+
+```json
+{"doc":"doc_g1ed5q","layer":"head","visible":false}
+```
+
 ## lint.run
 
 Check the document and list findings (palette, orphan pixels, joint gaps, stale overrides, empty frames).
@@ -371,6 +786,162 @@ Lint the hero, joint and palette rules only:
 
 ```json
 {"doc":"doc_g1ed5q","enable":["rig.jointGap","palette.offPalette"]}
+```
+
+## override.list
+
+List overrides: stale ones (art under them changed) and ones that fail to render, apart.
+
+Read-only; renders the frames that have overrides. "stale" overrides are still applied; decide with override_resolve (keep, rebase = accept the current art, discard). "errors" cannot be judged because their frame does not render (missing image, no view for the direction...): fix the rig first, they cannot be rebased until it renders. Part overrides of mirror animations are never rendered and not listed.
+
+- Safety: `read`
+- MCP tool: `override_list`
+- CLI: `pf override list`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `animations` | {group, direction} \| {id}[] | no | Only these animations (default: all). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `counts` | {total, valid, stale, errors} | yes |  |
+| `stale` | {id, animation, frameIndex, frameId, target, mirror, reason, errorCode, errorMessage}[] | yes | Stale overrides (reason "hash" or "no-target"). |
+| `errors` | {id, animation, frameIndex, frameId, target, mirror, reason, errorCode, errorMessage}[] | yes | Overrides whose render failed (reason "error"). |
+| `valid` | string[] | yes | Ids of the overrides that are up to date. |
+
+### Examples
+
+List the hero overrides:
+
+```json
+{"doc":"doc_g1ed5q"}
+```
+
+## override.resolve
+
+Resolve overrides: "keep" them, "rebase" onto the current art, or "discard" them.
+
+Name overrides by id (from override_list) or pass allStale: true for every stale one. "keep" changes nothing (a stale override is still applied) and just confirms the ids exist. "rebase" accepts the art under the override as the new base, so it stops being stale; it needs the frame to render. "discard" deletes the override and its pixels. With allStale, overrides that fail to render are left out of a rebase and reported in skipped.
+
+- Safety: `mutate`
+- MCP tool: `override_resolve`
+- CLI: `pf override resolve`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `action` | "keep" \| "rebase" \| "discard" | yes | What to do with them. |
+| `overrides` | string[] | no | Override ids ("ovr_..."). |
+| `allStale` | boolean | no | Also include every stale override of the document (default false). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `action` | "keep" \| "rebase" \| "discard" | yes |  |
+| `resolved` | string[] | yes | Override ids the action applied to. |
+| `skipped` | string[] | yes | allStale rebase: ids left out because they fail to render. |
+
+### Examples
+
+Re-base every stale override after reviewing the render:
+
+```json
+{"doc":"doc_g1ed5q","action":"rebase","allStale":true}
+```
+
+Output:
+
+```json
+{"action":"rebase","resolved":[],"skipped":[]}
+```
+
+## part.paintOverlap
+
+Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite does not change.
+
+For each joint with gaps (rig_joint_check), paints only pixels the upper part covers at rest, growing the variant image and shifting its pivot to keep the part in place. The colour is the variant's most frequent opaque one unless you pass color ([r,g,b,a] in RGBA documents, a palette index in indexed ones). Existing pixels are kept. "uncovered" lists joints that no hidden paint can close (they need a visible art change); "skipped" joints with several parts per bone or a part drawn rotated at rest. Check with rig_joint_check afterwards.
+
+- Safety: `mutate`
+- MCP tool: `part_paint_overlap`
+- CLI: `pf part paint-overlap`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `view` | string | no | Rig view to check (default: the first view). |
+| `bones` | string[] | no | Only joints whose child bone is one of these (default: all joints with gaps). |
+| `color` | array \| integer >= 0 | no | Paint colour: [r,g,b,a], or a palette index in an indexed document. |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `painted` | {part, variant, bones, pixels, grew, pivot}[] | yes | Variants that were painted (empty when no joint has gaps). |
+| `uncovered` | {bone, pixels}[] | yes | Joints with gap pixels no hidden paint can close. |
+| `skipped` | {bone, parent, reason}[] | yes | Joints the helper cannot handle. |
+
+### Examples
+
+Close the elbow gap of the hero:
+
+```json
+{"doc":"doc_g1ed5q","bones":["lower_arm_r"]}
+```
+
+## part.split
+
+Split a region (rect, lasso or flood, canvas px) of a flat layer's cel on one frame into a new layer, bound to a bone.
+
+The pixels move into a new layer above the source and leave transparency behind; at rest the remainder plus the parts recomposite the source frame exactly. Name the target with partName ("part:upper_arm_r", "part:hand_r@open#side", or a bone name), else it binds by overlap with the bones when there is a clear winner (ambiguous or no overlap: it stays a pixel layer, see ambiguous/skipped). The part draws in every frame that renders the rig, not only this one: key it visible=false (rig_set_pose) on other frames. Then run rig_joint_check and part_paint_overlap.
+
+- Safety: `mutate`
+- MCP tool: `part_split`
+- CLI: `pf part split`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `layer` | string | yes | The flat pixel layer to cut from (id or name). |
+| `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
+| `frame` | integer >= 0 \| string | yes | The frame whose cel is cut. |
+| `selection` | any | yes | The region to cut. |
+| `partName` | string | no | Bind as "part:<bone>[.<part>][@variant][#view]" or a bone name. |
+| `name` | string | no | Name of the new layer while it is not a part (default "split"). |
+| `bind` | boolean | no | Without partName: try to bind by overlap (default true). |
+| `view` | string | no | View for names without #view and for overlap (default: the first). |
+| `zByBone` | map of integer | no | Default z of the new part by part-layer name, then bone name; higher draws on top. |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `layer` | string | yes | Layer holding the moved pixels (the part layer once bound). |
+| `image` | string | yes | Image id of the moved pixels. |
+| `bounds` | {x, y, w, h} | yes | Canvas rectangle of the moved pixels. |
+| `pixels` | integer | yes | Pixels moved. |
+| `bound` | {part, variant, bone, view, how, merged} | no | Present when the layer became (part of) a part. |
+| `ambiguous` | string[] | no | Bones tied for the overlap (nothing bound). |
+| `skipped` | string | no | Why automatic binding was skipped (kebab-case). |
+| `unlinked` | integer | yes | Other frames whose linked cel now owns the original drawing. |
+
+### Examples
+
+Cut the head rectangle of a flat run frame into the head part:
+
+```json
+{"doc":"doc_g1ed5q","layer":"body","animation":{"group":"run"},"frame":0,"selection":{"kind":"rect","x":24,"y":16,"w":18,"h":12},"partName":"part:head"}
 ```
 
 ## rig.applyTemplate
@@ -409,6 +980,113 @@ Set the rest pose of the hero in its existing side view:
 {"doc":"doc_g1ed5q","template":"humanoid-side","view":"side"}
 ```
 
+## rig.bake
+
+Bake a rig animation into one plain pixel layer: as a new animation, or in place.
+
+Renders every frame (parts, part and final overrides, post-passes, other exported layers) into a new pixel layer "baked" at the rig's position, one full-canvas cel per frame, and hides all parts for the baked animation. mode "new" adds animation <group>_baked (or name) and leaves the source untouched. mode "replace" bakes the source in place (ids kept, so mirrors keep working). A mirror cannot be baked: bake its source; mirrors stay derived. After a bake the pixels no longer follow the rig.
+
+- Safety: `destructive`
+- MCP tool: `rig_bake`
+- CLI: `pf rig bake`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
+| `mode` | "new" \| "replace" | yes | "new" keeps the source; "replace" bakes it in place. |
+| `name` | string | no | mode "new": group of the baked animation (default <group>_baked). |
+| `confirm` | boolean | no | Must be true: this operation is destructive. |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `animation` | string | yes | Id of the baked animation. |
+| `layer` | string | yes | Id of the new pixel layer holding the baked pixels. |
+| `frames` | string[] | yes | Frame ids of the baked animation, in play order. |
+| `dropped` | {boneKeys, partKeys, overrides, postPasses, cels} | yes | What a "replace" bake removed (all zero for "new"). |
+
+### Examples
+
+Bake the hero idle as a new animation:
+
+```json
+{"doc":"doc_g1ed5q","animation":{"group":"default"},"mode":"new","confirm":true}
+```
+
+## rig.bindParts
+
+Bind pixel layers to bones as parts, by layer name ("part:<bone>[.<part>][@variant][#view]") or by overlap.
+
+By name: a layer called part:upper_arm_r (or just a bone name) becomes that bone's part; @variant adds another variant of the same part, #view another view. By overlap: remaining layers bind to the bone their opaque pixels cover, only with a clear winner (ties are listed as ambiguous, nothing is guessed). Layers with several drawings cannot bind (animated). Running it again changes nothing. Cut flat art into layers first with part_split.
+
+- Safety: `mutate`
+- MCP tool: `rig_bind_parts`
+- CLI: `pf rig bind-parts`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `layers` | string[] | no | Only these layers (default: every pixel layer). |
+| `byName` | boolean | no | Bind by layer name (default true). |
+| `byOverlap` | boolean | no | Bind the rest by overlap with the bones (default true). |
+| `rawNames` | map of string | no | Source names to parse instead of layer names, by layer: {"arm": "part:upper_arm_r@open#side"}. |
+| `view` | string | no | View for names without #view and for overlap (default: the first). |
+| `zByBone` | map of integer | no | Default z of new parts by part-layer name, then bone name; higher draws on top. |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `bound` | {layer, part, variant, bone, view, how, merged}[] | yes | Layers that became (part of) a part. |
+| `ambiguous` | {layer, candidates}[] | yes | Layers whose overlap has no clear winner (left alone). |
+| `skipped` | {layer, reason}[] | yes | Layers left alone, with the reason. |
+
+### Examples
+
+Bind every layer named after a bone, no overlap guessing:
+
+```json
+{"doc":"doc_g1ed5q","byOverlap":false}
+```
+
+## rig.editBones
+
+Edit the skeleton: add/delete/reparent/rename bones, set length and rest pose per view, add/rename/delete views.
+
+Edits run in order inside one undo step; one failure undoes the whole call, and later edits can name bones or views added earlier. Deleting never destroys art: a bone with parts or (without cascade) children is refused. Reparenting keeps the art in place. Rest x/y: root = canvas pivot, child = offset from the parent pivot; angle in deg clockwise relative to the parent. For a standard skeleton use rig_apply_template. Bone and part keys of deleted bones go with them.
+
+- Safety: `mutate`
+- MCP tool: `rig_edit_bones`
+- CLI: `pf rig edit-bones`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `edits` | any[] | yes | Edits, applied in order. |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `results` | {action, id}[] | yes | One entry per edit, in order. |
+| `bones` | integer | yes | Bone count afterwards. |
+
+### Examples
+
+Add a tail bone under the torso, then lengthen the head:
+
+```json
+{"doc":"doc_g1ed5q","edits":[{"action":"addBone","name":"tail","parent":"torso","length":8},{"action":"setLength","bone":"head","length":9}]}
+```
+
 ## rig.jointCheck
 
 Sweep each joint of one rig view and report the pixel gaps that open on the outer side of a bend.
@@ -441,6 +1119,77 @@ Check the first view of the hero:
 
 ```json
 {"doc":"doc_g1ed5q"}
+```
+
+## rig.mirrorAnimation
+
+Add a mirror of an animation under a new direction: same group, flipped around the origin.
+
+The mirror stores no frames or pixels: it plays the source flipped horizontally about the document origin (markers flip too, names stay), so editing the source updates it. Asymmetric art needs a separate animation. The mirror takes the source's group and loop; the direction must be new for that group (I6). A source cannot be a mirror itself. Final overrides of the mirror can be added later with pixels_write_grid on the mirror.
+
+- Safety: `mutate`
+- MCP tool: `rig_mirror_animation`
+- CLI: `pf rig mirror-animation`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `source` | {group, direction} \| {id} | yes | The animation to mirror (an authored one, not itself a mirror). |
+| `direction` | string | yes | Direction of the mirror, e.g. "left" for a "right" source. |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `animation` | string | yes | Id of the new mirror animation. |
+| `label` | string | yes | "group/direction" of the mirror. |
+| `mirrorOf` | string | yes | Label of the source. |
+
+### Examples
+
+Mirror the hero idle as its left-facing twin:
+
+```json
+{"doc":"doc_g1ed5q","source":{"group":"default"},"direction":"left"}
+```
+
+## rig.setPivot
+
+Set a part variant's pivot: the pixel (int px, in the variant image) that sits on the bone pivot.
+
+Coordinates are in the variant image, origin top-left, pixel centre; the pivot may lie outside the image (a floating hand). Moving the pivot moves the part's art relative to the bone, so run rig_joint_check afterwards. Variant names repeat across views: pass view when the name is ambiguous.
+
+- Safety: `mutate`
+- MCP tool: `rig_set_pivot`
+- CLI: `pf rig set-pivot`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `part` | string | yes | Part: its part-layer name (e.g. "head"), part id ("prt_...") or layer id. |
+| `variant` | string | no | Variant name or id (default "default"). |
+| `view` | string | no | Resolve the variant name among this view's variants. |
+| `pivot` | {x, y} | yes | New pivot, int px in the variant image. |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `part` | string | yes | Part layer name. |
+| `variant` | string | yes | Variant id. |
+| `pivot` | {x, y} | yes | Pivot afterwards. |
+| `previous` | {x, y} | yes | Pivot before. |
+
+### Examples
+
+Move the forearm pivot two pixels right:
+
+```json
+{"doc":"doc_g1ed5q","part":"lower_arm_r","pivot":{"x":3,"y":1}}
 ```
 
 ## rig.setPose

@@ -230,3 +230,9 @@ Pure; works on a store, snapshot or open transaction. The anim is found by id, o
 - **`replace`**: the animation keeps its id and frame ids (mirrors and their own final overrides keep working and stay correct). It loses its bone keys, part keys, own overrides (their images are deleted when unreferenced), post-passes and `angleQuantum`; `dropped` reports counts and the override ids. The cels of the drawn pixel layers (visible and exported with all ancestors) at the baked frames are consumed (they are in the baked layer now; `dropped.cels`); a link from another frame to a consumed cel is materialised first.
 - **Mirrors stay derived** (bake mirror is M3); baking a mirror animation is refused (`mirror-animation`).
 - **Identical consecutive frames** stay separate cels (no `linkTo`): simplest, and always correct.
+
+## Paint overlap and colour mode (T5.2b)
+
+`paintOverlapTx(tx, {viewId?, bones?, color?}) -> {painted, uncovered, skipped}`: the paint step of W2b. For each joint with gaps, `rig`'s `overlapMasks` gives the pixels of the lower-drawn part that the upper part covers at rest; the variant image grows to hold them, they are painted (default colour: the variant's most frequent opaque one; a palette index in an indexed document), and the pivot shifts by the growth, so the rest composite does not change and the gap closes. Joints sharing a variant are painted together; `bones` filters by the joint's child bone. `uncovered` lists joints that no hidden paint can close.
+
+`setColorMode(tx, {colorMode?, paletteLocked?}) -> {colorMode, paletteLocked, converted}`: converts every drawing (cels, variants, override `set` images) by **exact** palette match to indexed (the first alpha-0 palette entry is the transparent index), or through the palette to RGBA; a missing colour refuses the whole change (`not-indexable`). The lock needs an active palette and recolours nothing.

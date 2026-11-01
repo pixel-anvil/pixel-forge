@@ -49,6 +49,11 @@ export interface OpSpec<S extends Safety, I extends OpInputSchema, O extends z.Z
   /** Optional longer guidance: when to use it, what it does not do, follow-up ops. */
   readonly description?: string;
   /**
+   * `destructive` only: what the caller should know before confirming (what is lost). It is added
+   * to the tool description and to the `CONFIRM_REQUIRED` message.
+   */
+  readonly confirmText?: string;
+  /**
    * The input object. Document ops put `doc: DocRef` first (the registry resolves it to
    * `ctx.document`); use `z.strictObject` so misspelt keys are reported, `.describe()` every field,
    * and plain `z.record` (not schema's `record` helper) for maps, so the JSON Schema can be built.
@@ -96,6 +101,7 @@ export interface AnyOp {
   readonly safety: Safety;
   readonly summary: string;
   readonly description?: string;
+  readonly confirmText?: string;
   readonly input: OpInputSchema;
   readonly output: z.ZodType;
   readonly examples: readonly OpExample<unknown, unknown>[];
@@ -188,6 +194,9 @@ export function defineOp<S extends Safety, I extends OpInputSchema, O extends z.
   if (writes && !targetsDocument) fail(name, `${spec.safety} ops need a "doc" input field`);
   if (Object.hasOwn(shape, 'confirm')) {
     fail(name, '"confirm" is reserved: the registry adds it to destructive ops');
+  }
+  if (spec.confirmText !== undefined && spec.safety !== 'destructive') {
+    fail(name, '"confirmText" only applies to destructive ops');
   }
   if (spec.transaction !== undefined && !writes) {
     fail(name, '"transaction" only applies to mutate and destructive ops');
