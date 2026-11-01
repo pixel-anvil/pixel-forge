@@ -1,7 +1,7 @@
 # Godot integration contract (FR-GD-02, FR-GD-03)
 
 **Status:** defined by T6.0. Implemented by T6.1 (`PixelForgeAsset`, importer) and T6.2 (`PixelForgeDriver`,
-adapters). Checked on the first consumer game by D1 (flat frames) and T6.5 (rigged frames).
+adapters; section 3.5 lists what the code settled). Checked on the first consumer game by D1 (flat frames) and T6.5 (rigged frames).
 **Inputs:** the `.pxf` render cache only (`render/index.json` plus `render/<skin>/…png`, spec §7, FR-GD-05).
 The rig is never evaluated in Godot. The code-level reference for the cache is `packages/io/README.md`
 ("Render cache") and `packages/schema/src/render.ts`.
@@ -158,6 +158,36 @@ For the resolved animation with frame durations `d_0 … d_{n−1}`, `T = Σ d_i
   `side`) and sets `mirror`. A game that authors explicit mirror directions (`left` with `mirrorOf: right`)
   leaves `mirror` false. Both are valid; the first consumer game uses `mirror`.
 
+### 3.5 Implementation notes (T6.2)
+
+Decisions the sections above leave open; the code is `godot/addons/pixel_forge/pixel_forge_driver.gd`.
+
+- **Files:** `PixelForgeDriver`; `PixelForgeAdapter` (the duck-typed adapter and the base class), `PixelForgeSprite2DAdapter`,
+  `PixelForgeSprite3DAdapter`. `target` chooses the adapter by node type and keeps it (and its options) while the node type
+  stays the same; assigning `driver.adapter` makes it custom and `target` no longer replaces it. The adapter options
+  (`offset_y_up`, `apply_pixel_size`) live on the adapter: `driver.adapter.offset_y_up = false`.
+- **Nothing playing:** `group` is `&""`, `frame` and `frame_index` are `-1`, queries return empty or zero. `play()` with
+  `direction` omitted (empty) uses the current `direction`.
+- **Entries:** the driver walks the cycle as entries (`0..n-1`, plus `n-2..1` for `pingpong`), each with an absolute id.
+  A long `advance()` fires every crossed entry's events in id order. The intermediate entries fire **before** the final frame
+  is applied (a handler asking for `frame` during one of them sees the old frame); the final entry then gets `frame_changed`
+  (only if the frame differs) and its events. Frame 0 fires on each wrap even when frame 0 was already shown.
+- **`finished`** is also emitted by `seek_ms` / `set_frame` / setting `hold_last` when the position lands at or past `T` on a
+  `once` animation or under `hold_last`; still once per `play()` (scrubbing back does not re-arm it). `position_ms` is not
+  clamped on a finished `once` animation (the game may read the time since it started), only under `hold_last`. Setting
+  `hold_last` at or past `T` jumps to the last frame without events.
+- **`advance(delta_s)`** ignores `delta_s <= 0`; clearing `hold_last` changes nothing until the next positive advance.
+- **Direction change** to an unresolvable direction keeps the current entry. A direction change that resolves to the entry
+  already playing (a fallback) does nothing. `frame_changed` is emitted when the animation frame index or the asset frame
+  index changes.
+- **`skin`** not in the asset falls back to `base`.
+- **`auto_direction`** (4 or 8, a `Node3D` target; the camera is `auto_direction_camera` or the viewport's current camera): each
+  `advance()` (even paused) sets `direction` **and** `mirror`. The angle is from the target's facing (-Z) to the camera, in the
+  horizontal plane, positive towards the target's left. Four sectors: `down` (camera in front, |angle| < 45), `side`,
+  `up` (|angle| >= 135); eight add `down_side` and `up_side` (22.5, 67.5, 112.5, 157.5 boundaries; `PixelForgeDriver.sector_direction`).
+  Sectors are half-open on the absolute angle. `mirror` is true for a side sector when the camera is on the left (the art's side
+  view faces right, so the character faces screen-left). Missing directions resolve through `direction_fallback`.
+
 ## 4. Events
 
 ### 4.1 Names
@@ -278,6 +308,16 @@ Adapters convert `offset` to their node's convention and must **not** mirror it 
 `Sprite2D` / `Sprite3D` and the game's billboard flip only the texture inside the same rectangle. T6.2 GUT
 tests a trimmed, asymmetric frame, mirrored, against the pixel-forge mirrored render for each adapter.
 
+**Observed (T6.2, Godot 4.6.1, the T6.0 doubt):** `flip_h` leaves `offset` unmirrored in both `Sprite2D` and `Sprite3D`.
+Checked by rendering: a 16x16 texture with a red left edge, `offset = (4, 0)`, drawn through a `SubViewport` (a 64x64
+viewport, 1 texel = 1 pixel; `Sprite3D` with an orthographic camera and `pixel_size = 0.1`); without `flip_h` the opaque
+span is x 28..43 with the red edge at 28..31, with `flip_h` the span is still 28..43 and the red edge is at 40..43, for
+both nodes. The GUT test `test_flip_h_leaves_offset_unmirrored` pins it headless through `get_rect()` /
+`get_item_rect()` (a headless run has no pixels). So the adapters pass the already-mirrored offset through unchanged. If a
+future Godot mirrors the offset, override `PixelForgeAdapter._flip_mirrors_offset()` to return true: the adapter then negates
+x again for that node. The oracle of the GUT adapter tests places every region pixel as Godot draws it and compares the
+set with the canvas frame decoded from the `.pxf`, mirrored about the origin pixel.
+
 ### 8.2 Built-in adapters
 
 | Node | Settings | `offset` assignment |
@@ -302,7 +342,8 @@ shades with a normal tilted across the quad's width.
   the whole quad), so a trimmed region would shade differently per frame. Untrimmed frames also match the
   game's current quad size.
 - Each property setter of that node rebuilds the quad, so the adapter **assigns only properties that
-  changed**, in the order `texture`, `region_rect`, `offset`, `flip_h`.
+  changed**, in the order `texture`, `region_rect`, `offset`, `flip_h` (`pixel_size` and, for the built-in
+  nodes, `region_enabled` / `centered` come first and are assigned only when they differ).
 - Worked example: canvas 64×64, origin `(32, 55)`, untrimmed frame: `c = (−0.5, −24)`, billboard
   `offset = (−0.5, 24)`, mirrored `(0.5, 24)`. The game's previous offset was `(0, feet_row − 32) = (0, 24)`.
   A trimmed 20×30 region at `offset_px (22, 26)`: `c = (−0.5, −15)`.

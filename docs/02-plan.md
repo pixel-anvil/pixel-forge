@@ -156,7 +156,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T4.2 | io: `.pxf` read/write, migrations, render cache, atomic save, pack/unpack | sonnet | high | M | T4.3, T2.2 | |☑ |
 | T6.0 | Godot integration contract with the first consumer game (spec addendum) | opus | high | S | T4.2 | | ☑ |
 | T6.1 | Godot: `.pxf` reader + import plugin + test harness + fixture `.pxf` generator | sonnet | high | M | T6.0 | | ☐☑ |
-| T6.2 | Godot: PixelForgeDriver (clock + game-driven playback), adapters, mirroring, markers/events | sonnet | high | M | T6.1 | | ☐ |
+| T6.2 | Godot: PixelForgeDriver (clock + game-driven playback), adapters, mirroring, markers/events | sonnet | high | M | T6.1 | | ☑ |
 | T6.3 | Godot: demo scene + CI job (ubuntu, 4.6.1 headless) | haiku | low | S | T6.2 | | ☐ |
 | D1 | **Early demo**: flat target-move `.pxf` → plays in the first consumer game through the driver (user approval) | orchestrator + sonnet | medium | M | T6.3 | | ☐ |
 | T3.3 | rig: part render pipeline + overrides + staleness; core hook (+ review) | opus | high | M | T3.2, T2.3, T1.7 | ∥ | ☑ |
@@ -546,6 +546,10 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - adapters: Sprite2D, Sprite3D and duck-typed;
   - mirroring (`flip_h` and mirrored markers).
 - **Oracle** — GUT tests for timing, `seek` and `hold`, fallback, mirrored markers, and the duck-typed adapter on a fake node with the lit billboard node's properties.
+- **Notes (2026-11-01)** — ☑ Sonnet/high; about 170k tokens; resumed once after the weekly limit. 161 GUT tests pass headless (85 new; the orchestrator re-ran them). `PixelForgeDriver`, a base/duck-typed `PixelForgeAdapter`, and Sprite2D/Sprite3D adapters.
+  - T6.0 doubt settled: `flip_h` leaves `offset` unmirrored in Sprite2D and Sprite3D (seen in a real render, pinned headless via `get_item_rect`; contract §8.1). Adapters pass the already-mirrored offset through.
+  - Decisions (contract §3.5): a long `advance()` fires the intermediate frames' events before applying the final frame (their handlers see the old frame); `finished` also fires when seek/set_frame/hold_last lands at the end, once per `play()`; `frame` is −1 with nothing playing; an unknown skin falls back to `base`.
+  - `auto_direction` (4/8 sectors, sets `direction` and `mirror`, facing −Z) is the agent's own design; D1 or the game may change it.
 
 #### T6.3 demo + CI  [haiku] [S]
 - **Deliverables** — `godot/demo/` (plays the fixture character), and a CI job on ubuntu with Godot 4.6.1 headless (binary cached) that runs `godot/test/run_tests.sh`.
