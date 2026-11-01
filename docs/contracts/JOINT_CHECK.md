@@ -173,6 +173,13 @@ The fix is to paint hidden overlap on whichever of the two parts is drawn **lowe
 rest composite does not change. Note that every gap pixel q was covered at rest by the child and is never covered
 by the parent: the parent is static, so `rest(q) ∧ ¬comp_θ(q)` implies `child_0(q) ∧ ¬parent(q)`.
 
+**Implemented by T3.5** (`rig/src/overlap.ts`): `overlapMask({gaps, parent, childRest, paint, imageOrigin})` is the
+images-level function below (`paint` is `'child'` or `'parent'`, `imageOrigin = P − Pc`, so `local = mask − imageOrigin`);
+`overlapMasks(jointCheckInput)` runs the sweep, picks the lower part from the rest render order and returns one entry per joint
+with gaps, listing a joint that breaks a precondition in `skipped` (`ambiguous-parts`, `rotated-rest`) instead of throwing;
+`checkOverlapPaint({mask, upper, painted})` reports painted pixels outside the mask (`outsideVisible` changes the rest composite).
+The `JointCheckError` codes `AMBIGUOUS_PARTS` and `ROTATED_REST` exist for callers that enforce the preconditions themselves.
+
 `overlapMask` takes the `JointGapResult` plus the rendering context for the joint. It returns
 `{ part, mask: Px[], local: Px[], uncovered: Px[] }`. `mask` is in rest canvas coordinates and `local` is the same
 pixels in the painted part's image coordinates (both sorted by y, then x). `local` may fall outside the current

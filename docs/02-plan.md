@@ -162,7 +162,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T3.3 | rig: part render pipeline + overrides + staleness; core hook (+ review) | opus | high | M | T3.2, T2.3, T1.7 | ∥ | ☑ |
 | T3.8 | rig: `attributeEdit(render, edited) → overrides` (+ review) | opus | high | M | T3.3 | | ☐☑ |
 | T3.4 | rig: `jointCheck` (implements the T3.0 definition) | sonnet | high | M | T3.0, T3.3 | | ☑ |
-| T3.5 | rig `overlapMask` + core `splitRegion` transaction | sonnet | high | M | T3.4 | ∥ | ☐ |
+| T3.5 | rig `overlapMask` + core `splitRegion` transaction | sonnet | high | M | T3.4 | ∥ | ☑ |
 | T3.6 | core: derived mirror in `renderFrame`; rig: pose clipboard (mirrored) | sonnet | medium | S | T3.3 | ∥ | ☑ |
 | T3.7 | core: bake | sonnet | medium | S | T3.3 | ∥ | ☑ |
 | T3.9 | fixtures: synthetic humanoid "hero" (TS doc + `.aseprite` via Lua) | sonnet | medium | M | T3.2, T0.3 | ∥ | ☑ |
@@ -621,6 +621,9 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - W2b: the split parts recomposite to the source frame by hash;
   - painting inside the mask leaves the composite at rest unchanged;
   - painting outside the mask is reported.
+- **Notes (2026-11-01)** — ☑ Sonnet/high; about 271k tokens. rig `overlapMask` (images level) and `overlapMasks(jointCheckInput)` (rig level; ambiguous/rotated-rest joints are `skipped`), `checkOverlapPaint` → `{inside, outsideHidden, outsideVisible}`; `jointCheck` now shares an internal `sweepJoints` (output unchanged). core `splitRegion(tx, layer, frameId, selection)`: rect, lasso (even-odd rule, written from the definition) or flood; moves pixels into a new layer above the source on one frame and binds via `bindParts`.
+  - Mask = 3×3 blocks around each gap's inverse-rotated source, limited to pixels the parent covers and the child doesn't draw. `jointCheck` after painting is the judge (RIG-05). Split parts draw in every rig frame (CORE-04): the flat exit move needs per-frame visibility.
+  - For T5.2b: factor the paint-overlap step (grow the variant, shift the pivot) out of the W2b test into an op.
 
 #### T3.6 mirroring + pose clipboard  [sonnet] [S] ∥
 - **Deliverables** — the derived mirror in `renderFrame` (flipped around `origin.x`; markers mirrored, names kept), and `copyPose` / `pastePose({mirrored})`.

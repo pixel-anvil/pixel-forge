@@ -163,7 +163,8 @@ function gapsOnMasks(
   };
 }
 
-function alphaMask(img: RgbaImage, what: string, w: number, h: number): Uint8Array {
+/** @internal Alpha > 0 of `img` as a 0/1 mask of `w × h`; `SIZE_MISMATCH` when the image is another size. */
+export function alphaMask(img: RgbaImage, what: string, w: number, h: number): Uint8Array {
   if (img.width !== w || img.height !== h || img.data.length !== w * h * 4) {
     throw new JointCheckError(
       'SIZE_MISMATCH',
@@ -346,24 +347,38 @@ function paint(
 
 const codeUnit = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
 
+/** @internal One joint of a {@link JointSweep}: the masks the gap predicate ran on, and its result. */
+export interface SweptJoint {
+  readonly bone: JointBone;
+  readonly parent: JointBone;
+  /** The parent's visible parts at rest, canvas masks of `w × h`. */
+  readonly parentRest: Uint8Array;
+  /** The child's visible parts at rest. */
+  readonly childRest: Uint8Array;
+  /** The child's pivot `P` (snapped, rest) and rest world direction. */
+  readonly pivot: Px;
+  readonly childDir: number;
+  readonly result: JointGapResult;
+}
+
+/** @internal Everything {@link jointCheck} and `overlapMasks` need from one sweep of a rig. */
+export interface JointSweep {
+  readonly view: { readonly name: string };
+  readonly params: { readonly rangeDeg: number; readonly stepDeg: number; readonly radius: number };
+  readonly w: number;
+  readonly h: number;
+  /** The visible parts at rest in draw order (ascending z, ties as `renderParts` sorts them). */
+  readonly restParts: readonly PartRender[];
+  /** In `rig.bones` order (not sorted). */
+  readonly joints: readonly SweptJoint[];
+}
+
 /**
- * The joint coverage check of a rig in one view (FR-RIG-05; `docs/contracts/JOINT_CHECK.md` sections
- * 3.2 and 6.2). Every bone B with a parent bone A, both with at least one visible part in the view, is a
- * joint. With A at rest, B's parts are rendered with only B's bone key set to θ (relative to rest) for
- * every θ = k·S, k ≠ 0, |k·S| ≤ R, through `renderParts` (FR-RIG-20 steps 1 to 3: snapping, the view's
- * variant, the part's rotation algorithm, pivot alignment). Overrides, post-passes, skins, pixel layers,
- * other bones' parts and B's own children are left out. The masks go to {@link jointGaps} with
- * `pivot` = B's snapped rest pivot and `childDir` = B's rest world angle.
- *
- * Reports bone names; joints are sorted by `bone` in code-unit order. A bone without visible parts is
- * skipped and its children are not re-attached to a farther ancestor. Sweep angles are key angles: an
- * `angleQuantum` coarser than `stepDeg` rounds the rendered rotation (the report still lists θ).
- * Pure and deterministic.
- *
- * Throws `RigError` (`BAD_VALUE` for a bad `rangeDeg`, `stepDeg` or `canvas`, plus everything
- * `renderParts`, `selectView` and `snapSkeleton` throw) and {@link JointCheckError} (`BAD_RADIUS`).
+ * @internal The sweep behind {@link jointCheck}: validates the input, renders the rest pose and every
+ * joint's swept child, and runs the gap predicate. Shared with `overlapMasks` so the overlap mask is
+ * derived from exactly the gaps the check reports.
  */
-export function jointCheck(input: JointCheckInput): JointCheckReport {
+export function sweepJoints(input: JointCheckInput): JointSweep {
   const { rig, images, canvas } = input;
   const rangeDeg = input.rangeDeg ?? JOINT_SWEEP_DEG_DEFAULT;
   const stepDeg = input.stepDeg ?? JOINT_STEP_DEG_DEFAULT;
@@ -410,7 +425,8 @@ export function jointCheck(input: JointCheckInput): JointCheckReport {
 
   // Rest render: each bone's visible parts as one mask.
   const restMasks = new Map<BoneId, Uint8Array>();
-  for (const part of render(animation([{}]), 0)) {
+  const restParts = render(animation([{}]), 0);
+  for (const part of restParts) {
     let m = restMasks.get(part.boneId);
     if (m === undefined) {
       m = new Uint8Array(w * h);
@@ -421,7 +437,7 @@ export function jointCheck(input: JointCheckInput): JointCheckReport {
   const rest = snapSkeleton(rig, view, new Map(), { angleQuantum: quantum });
   const byId = new Map(rig.bones.map((b) => [b.id, b]));
 
-  const joints: JointCheckJoint[] = [];
+  const joints: SweptJoint[] = [];
   for (const bone of rig.bones) {
     if (bone.parentId === undefined) continue;
     const parentMask = restMasks.get(bone.parentId);
@@ -445,22 +461,58 @@ export function jointCheck(input: JointCheckInput): JointCheckReport {
       }
       return { angle, child };
     });
-    const res = gapsOnMasks(
+    const pivot: Px = [snapped.pivot.x, snapped.pivot.y];
+    const result = gapsOnMasks(
       w,
       h,
       parentMask,
       childRest,
       frames,
-      [snapped.pivot.x, snapped.pivot.y],
+      pivot,
       snapped.restAngle,
       radius,
     );
-    joints.push({ bone: bone.name, parent: parentBone.name, ...res });
+    joints.push({
+      bone,
+      parent: parentBone,
+      parentRest: parentMask,
+      childRest,
+      pivot,
+      childDir: snapped.restAngle,
+      result,
+    });
   }
+  return { view, params: { rangeDeg, stepDeg, radius }, w, h, restParts, joints };
+}
+
+/**
+ * The joint coverage check of a rig in one view (FR-RIG-05; `docs/contracts/JOINT_CHECK.md` sections
+ * 3.2 and 6.2). Every bone B with a parent bone A, both with at least one visible part in the view, is a
+ * joint. With A at rest, B's parts are rendered with only B's bone key set to θ (relative to rest) for
+ * every θ = k·S, k ≠ 0, |k·S| ≤ R, through `renderParts` (FR-RIG-20 steps 1 to 3: snapping, the view's
+ * variant, the part's rotation algorithm, pivot alignment). Overrides, post-passes, skins, pixel layers,
+ * other bones' parts and B's own children are left out. The masks go to {@link jointGaps} with
+ * `pivot` = B's snapped rest pivot and `childDir` = B's rest world angle.
+ *
+ * Reports bone names; joints are sorted by `bone` in code-unit order. A bone without visible parts is
+ * skipped and its children are not re-attached to a farther ancestor. Sweep angles are key angles: an
+ * `angleQuantum` coarser than `stepDeg` rounds the rendered rotation (the report still lists θ).
+ * Pure and deterministic.
+ *
+ * Throws `RigError` (`BAD_VALUE` for a bad `rangeDeg`, `stepDeg` or `canvas`, plus everything
+ * `renderParts`, `selectView` and `snapSkeleton` throw) and {@link JointCheckError} (`BAD_RADIUS`).
+ */
+export function jointCheck(input: JointCheckInput): JointCheckReport {
+  const sweep = sweepJoints(input);
+  const joints: JointCheckJoint[] = sweep.joints.map((j) => ({
+    bone: j.bone.name,
+    parent: j.parent.name,
+    ...j.result,
+  }));
   joints.sort((a, b) => codeUnit(a.bone, b.bone));
   return {
-    view: view.name,
-    params: { rangeDeg, stepDeg, radius },
+    view: sweep.view.name,
+    params: sweep.params,
     joints,
     summary: {
       joints: joints.length,

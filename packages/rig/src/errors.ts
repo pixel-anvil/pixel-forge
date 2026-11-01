@@ -32,7 +32,9 @@ export type JointCheckErrorCode =
   | 'SIZE_MISMATCH' // the images of a joint check differ in size (or a buffer does not match its size)
   | 'BAD_ANGLE' // a checked angle that is 0, not finite or duplicated, or a childDir that is not a multiple of 0.25
   | 'BAD_RADIUS' // the window radius is not an integer, or is below 1
-  | 'BAD_PIVOT'; // a non-integer pivot coordinate
+  | 'BAD_PIVOT' // a non-integer pivot coordinate
+  | 'AMBIGUOUS_PARTS' // overlapMask: a joint bone has no visible part, or more than one (contract section 7)
+  | 'ROTATED_REST'; // overlapMask: the painted part is not drawn unrotated at rest (drawnAngle differs from the rest angle)
 
 /**
  * Typed error of the joint check (`docs/contracts/JOINT_CHECK.md` section 3.1): invalid input of

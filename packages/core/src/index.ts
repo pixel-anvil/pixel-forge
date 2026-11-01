@@ -117,3 +117,13 @@ export type {
 } from './rig-edit.js';
 export { bakeAnimation } from './bake.js';
 export type { BakeDropped, BakeOptions, BakeReason, BakeResult } from './bake.js';
+export { splitRegion } from './split.js';
+export type {
+  FloodSelection,
+  LassoSelection,
+  RectSelection,
+  SplitReason,
+  SplitRegionOptions,
+  SplitRegionResult,
+  SplitSelection,
+} from './split.js';

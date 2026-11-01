@@ -4,7 +4,7 @@ FK/IK, key interpolation and quantisation, snapping, variant selection, part ren
 
 **Depends on:** `schema`, `raster`
 
-**Status:** T3.1: forward kinematics, key interpolation and quantisation, hierarchical snapping (FR-RIG-10/11/12, FR-RIG-20 steps 1–2). T3.2: templates, part names, overlap binding. T3.3: the part render pipeline, part overrides and staleness (FR-RIG-20 steps 3–4, FR-RIG-21/22; see "Part render and overrides"). T3.4: the joint check (FR-RIG-05; see "Joint check (T3.4)"). T3.8: edit attribution (FR-RIG-22/24; see "Edit attribution"). T3.6: the pose clipboard, `copyPose` / `pastePose` (FR-RIG-17; see "Pose clipboard").
+**Status:** T3.1: forward kinematics, key interpolation and quantisation, hierarchical snapping (FR-RIG-10/11/12, FR-RIG-20 steps 1–2). T3.2: templates, part names, overlap binding. T3.3: the part render pipeline, part overrides and staleness (FR-RIG-20 steps 3–4, FR-RIG-21/22; see "Part render and overrides"). T3.4: the joint check (FR-RIG-05; see "Joint check (T3.4)"). T3.8: edit attribution (FR-RIG-22/24; see "Edit attribution"). T3.6: the pose clipboard, `copyPose` / `pastePose` (FR-RIG-17; see "Pose clipboard"). T3.5: the overlap mask (FR-RIG-07; see "Overlap mask (T3.5)").
 
 Pure: no Node built-ins, no clock, no randomness, and **no floating-point trig or accumulation** in any decision. Angles are exact BigInt rationals until they are rounded once; rotations use raster's committed Q16 table (NFR-02, ADR-010). The conventions are recorded in [ADR-012](../../docs/adr/ADR-012.md) (Accepted), which refines spec §3.4.7.
 
@@ -155,12 +155,12 @@ Evidence (`test/render.test.ts`, `test/overrides.test.ts`): W4 as hand-written A
 
 FR-RIG-05, implementing [`docs/contracts/JOINT_CHECK.md`](../../docs/contracts/JOINT_CHECK.md) (T3.0). Read the contract for the exact definition; this is the API.
 
-| Export                     | Purpose                                                                                                                                                                                                                                                                |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `jointGaps(input)`         | The pure predicate (contract sections 3.1, 4, 5): `{parent, childRest, frames: [{angle, child}], pivot, childDir, radius}` (RGBA8 images of one canvas, only alpha matters) gives `{pivot, angles: [{angle, gaps}], gapCount, union}`; coordinates sorted by y, then x |
-| `jointCheck(input)`        | The rig check (sections 3.2, 6.2): `{view, params, joints: [{bone, parent, pivot, angles, gapCount, union}], summary: {joints, jointsWithGaps, gapCount, unionCount}}`. A rig passes when `summary.gapCount === 0`                                                     |
-| `JOINT_RADIUS_DEFAULT`     | 4. The sweep defaults are schema's `JOINT_SWEEP_DEG_DEFAULT` (30) and `JOINT_STEP_DEG_DEFAULT` (5)                                                                                                                                                                     |
-| `JointCheckError` (`code`) | `SIZE_MISMATCH`, `BAD_ANGLE` (a frame angle of 0, non-finite or duplicated; a `childDir` that is not a multiple of 0.25), `BAD_RADIUS`, `BAD_PIVOT`                                                                                                                    |
+| Export                     | Purpose                                                                                                                                                                                                                                                                                                  |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `jointGaps(input)`         | The pure predicate (contract sections 3.1, 4, 5): `{parent, childRest, frames: [{angle, child}], pivot, childDir, radius}` (RGBA8 images of one canvas, only alpha matters) gives `{pivot, angles: [{angle, gaps}], gapCount, union}`; coordinates sorted by y, then x                                   |
+| `jointCheck(input)`        | The rig check (sections 3.2, 6.2): `{view, params, joints: [{bone, parent, pivot, angles, gapCount, union}], summary: {joints, jointsWithGaps, gapCount, unionCount}}`. A rig passes when `summary.gapCount === 0`                                                                                       |
+| `JOINT_RADIUS_DEFAULT`     | 4. The sweep defaults are schema's `JOINT_SWEEP_DEG_DEFAULT` (30) and `JOINT_STEP_DEG_DEFAULT` (5)                                                                                                                                                                                                       |
+| `JointCheckError` (`code`) | `SIZE_MISMATCH`, `BAD_ANGLE` (a frame angle of 0, non-finite or duplicated; a `childDir` that is not a multiple of 0.25), `BAD_RADIUS`, `BAD_PIVOT`, and for the overlap mask `AMBIGUOUS_PARTS`, `ROTATED_REST` (reserved by the contract; `overlapMasks` reports them as `skipped` instead of throwing) |
 
 `jointCheck({rig, images, canvas, direction?, partKeys?, palette?, angleQuantum?, rangeDeg?, stepDeg?, radius?, cache?})`: `rig` is a `PartRig` whose bones and views also carry `name` (a schema `Rig` fits), `images` is the `renderParts` lookup, and `canvas` is the document canvas `{w, h}`.
 
@@ -172,6 +172,29 @@ FR-RIG-05, implementing [`docs/contracts/JOINT_CHECK.md`](../../docs/contracts/J
 - Joints are sorted by bone name in code-unit order and `view` is the view's name.
 
 Evidence (`test/joint.test.ts`): every `fixtures/joint/*.txt` runs through `jointGaps` and deep-equals its hand-written `*.expected.json` (JSON key order and frame-order independence too); the radius, window-edge, off-canvas pivot and error cases the fixtures do not pin; `jointCheck` on a rig built from the fixtures through the real RotSprite (`gappy_elbow` finds (7,6) at −30° and (7,4) at +30°; `clean_capped_elbow` is clean at all 12 angles), plus sweep parameters, skipped bones, view selection and indexed images. The synthetic hero is not clean under the definition: its test (`packages/io/test/hero-fixture.test.ts`) pins the 8 gap pixels.
+
+## Overlap mask (T3.5)
+
+FR-RIG-07's overlap helper, defined in `docs/contracts/JOINT_CHECK.md` section 7 and implemented in `src/overlap.ts`. For a joint with gaps it answers: **which pixels can be painted so the gaps close while the composite at rest does not change?** The painted part is the one **drawn lower at rest** (render order: `z`, then rig order); the other is the upper part.
+
+| Function                                                     |                                                                                                                                                                                                                                                                                                                                            |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `overlapMask({gaps, parent, childRest, paint, imageOrigin})` | Pure, images level (like `jointGaps`). `gaps` is a `JointGapResult`; `paint` is `'child'` (child drawn under the parent) or `'parent'`; `imageOrigin` is the canvas position of pixel (0, 0) of the painted variant image. Returns `{paint, mask, local, uncovered}`, every list sorted by y, then x                                       |
+| `overlapMasks(jointCheckInput)`                              | Rig level: the same sweep and defaults as `jointCheck`, one entry per joint **with gaps**: `{bone, parent, paint, mask, local, uncovered, partId, layerId, variantId, boneId}`, plus `skipped` joints (`ambiguous-parts`: not exactly one visible part on each bone; `rotated-rest`: the painted part is drawn rotated or flipped at rest) |
+| `checkOverlapPaint({mask, upper, painted})`                  | Reports paint outside a mask: `{inside, outsideHidden, outsideVisible}`. `outsideVisible` pixels change the rest composite (not covered by the upper part) and should be undone                                                                                                                                                            |
+
+**Definition** (integer maths on alpha masks, opaque = alpha > 0):
+
+- **Child under the parent** (the usual case). For each checked angle θ and gap `q` (`d = q − P`), the child's nearest-sample source is `src = P + (rnd(C·dx + S·dy), rnd(−S·dx + C·dy))` with `[C, S] = trigQ16(θ)`. `mask` is the union over all gaps of the 3×3 block around `src`, restricted to `hidden(t) = parent(t) ∧ ¬child₀(t)`. The 3×3 dilation covers RotSprite's rounded convex corners.
+- **Child over the parent** (paint the parent): gaps never move and are child-covered at rest, so `mask` = the gap union.
+- `uncovered`: gaps whose source block holds no hidden pixel (child-under only). No invisible paint can close them; they need a visible change.
+- `local = mask − imageOrigin`, the same pixels in the painted variant's image coordinates (`imageOrigin = pivot − variant pivot`). It may fall outside the image: the paint op grows the image and shifts the pivot.
+
+**Guarantee.** `mask ⊆ {t : upper(t) ∧ ¬painted₀(t)}`, so painting any subset of `mask` leaves the rest composite unchanged. It is a mask of what is **safe and useful**, not a promise that painting all of it closes every gap under every rotation algorithm: `jointCheck` after painting is the judge (the tests re-run it on a real RotSprite sweep).
+
+Preconditions of the contract: exactly one visible part on each of the two bones and a painted part drawn at its rest angle. `overlapMask` itself works on masks and has no such check; `overlapMasks` skips the joints that break them. Other parts (siblings, pixel layers) are not considered when deciding what is hidden.
+
+Evidence (`test/overlap.test.ts`): the contract's worked examples (`gappy_elbow` mask of 8 pixels and `gappy_knee` mask `[[8,4],[9,4]]`, both child-under), the real sweep re-checked after painting (0 gaps), random subsets of the mask leave the composite unchanged (seeded), child-over, `uncovered`, `imageOrigin`, the typed errors, the `skipped` reasons and `checkOverlapPaint` against the composite diff. `packages/core/test/split.test.ts` runs the whole W2b loop on a document.
 
 ## Edit attribution (T3.8)
 

@@ -113,3 +113,14 @@ export type {
 } from './joint.js';
 export { attributeEdit } from './attribute.js';
 export type { AttributedOverride, EditContext, EditRender } from './attribute.js';
+export { checkOverlapPaint, overlapMask, overlapMasks } from './overlap.js';
+export type {
+  OverlapJoint,
+  OverlapMaskInput,
+  OverlapMaskResult,
+  OverlapPaint,
+  OverlapPaintInput,
+  OverlapPaintReport,
+  OverlapReport,
+  OverlapSkipped,
+} from './overlap.js';
