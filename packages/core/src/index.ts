@@ -62,7 +62,7 @@ export {
 } from './frames.js';
 export type { FrameOpReason, InsertFrameOptions } from './frames.js';
 export { FINDING_CODES, validate } from './validate.js';
-export type { Finding, FindingCode, Severity } from './validate.js';
+export type { Finding, FindingCode, Severity, ValidateOptions } from './validate.js';
 export { renderFrame } from './render.js';
 export type { RenderOptions, SkinRef } from './render.js';
 export { createFrameRenderer, renderInputKey } from './render-cache.js';

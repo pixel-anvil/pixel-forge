@@ -4,13 +4,17 @@
 //
 // Generators registered so far:
 //   - packages/raster/scripts/gen-trig-table.mjs  -> packages/raster/src/trig-table.ts (T1.6)
-// T5.1 adds op-registry generation (docs, JSON Schemas, CLI and MCP tool tables); register it below.
+//   - packages/ops/scripts/gen-ops.mjs            -> packages/ops/generated/{mcp-tools,cli}.json and
+//                                                    docs/contracts/OPERATIONS.md (T5.1, op registry)
 import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const GENERATORS = ['packages/raster/scripts/gen-trig-table.mjs'];
+const GENERATORS = [
+  'packages/raster/scripts/gen-trig-table.mjs',
+  'packages/ops/scripts/gen-ops.mjs',
+];
 
 const check = process.argv.includes('--check');
 let failed = false;

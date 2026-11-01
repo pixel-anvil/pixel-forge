@@ -172,7 +172,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T4.4 | io: `.aseprite` binary parser (Aseprite CLI as oracle) | sonnet | high | M | T4.6 | |☑ |
 | T4.5 | io: `.aseprite` → document mapping + in-place re-import (explicit rules) | sonnet | high | M | T4.4, T4.2 | ∥ | ☑ |
 | T4.1 | lint: rules + structured findings | sonnet | medium | M | T3.4, T3.3 | ∥ | ☑ |
-| T5.1 | ops: registry framework + generators + 3 exemplar ops (+ review) | opus | high | M | T4.1, T4.2 | | ☐ |
+| T5.1 | ops: registry framework + generators + 3 exemplar ops (+ review) | opus | high | M | T4.1, T4.2 | | ☑ |
 | T5.2a | ops (no logic, from table) | haiku | medium | S | T5.1 | ∥ | ☐ |
 | T5.2b | ops with logic + P-06 ops | sonnet | medium | M | T5.1 | ∥ | ☐ |
 | T5.3 | ops: text grid read/write + render/contact sheet with overlays | sonnet | high | M | T5.1, T3.8, T4.3 | ∥ | ☐ |
@@ -715,6 +715,11 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - the exemplars `doc.open`, `doc.summary`, `rig.setPose`;
   - the PLAYBOOKS entry "add an op", written as a Haiku-followable recipe with one fully worked example.
 - **Acceptance** — then the review.
+- **Notes (2026-11-01)** — ☑ Opus/high (about 320k tokens), then code-review high (10 findings, all accepted), then a Sonnet/high fix pass (about 160k tokens).
+  - `defineOp` (checked at load), a registry (one call = one transaction = at most one undo entry, labelled `AI: <op name>`; a no-op records nothing), `OpContext`, `OpError`, safety classes read/mutate/destructive/io with `confirm`, ref resolution (id first, then name; misses list what exists), `OpHost` plus an in-memory host that owns one rig renderer (CORE-03). Core refusals map `unknown-*` → NOT_FOUND, others → REFUSED (CORE-02).
+  - Generators: `packages/ops/scripts/gen-ops.mjs` → `generated/{mcp-tools,cli}.json` and `docs/contracts/OPERATIONS.md`, checked by `gen --check`. ops depends on schema and zod (spec §6.2 updated).
+  - A validate guard refuses changes that add `validate()` errors. Fixes: counts cached per committed store version only; only touched images are scanned (new core `validate(view, {images})` option); a listener throwing after commit gives success plus `warnings`; no unhandled rejections; shared `commit.ts`; variant refs never cross views; concurrent `doc.open` is deduplicated.
+  - For T5.5: resolve the "exactly one undo entry labelled `AI: <tool>`" wording against the rules above (op name, no entry for a no-op). Tool definitions are 3.8–4.4 KB, mostly outputSchema; consider trimming for LLM context. OPS-01: io `ctx.transact` commits before the output check.
 
 #### T5.2a ops without logic  [haiku] [S] ∥
 - **Exemplar** — `rig.setPose` plus the PLAYBOOKS recipe.

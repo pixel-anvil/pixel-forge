@@ -154,6 +154,17 @@ const KIND_OF_PREFIX: Record<string, IdKind> = {
 
 // ---- validate -------------------------------------------------------------------------------------
 
+/** Options of {@link validate}. Additive. */
+export interface ValidateOptions {
+  /**
+   * Restricts the per-image **content** checks (`INDEX_OUT_OF_RANGE`, `TRANSPARENT_INDEX_OPAQUE`,
+   * `IMAGE_KIND_MISMATCH`, `PALETTE_LOCK_COLOR`), which scan pixels, to these image ids; `false`
+   * skips them. Default: every stored image. Reference checks (`IMAGE_MISSING`, `IMAGE_ORPHAN`)
+   * and every document check always run. For callers that know which images changed.
+   */
+  readonly images?: ReadonlySet<ImageId> | false;
+}
+
 /**
  * Checks invariants I1-I7 and image bookkeeping of `view` and returns all findings (empty: clean).
  * Never throws and never mutates. A document that fails the schema yields only `SCHEMA` findings.
@@ -169,7 +180,7 @@ const KIND_OF_PREFIX: Record<string, IdKind> = {
  * - **I2** palette lock for RGBA documents is only checked on stored images (`PALETTE_LOCK_COLOR`,
  *   warning); the render-based lint (T4.1) is authoritative.
  */
-export function validate(view: DocumentView): Finding[] {
+export function validate(view: DocumentView, options: ValidateOptions = {}): Finding[] {
   const parsed = Document.safeParse(view.doc);
   if (!parsed.success) {
     return parsed.error.issues.map((i) => ({
@@ -179,7 +190,7 @@ export function validate(view: DocumentView): Finding[] {
       message: i.message,
     }));
   }
-  return new Checker(view, view.doc).run();
+  return new Checker(view, view.doc, options.images).run();
 }
 
 class Checker {
@@ -190,6 +201,7 @@ class Checker {
   constructor(
     private readonly view: DocumentView,
     private readonly doc: Doc,
+    private readonly scanImages: ReadonlySet<ImageId> | false | undefined,
   ) {}
 
   private add(code: FindingCode, severity: Severity, path: Path, message: string): void {
@@ -654,6 +666,8 @@ class Checker {
       const at = ['images', id];
       if (!refs.has(id))
         this.warn('IMAGE_ORPHAN', at, `image ${id} is not referenced by the document`);
+      if (this.scanImages === false || (this.scanImages !== undefined && !this.scanImages.has(id)))
+        continue;
       const img = this.view.image(id);
       if (img === undefined || masks.has(id)) continue; // erase masks are 8-bit masks in every mode
       if (colorMode === 'indexed') {

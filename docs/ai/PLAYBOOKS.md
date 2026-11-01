@@ -27,7 +27,136 @@ store.transact('Set duration', (tx) => { setFrameDuration(tx, animId, frameId, 1
 8. Test: commit, check the result, `store.undo()` restores `documentHash(store)`, `redo()` gives it back; a no-op returns `undefined`.
 
 ## Add an op
-Filled in by card T5.1.
+An op is one file in `packages/ops/src/ops/` that calls `defineOp`. The registry (`packages/ops/src/registry.ts`) does the rest: it parses the input, resolves `doc`, opens **one transaction = one undo step** labelled `AI: <op name>`, checks the output, refuses changes that make `validate()` report new errors, and turns every thrown error into an `OpError`. The generators turn the op into the MCP tool, the CLI subcommand and `docs/contracts/OPERATIONS.md`. Exemplars: `rig-set-pose.ts` (mutate), `doc-summary.ts` (read), `doc-open.ts` (io). API: `packages/ops/README.md`.
+
+**Steps** (the worked example below is `frame.duplicate`; replace names, keep the shape):
+
+1. **Find the function the op wraps** (core frame ops, `rig-edit.ts`, overrides, lint, io) and read its README section. Most ops are a thin wrapper: they pass `ctx.tx` and the refs straight through. Never re-implement document logic in `ops`.
+2. **Choose the safety class**: `read` (changes nothing), `mutate` (changes one document; undoable), `destructive` (like mutate but drastic, e.g. bake: the registry adds `confirm` and refuses without `"confirm": true`; never declare `confirm` yourself), `io` (files through `ctx.host.fs`; may be `async`).
+3. **Create** `packages/ops/src/ops/<area>-<verb>.ts` (file name in kebab case; op name `area.verbNoun`, e.g. `frame.duplicate`, `rig.setPivot`). Use the template below:
+   - `input`: `z.strictObject({...})`, first field `doc: DocRef` for any op on a document; take references with the shared schemas from `../refs.js` (`AnimRef`, `FrameRef`, `LayerRef`, `BoneRef`, `PartRef`, `ViewRef`, `VariantRef`); `.describe('...')` **every** field (a test enforces it); use `z.record(z.string(), X)` for maps, never schema's `record` helper or `z.custom` (no JSON Schema).
+   - `output`: `z.strictObject({...})` of plain JSON (ids, indices, names, counts); describe the fields.
+   - `summary`: one imperative line, at most 200 characters, with units (`deg clockwise`, `int px`). `description`: optional, when to use it and what to call next.
+   - `examples`: at least one, against the hero fixture (`doc: 'doc_g1ed5q'`, animation `{ group: 'default' }`, frame `0`, bones like `upper_arm_r`, parts like `head`, `lower_arm_r` with variants `default`, `sleeve`). They are checked against the schemas when the module loads, and the first one is shown in the MCP tool description.
+4. **Write the handler** (synchronous unless `io`):
+   - change the document only through `ctx.tx` (pass it to core functions: `duplicateFrame(ctx.tx, ...)`); never call `store.begin`, `commit`, `cancel`, `undo` (except history ops, see below);
+   - read through `ctx.doc` / `ctx.view` (they see your own edits so far); render with `ctx.renderFrame(anim, frame, opts)` (it passes the host's renderer, KNOWN_ISSUES CORE-03);
+   - resolve names with the resolvers in `../refs.js` (`resolveAuthoredAnimation`, `resolveFrame`, `resolveLayer`, `resolveBone`, `resolvePart`, `resolveView`, `resolveVariant`, `viewForAnimation`, `requireRig`); they throw `NOT_FOUND` / `AMBIGUOUS` / `REFUSED` with the right details;
+   - let core, rig and io errors propagate: `toOpError` maps them (core `BAD_ARGUMENT` `unknown-*` -> `NOT_FOUND`, other reasons -> `REFUSED`, KNOWN_ISSUES CORE-02). Throw `new OpError('REFUSED', message, { reason: 'kebab-case' })` only for refusals of your own; `BAD_INPUT` for cross-field input rules zod cannot express;
+   - return exactly the output shape (the registry rejects anything else as `INTERNAL`).
+5. **Register** it: import and append to `ALL_OPS` in `packages/ops/src/ops/index.ts`, add it to the `export { ... } from './<file>.js'` lines there, and to the `./ops/index.js` export list in `packages/ops/src/index.ts`.
+6. **Test** in `packages/ops/test/<area>-<verb>.test.ts` with the helpers in `test/helpers.ts` (`openHero`, `rejection`, `need`, `HERO_ID`): one **schema test** (bad input -> `BAD_INPUT` with the issue path) and one **example test** (run `examples[0]` on the hero; for mutate ops check the history has exactly one entry `AI: <op>` and that `store.undo()` restores `documentHash`). Add a test per refusal you throw yourself.
+7. `pnpm gen` (rewrites `packages/ops/generated/*.json` and `docs/contracts/OPERATIONS.md`; commit them), `pnpm changeset`, then `pnpm vitest run --project ops`, `pnpm lint`, `pnpm typecheck`, `pnpm gen:check`.
+
+**Worked example** (compiled and tested verbatim during T5.1). `packages/ops/src/ops/frame-duplicate.ts`:
+
+```ts
+/**
+ * `frame.duplicate`: copy one frame of an animation right after itself.
+ * @packageDocumentation
+ */
+import { duplicateFrame } from '@pixel-forge/core';
+import { z } from 'zod';
+import { defineOp } from '../define.js';
+import { AnimRef, DocRef, FrameRef, resolveAuthoredAnimation, resolveFrame } from '../refs.js';
+
+/** `frame.duplicate` (MCP `frame_duplicate`, CLI `pf frame duplicate`). */
+export const frameDuplicate = defineOp({
+  name: 'frame.duplicate',
+  safety: 'mutate',
+  summary: 'Duplicate one frame; the copy goes right after it, with linked cels and copied keys.',
+  description:
+    'Cels of the copy link to the source frame (edit one, both change). Bone keys, part keys, markers, events, root motion, duration and overrides are copied.',
+  input: z.strictObject({
+    doc: DocRef,
+    animation: AnimRef,
+    frame: FrameRef,
+  }),
+  output: z.strictObject({
+    frameId: z.string().describe('Id of the new frame.'),
+    frameIndex: z.int().describe('Index of the new frame (source index + 1).'),
+    frames: z.int().describe('Frame count of the animation afterwards.'),
+  }),
+  examples: [
+    {
+      title: 'Duplicate frame 0 of the hero',
+      input: { doc: 'doc_g1ed5q', animation: { group: 'default' }, frame: 0 },
+    },
+  ],
+  handler: (ctx, input) => {
+    const frameId = duplicateFrame(ctx.tx, input.animation, input.frame);
+    const { animation } = resolveAuthoredAnimation(ctx.doc, input.animation);
+    const { index } = resolveFrame(animation, frameId);
+    return { frameId, frameIndex: index, frames: animation.frames.length };
+  },
+});
+```
+
+`packages/ops/src/ops/index.ts` (additions):
+
+```ts
+import { frameDuplicate } from './frame-duplicate.js';
+export { frameDuplicate } from './frame-duplicate.js';
+export const ALL_OPS: readonly AnyOp[] = [docOpen, docSummary, frameDuplicate, rigSetPose];
+```
+
+`packages/ops/test/frame-duplicate.test.ts`:
+
+```ts
+// frame.duplicate: schema test and example test.
+import { documentHash } from '@pixel-forge/core';
+import { describe, expect, it } from 'vitest';
+import { frameDuplicate, registry } from '../src/index.js';
+import { HERO_ID, need, openHero, rejection } from './helpers.js';
+
+describe('frame.duplicate', () => {
+  it('rejects bad input', async () => {
+    const { run } = await openHero();
+    const err = await rejection(
+      registry.execute('frame.duplicate', { doc: HERO_ID, animation: { group: 'default' } }, run),
+    );
+    expect(err.code).toBe('BAD_INPUT');
+    expect(err.details.issues).toEqual([{ path: 'frame', message: expect.any(String) as string }]);
+  });
+
+  it('runs its example as one undo step', async () => {
+    const { hero, run } = await openHero();
+    const before = documentHash(hero.store);
+    const out = await registry.execute(
+      'frame.duplicate',
+      need(frameDuplicate.examples[0]).input,
+      run,
+    );
+    expect(out).toEqual({ frameId: expect.any(String) as string, frameIndex: 1, frames: 2 });
+    expect(hero.store.historyInfo().entries.map((e) => e.label)).toEqual(['AI: frame.duplicate']);
+    hero.store.undo();
+    expect(documentHash(hero.store)).toBe(before);
+  });
+
+  it('reports an unknown frame', async () => {
+    const { run } = await openHero();
+    const err = await rejection(
+      registry.execute(
+        'frame.duplicate',
+        { doc: HERO_ID, animation: { group: 'default' }, frame: 5 },
+        run,
+      ),
+    );
+    expect(err).toMatchObject({ code: 'NOT_FOUND', details: { kind: 'frame' } });
+  });
+});
+```
+
+**Special cases**
+
+| Case | What to do |
+| --- | --- |
+| History ops (`doc.undo`, `doc.redo`) | `safety: 'mutate'`, `transaction: false`; the handler calls `ctx.document.store.undo()` / `redo()` (they return `undefined` when there is nothing to do). |
+| `destructive` | Nothing extra: the registry adds `confirm` to the schemas and refuses with `CONFIRM_REQUIRED`. Examples omit `confirm` (the docs add it). |
+| `io` | `handler: async (ctx, input) => ...`; paths through `ctx.host.resolvePath(input.path)`, bytes through `ctx.host.fs`, time through `ctx.host.clock`; change the document at most once with `ctx.transact((tx) => ...)`, as the last step. |
+| Ops without a document (`doc.create`, `doc.list`) | No `doc` field (only `read` and `io` may omit it); use `ctx.host` (`adopt`, `list`, `get`). |
+| MCP name from spec 8 differs | `mcp: { name: 'undo' }` (also `redo`, `lint`, `import_file`, `export`); `cli: { command: ['lint'] }` for a CLI name; `hidden: true` to leave a transport out. |
+| Big outputs (grids, renders) | Keep JSON compact; images are T5.3's business (MCP image content), not base64 in the output. |
 
 ## Add a lint rule
 Rules live in `packages/lint/src/rules.ts`; `lint(view, opts)` runs them in `RULE_IDS` order.

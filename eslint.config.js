@@ -1,7 +1,7 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 
-const PURE = ['schema', 'color', 'raster', 'rig', 'convert', 'core', 'png'];
+const PURE = ['schema', 'color', 'raster', 'rig', 'convert', 'core', 'png', 'ops'];
 
 const nodeBuiltins = [
   'node:*',

@@ -450,6 +450,40 @@ describe('validate()', () => {
     tx.cancel();
   });
 
+  it('restricts the pixel content checks to options.images, leaving the rest alone', () => {
+    const doc = richDoc();
+    const images = richImages();
+    toIndexed(doc, images, (img) => {
+      img.set(0, 0, 9);
+    });
+    const ids = images.map(([id]) => id);
+    const store = new DocumentStore(doc, { images });
+    const codes = (o?: Parameters<typeof validate>[1]): string[] =>
+      validate(store, o)
+        .map((f) => `${f.code}@${f.path.join('.')}`)
+        .sort();
+    const all = codes();
+    expect(all.some((c) => c.startsWith('INDEX_OUT_OF_RANGE'))).toBe(true);
+    expect(codes({})).toEqual(all);
+
+    const content = (c: string): boolean =>
+      /^(INDEX_OUT_OF_RANGE|TRANSPARENT_INDEX_OPAQUE|IMAGE_KIND_MISMATCH|PALETTE_LOCK_COLOR)/.test(
+        c,
+      );
+    const none = codes({ images: false });
+    expect(none.filter(content)).toEqual([]);
+    expect(none).toEqual(all.filter((c) => !content(c)));
+    expect(codes({ images: new Set() })).toEqual(none);
+
+    const first = ids[0];
+    if (first === undefined) throw new Error('fixture has images');
+    const one = codes({ images: new Set([first]) });
+    expect(one.filter(content)).toEqual(
+      all.filter((c) => content(c) && c.endsWith(`images.${first}`)),
+    );
+    expect(one.filter((c) => !content(c))).toEqual(none);
+  });
+
   it('has a failing fixture for every code', () => {
     expect(CASES.map(([c]) => c).sort()).toEqual([...FINDING_CODES].sort());
   });

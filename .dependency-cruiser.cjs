@@ -13,7 +13,7 @@ const ALLOWED = {
   core: ['schema', 'raster', 'rig'],
   lint: ['core', 'rig'],
   io: ['core', 'convert', 'png', 'schema', 'raster', 'rig'],
-  ops: ['core', 'lint', 'io', 'rig', 'convert'],
+  ops: ['core', 'lint', 'io', 'rig', 'convert', 'schema'],
   server: ['ops'],
   cli: ['server', 'ops'],
 };
