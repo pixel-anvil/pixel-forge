@@ -164,7 +164,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T3.4 | rig: `jointCheck` (implements the T3.0 definition) | sonnet | high | M | T3.0, T3.3 | | ☑ |
 | T3.5 | rig `overlapMask` + core `splitRegion` transaction | sonnet | high | M | T3.4 | ∥ | ☐ |
 | T3.6 | core: derived mirror in `renderFrame`; rig: pose clipboard (mirrored) | sonnet | medium | S | T3.3 | ∥ | ☑ |
-| T3.7 | core: bake | sonnet | medium | S | T3.3 | ∥ | ☐ |
+| T3.7 | core: bake | sonnet | medium | S | T3.3 | ∥ | ☑ |
 | T3.9 | fixtures: synthetic humanoid "hero" (TS doc + `.aseprite` via Lua) | sonnet | medium | M | T3.2, T0.3 | ∥ | ☑ |
 | T3.9b | fixtures: widen hero joint caps until `jointCheck` is clean; regenerate `hero.pxf` with a render cache | sonnet | medium | S | T3.4, T3.3 | ∥ | ☑ |
 | G1 | **Gate: core + rig** | opus | high | — | W1–W3 rig track | | ☐ |
@@ -631,6 +631,9 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 #### T3.7 bake  [sonnet] [S] ∥
 - **Deliverables** — `bakeAnimation(doc, animRef, {mode})`, with overrides merged.
 - **Acceptance** — the baked render equals the rig render for every frame (hash).
+- **Notes (2026-11-01)** — ☑ Sonnet/medium; about 117k tokens. `bakeAnimation(tx, animRef, {mode, name?, rig?})` → `{animationId, layerId, frames, dropped}`; one new pixel layer `baked` at the first part layer's slot holding the export composite (no skin); the baked animation hides all parts with a frame-0 `visible:false` part key.
+  - `new`: fresh ids, group `<group>_baked`, source untouched. `replace`: keeps animation and frame ids (mirrors and their finals stay valid), drops keys/overrides/post-passes (reported), and consumes other exported layers' cels at those frames: T5.2b `rig.bake` confirm text must say so.
+  - Mirrors stay derived (baking a mirror is refused). Identical frames are not linked.
 
 #### T3.9 synthetic hero  [sonnet] [M] ∥
 - **Deliverables** — `fixtures/src/hero.ts`, which builds a 48×48 humanoid side view (parts with joint caps, the template bones, and one variant on the forearm) as a `.pxf`, plus `fixtures/src/aseprite/hero_parts.lua`, which writes the same parts as `fixtures/hero_parts.aseprite` with `part:` layer names.

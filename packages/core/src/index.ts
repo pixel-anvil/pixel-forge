@@ -115,3 +115,5 @@ export type {
   DeleteBoneOptions,
   RigEditReason,
 } from './rig-edit.js';
+export { bakeAnimation } from './bake.js';
+export type { BakeDropped, BakeOptions, BakeReason, BakeResult } from './bake.js';
