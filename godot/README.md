@@ -3,7 +3,7 @@
 Imports pixel-forge `.pxf` files into Godot 4.6 as a `PixelForgeAsset` resource. Contract:
 [`docs/contracts/GODOT_INTEGRATION.md`](../docs/contracts/GODOT_INTEGRATION.md); spec FR-GD-01, 02, 04, 05, 07.
 
-**Status:** importer, asset and helpers (T6.1); driver and adapters (T6.2). The demo and the CI job come with T6.3.
+**Status:** importer, asset and helpers (T6.1); driver and adapters (T6.2); demo and CI job (T6.3).
 
 ## Layout
 
@@ -64,6 +64,21 @@ var hand := driver.marker_metres(&"hand_r")   # metres, y up, from the node orig
   is; for a y-down node set `driver.adapter.offset_y_up = false`, and `driver.adapter.apply_pixel_size = false` to leave
   `pixel_size` alone. Import such an asset with trim off (contract section 8.3).
 - The details and the rules are in the contract, sections 3, 4 and 8.
+
+## Demo
+
+`godot/demo/` is a minimal Godot 4.6 project: `main.gd` loads `walker.pxf` and plays it on a `Sprite2D` with
+`PixelForgeDriver`. Its `addons/pixel_forge` is a symlink to the addon, and `walker.pxf` is a symlink to the test fixture.
+Keys: Left / Right set the mirror, Space cycles the animation groups.
+
+```sh
+GODOT=/path/to/godot godot --path godot/demo              # open the window (or run it from the editor)
+GODOT=/path/to/godot godot --headless --path godot/demo --import
+GODOT=/path/to/godot godot --headless --path godot/demo --quit-after 60   # smoke run, no window
+```
+
+Use the Godot 4.6.1 editor. CI (`godot` job in `.github/workflows/ci.yml`) downloads it and runs the same import
+and smoke run before the GUT suite.
 
 ## Tests
 

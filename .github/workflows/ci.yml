@@ -22,3 +22,45 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm verify
       - run: pnpm fixtures:check
+
+  godot:
+    name: godot (GUT + demo)
+    runs-on: ubuntu-latest
+    env:
+      GODOT_VERSION: 4.6.1-stable
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache Godot editor
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/godot
+          key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
+      - name: Download Godot editor
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/godot"
+          mkdir -p "$dir"
+          curl -fsSL -o "$dir/godot.zip" \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          unzip -q "$dir/godot.zip" -d "$dir"
+          mv "$dir/Godot_v${GODOT_VERSION}_linux.x86_64" "$dir/godot"
+          chmod +x "$dir/godot"
+          rm "$dir/godot.zip"
+      - name: Point GODOT at the editor
+        run: echo "GODOT=$RUNNER_TEMP/godot/godot" >> "$GITHUB_ENV"
+      - name: Show Godot version
+        run: $GODOT --version
+      - name: Demo imports and runs headless
+        run: |
+          set -o pipefail
+          "$GODOT" --headless --path godot/demo --import
+          log="$RUNNER_TEMP/demo.log"
+          "$GODOT" --headless --path godot/demo --quit-after 60 2>&1 | tee "$log"
+          if grep -q "SCRIPT ERROR" "$log"; then
+            echo "demo: script error" >&2
+            exit 1
+          fi
+      - name: GUT tests
+        run: bash godot/test/run_tests.sh

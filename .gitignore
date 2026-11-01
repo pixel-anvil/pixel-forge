@@ -10,6 +10,8 @@ spikes/**/out/
 # Godot test project: written by `godot --import`
 godot/test/.godot/
 godot/test/fixtures/*.import
+godot/demo/.godot/
+godot/demo/*.import
 
 # Claude Code local state (worktrees, settings)
 .claude/

@@ -157,7 +157,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T6.0 | Godot integration contract with the first consumer game (spec addendum) | opus | high | S | T4.2 | | ☑ |
 | T6.1 | Godot: `.pxf` reader + import plugin + test harness + fixture `.pxf` generator | sonnet | high | M | T6.0 | | ☐☑ |
 | T6.2 | Godot: PixelForgeDriver (clock + game-driven playback), adapters, mirroring, markers/events | sonnet | high | M | T6.1 | | ☑ |
-| T6.3 | Godot: demo scene + CI job (ubuntu, 4.6.1 headless) | haiku | low | S | T6.2 | | ☐ |
+| T6.3 | Godot: demo scene + CI job (ubuntu, 4.6.1 headless) | haiku | low | S | T6.2 | | ☑ |
 | D1 | **Early demo**: flat target-move `.pxf` → plays in the first consumer game through the driver (user approval) | orchestrator + sonnet | medium | M | T6.3 | | ☐ |
 | T3.3 | rig: part render pipeline + overrides + staleness; core hook (+ review) | opus | high | M | T3.2, T2.3, T1.7 | ∥ | ☑ |
 | T3.8 | rig: `attributeEdit(render, edited) → overrides` (+ review) | opus | high | M | T3.3 | | ☐☑ |
@@ -554,6 +554,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 #### T6.3 demo + CI  [haiku] [S]
 - **Deliverables** — `godot/demo/` (plays the fixture character), and a CI job on ubuntu with Godot 4.6.1 headless (binary cached) that runs `godot/test/run_tests.sh`.
 - **Acceptance** — the CI job is green.
+- **Notes (2026-11-01)** — ☑ Haiku/low; about 67k tokens. `godot/demo/` (Sprite2D + `PixelForgeDriver` playing `walker.pxf`; Left/Right mirror, Space cycles animations; the addon and fixture are symlinked). CI job `godot` on ubuntu: cached 4.6.1 editor, demo import plus a 60-frame smoke run (fails on SCRIPT ERROR), then GUT.
 
 #### D1 Early demo: the flat target move in the game  [orchestrator + sonnet]
 - **Ask the user first.**
