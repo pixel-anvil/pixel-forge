@@ -2,9 +2,9 @@
  * The `FileSystem` and `Clock` ports (spec 6.8) plus an in-memory fake for tests.
  *
  * `io` never touches the disk itself: `saveAtomic`, `pack` and `unpack` take a {@link FileSystem}.
- * The production Node implementation belongs to `server` (T5.4); a minimal adapter for the CLI and
- * for tests lives in the separate entry point `@pixel-forge/io/node`, so this pure entry point never
- * imports a Node built-in. Paths are POSIX style (`/` separators); an adapter maps them if needed.
+ * The Node implementation, used by `server`, the CLI and tests, lives in the separate entry point
+ * `@pixel-forge/io/node`, so this pure entry point never imports a Node built-in. Paths are POSIX
+ * style (`/` separators); an adapter maps them if needed.
  * @packageDocumentation
  */
 

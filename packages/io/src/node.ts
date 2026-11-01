@@ -1,8 +1,8 @@
 /**
- * `@pixel-forge/io/node`: a minimal Node implementation of the {@link FileSystem} and {@link Clock}
- * ports, for the CLI and for tests. It is a separate entry point so that the main entry point of
+ * `@pixel-forge/io/node`: the Node implementation of the {@link FileSystem} and {@link Clock} ports,
+ * for `server`, the CLI and tests. It is a separate entry point so that the main entry point of
  * `io` stays free of Node built-ins (eslint and dependency-cruiser allow `node:` imports in this
- * file only). The full server-side implementation (workspace roots, lockfiles) is T5.4's.
+ * file only). Workspace roots and lockfiles are in `server`.
  * @packageDocumentation
  */
 import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';

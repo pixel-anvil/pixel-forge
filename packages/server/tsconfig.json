@@ -3,13 +3,17 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist",
-    "tsBuildInfoFile": "dist/.tsbuildinfo"
+    "tsBuildInfoFile": "dist/.tsbuildinfo",
+    "types": ["node"]
   },
   "include": ["src"],
   "exclude": ["dist"],
   "references": [
     {
       "path": "../ops"
+    },
+    {
+      "path": "../io"
     }
   ]
 }

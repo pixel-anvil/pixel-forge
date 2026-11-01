@@ -176,7 +176,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T5.2a | ops (no logic, from table) | haiku | medium | S | T5.1 | ∥ | ☑ |
 | T5.2b | ops with logic + P-06 ops | sonnet | medium | M | T5.1 | ∥ | ☐ |
 | T5.3 | ops: text grid read/write + render/contact sheet with overlays | sonnet | high | M | T5.1, T3.8, T4.3 | ∥ | ☐ |
-| T5.4 | server: DocumentHost, lockfiles, discovery, workspace roots | sonnet | high | M | T5.1 | ∥ | ☐ |
+| T5.4 | server: DocumentHost, lockfiles, discovery, workspace roots | sonnet | high | M | T5.1 | ∥ | ☑ |
 | T5.5 | MCP stdio server | sonnet | high | M | T5.2a, T5.2b, T5.3, T5.4 | | ☐ |
 | T5.6a | CLI shell + `check` harness + `tsup` bundle + `pf` on PATH | sonnet | medium | M | T5.5 | | ☐ |
 | T5.6b | CLI subcommands from registry metadata (+ override import/list/resolve, `pf godot install`) | haiku | medium | S | T5.6a | ∥ | ☐ |
@@ -761,6 +761,8 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - **two real processes** (via `execa`): the second gets `DOC_LOCKED` with the owner's pid;
   - a stale lock is reclaimed;
   - a path outside the roots is rejected.
+- **Notes (2026-11-01)** — ☑ Sonnet/high; about 135k tokens. `createDocumentHost` wraps the memory host and adds lockfiles (temp file + `link()`; stale locks reclaimed by rename-aside, 6 real processes gave one winner), `server.json` helpers (0600) and `resolveWorkspaceRoots` (explicit, then `PF_WORKSPACE_ROOTS`, then cwd). `resolvePath` walks symlinks itself, so dangling links cannot escape, and returns the canonical path: two names of one file are one document, and echoed paths may differ from typed ones.
+  - `server` may import `io` (Node ports); spec §6.2 updated. A lock from another hostname is never reclaimed (SRV-01). No signal handlers: `pf` must call `dispose()` on SIGINT/SIGTERM (T5.6a). `OpHost.rebind` was added before T5.2b/T5.4 started.
 
 #### T5.5 MCP stdio server  [sonnet] [M]
 - **Spec** — FR-AI-10–15, spec §8 M1a list.

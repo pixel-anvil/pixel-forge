@@ -14,7 +14,7 @@ const ALLOWED = {
   lint: ['core', 'rig'],
   io: ['core', 'convert', 'png', 'schema', 'raster', 'rig'],
   ops: ['core', 'lint', 'io', 'rig', 'convert', 'schema'],
-  server: ['ops'],
+  server: ['ops', 'io'], // io: the Node FileSystem/Clock (`@pixel-forge/io/node`)
   cli: ['server', 'ops'],
 };
 const ALL = Object.keys(ALLOWED);

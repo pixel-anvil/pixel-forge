@@ -351,7 +351,7 @@ schema   ← color ← raster ← rig ─┐
 | `lint` | Findings: palette, orphans, joints, stale overrides, rotation residual, opacity | core, rig |
 | `io` | `.pxf` read/write + migrations + render cache, PNG/GIF/JPEG/WebP codecs, spritesheet JSON, `.aseprite` import (+ re-import) | core, convert (for import remaps), png, schema, raster, rig (part-layer names for import) |
 | `ops` | Op registry, definitions, handlers, error types, generators (MCP tool JSON, CLI, docs) | core, lint, io, rig, convert, schema (reference and value schemas for op inputs, T5.1) |
-| `server` | DocumentHost, lockfiles and discovery, WS sync, HTTP, MCP transports, providers, keychain, workspace roots | ops |
+| `server` | DocumentHost, lockfiles and discovery, WS sync, HTTP, MCP transports, providers, keychain, workspace roots | ops, io (Node `FileSystem`/`Clock` from `@pixel-forge/io/node`) |
 | `cli` | `pf` binary: `serve`, `mcp`, `check` (harness), `convert`, `render`, `export`, `lint`, `override import`, `pack/unpack` | server, ops |
 | `editor` [M2] | React UI | ops (types), core (read-model), raster |
 | `godot/addons/pixel_forge` | GDScript importer, driver, adapters, GUT tests | (reads `.pxf` render cache) |
