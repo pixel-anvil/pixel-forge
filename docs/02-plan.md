@@ -158,7 +158,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T6.1 | Godot: `.pxf` reader + import plugin + test harness + fixture `.pxf` generator | sonnet | high | M | T6.0 | | ☐☑ |
 | T6.2 | Godot: PixelForgeDriver (clock + game-driven playback), adapters, mirroring, markers/events | sonnet | high | M | T6.1 | | ☑ |
 | T6.3 | Godot: demo scene + CI job (ubuntu, 4.6.1 headless) | haiku | low | S | T6.2 | | ☑ |
-| D1 | **Early demo**: flat target-move `.pxf` → plays in the first consumer game through the driver (user approval) | orchestrator + sonnet | medium | M | T6.3 | | ☐ |
+| D1 | **Early demo**: flat target-move `.pxf` → plays in the first consumer game through the driver (user approval) | orchestrator + sonnet | medium | M | T6.3 | | ☑ |
 | T3.3 | rig: part render pipeline + overrides + staleness; core hook (+ review) | opus | high | M | T3.2, T2.3, T1.7 | ∥ | ☑ |
 | T3.8 | rig: `attributeEdit(render, edited) → overrides` (+ review) | opus | high | M | T3.3 | | ☐☑ |
 | T3.4 | rig: `jointCheck` (implements the T3.0 definition) | sonnet | high | M | T3.0, T3.3 | | ☑ |
@@ -566,6 +566,10 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - runs the game's test runner;
   - records a screenshot or GIF.
 - **Acceptance** — the user approves the demo, which should look identical to the current art. Mismatches go to KNOWN_ISSUES.
+- **Notes (2026-11-01)** — ☑ **Approved by the user.** Generic builder `scripts/demo/flat-move.ts` (private config and output in `~/pf-work/`); game side on a local demo branch in a separate worktree (uncommitted, not pushed; details in GAME_NOTES / `~/pf-work/d1/`).
+  - The `.pxf` frames equal the game's sheets (0 px). The first capture showed the contract's half-pixel origin point: the sprite 0.5 px sideways, the prop 0.5 px low, so the jump apex was 2.3 cm higher. Fixed with the driver option `pixel_edge_origin` (contract §6.3); the game reads markers through it.
+  - After the fix, the old and new paths match except small in-air differences (mostly ≤ 50 px per frame) and one landing frame shown 16.7 ms early (rounding): GD-02. Game tests pass on an idle Mac; the earlier physics-test failures were CPU load from parallel agents.
+  - Cost: script agent about 110k, game agent about 216k (Sonnet); the fix was done by the orchestrator with the user running tests and captures by hand.
 
 ### Wave 3b — Rig track
 
