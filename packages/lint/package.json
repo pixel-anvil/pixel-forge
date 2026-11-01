@@ -21,5 +21,10 @@
   "dependencies": {
     "@pixel-forge/core": "workspace:*",
     "@pixel-forge/rig": "workspace:*"
+  },
+  "devDependencies": {
+    "@pixel-forge/raster": "workspace:*",
+    "@pixel-forge/schema": "workspace:*",
+    "@pixel-forge/testkit": "workspace:*"
   }
 }

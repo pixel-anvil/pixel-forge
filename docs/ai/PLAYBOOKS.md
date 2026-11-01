@@ -30,7 +30,13 @@ store.transact('Set duration', (tx) => { setFrameDuration(tx, animId, frameId, 1
 Filled in by card T5.1.
 
 ## Add a lint rule
-Filled in by card T4.1.
+Rules live in `packages/lint/src/rules.ts`; `lint(view, opts)` runs them in `RULE_IDS` order.
+1. Add the id to `RULE_IDS` in `packages/lint/src/types.ts` (`area.name`; the position fixes the report order).
+2. In `rules.ts` write `const myRule: LintRule = { id, severity, summary, run(ctx) { ... } }` and add it to `ALL`. `run` returns `LintFinding[]` in document order (animation, frame, skin, then pixel y then x) and must be a pure function of `ctx`.
+3. Use the context: `ctx.frames()` / `ctx.skins()` for what to check, `ctx.render(frame, skin)` for the (memoised) render output (it already uses `createRigRenderer`, and a failing render is recorded as `lint.renderError`, so return nothing for `undefined`), `ctx.doc` / `ctx.view` for the document, `ctx.cap(pixels)` to cap pixel lists. Rules on pixels check the render output, never the layers (invariant I2).
+4. A finding is `{rule, severity, location, message, data}`: `location` names the layer, animation, frame, pixel or override id; `data` is JSON for machines. Do not hide a different failure inside an existing rule; give it its own id (see `rig.overrideError`).
+5. Tests in `packages/lint/test/lint.test.ts`: one fixture that triggers the rule and one that does not (`test/fixtures.ts` builds small documents), plus `enable`/`disable` behaviour if the rule is special.
+6. Document the rule and its `data` keys in `packages/lint/README.md`, and add a changeset.
 
 ## Add a golden / ASCII test
 Prefer a hand-written ASCII expectation; use a golden only when the image is too big to write by hand.

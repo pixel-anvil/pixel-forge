@@ -279,6 +279,16 @@ importers:
       '@pixel-forge/rig':
         specifier: workspace:*
         version: link:../rig
+    devDependencies:
+      '@pixel-forge/raster':
+        specifier: workspace:*
+        version: link:../raster
+      '@pixel-forge/schema':
+        specifier: workspace:*
+        version: link:../schema
+      '@pixel-forge/testkit':
+        specifier: workspace:*
+        version: link:../testkit
 
   packages/ops:
     dependencies:

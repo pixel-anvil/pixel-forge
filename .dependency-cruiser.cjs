@@ -18,6 +18,8 @@ const ALLOWED = {
   cli: ['server', 'ops'],
 };
 const ALL = Object.keys(ALLOWED);
+// Extra edges for test files only: lint tests build documents and images (schema ids, raster images).
+const TEST_EXTRA = { lint: ['schema', 'raster'] };
 
 // Matches a package whether resolved to its folder, through node_modules, or left unresolved.
 const target = (names) =>
@@ -40,7 +42,11 @@ const forbiddenEdges = ALL.flatMap((pkg) => {
       comment,
       severity: 'error',
       from: { path: `^packages/${pkg}/test/` },
-      to: { path: target(forbidden.filter((o) => o !== 'testkit')) },
+      to: {
+        path: target(
+          forbidden.filter((o) => o !== 'testkit' && !(TEST_EXTRA[pkg] ?? []).includes(o)),
+        ),
+      },
     },
   ];
 });

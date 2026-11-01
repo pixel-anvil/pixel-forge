@@ -171,7 +171,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T4.6 | fixtures: synthetic `.aseprite` files via Aseprite Lua | sonnet | medium | S | T0.3 | ∥ | ☑ |
 | T4.4 | io: `.aseprite` binary parser (Aseprite CLI as oracle) | sonnet | high | M | T4.6 | |☑ |
 | T4.5 | io: `.aseprite` → document mapping + in-place re-import (explicit rules) | sonnet | high | M | T4.4, T4.2 | ∥ | ☑ |
-| T4.1 | lint: rules + structured findings | sonnet | medium | M | T3.4, T3.3 | ∥ | ☐ |
+| T4.1 | lint: rules + structured findings | sonnet | medium | M | T3.4, T3.3 | ∥ | ☑ |
 | T5.1 | ops: registry framework + generators + 3 exemplar ops (+ review) | opus | high | M | T4.1, T4.2 | | ☐ |
 | T5.2a | ops (no logic, from table) | haiku | medium | S | T5.1 | ∥ | ☐ |
 | T5.2b | ops with logic + P-06 ops | sonnet | medium | M | T5.1 | ∥ | ☐ |
@@ -702,6 +702,10 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 
   Plus the PLAYBOOKS entry "add a lint rule".
 - **Acceptance** — one fixture per rule that triggers it and one that doesn't.
+- **Notes (2026-11-01)** — ☑ Sonnet/medium; about 148k tokens; resumed once after the weekly limit. `lint(doc, opts)` with options `enable`/`disable`/`animations`/`skins`/`maxPixels`; findings sorted by rule id, then document order; severities include `info`.
+  - `palette.offPalette`: RGB of alpha>0 render pixels, one finding per frame and skin; a palette skin is checked against its own palette only. `pixels.orphan` = an opaque pixel with no opaque 8-neighbour (`info`).
+  - `rig.jointGap` per view (first direction, default sweep). CORE-03: `'error'` statuses become `rig.overrideError`. Extra rule `lint.renderError`: a frame that fails to render is reported, not thrown. `rig.rotationResidual` is a stub (M1b, FR-RIG-14).
+  - The depcruise `TEST_EXTRA` lets lint tests import schema and raster (src stays core+rig). Fixtures are hand-built. The jointGap test pins only part of the gap set.
 
 #### T5.1 ops framework  [opus] [M]
 - **Spec** — §6.3, FR-AI-01/14.
