@@ -18,6 +18,7 @@ Headless core shared by a CLI (`pf`), an MCP server, a later web editor and a Go
 - `pnpm verify` passes: lint, typecheck, test, depcruise, `gen --check`.
 - Tests written alongside or before logic; coverage of the touched core package stays at or above 85%.
 - No `any`, no `Math.random`, no `Date.now()` in pure packages.
+- No duplicate helpers: search the target package and its dependencies before writing one, and reuse or extend what exists. If the helper looks useful to another card, name it in your report.
 - Public API has TSDoc; update docs the change made stale (README, contracts, KNOWN_ISSUES, PLAYBOOKS).
 - User-visible change adds a changeset (`pnpm changeset`).
 

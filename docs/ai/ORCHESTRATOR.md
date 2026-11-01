@@ -37,6 +37,7 @@ The orchestrator cannot read its token count, so it counts work instead.
 5. **Commit only if verify passes**, in one `if` (never chain the commit after an `echo`):
    `if pnpm -s verify >/dev/null 2>&1; then git commit … && git push; else echo VERIFY_FAILED; fi`
    Then `git worktree remove --force <wt>` and `git branch -D worktree-<name>`.
+   **Parallel cards cannot see each other's code.** Before dispatching two cards in one package, name in both briefs any helper they will both need and give it to one card, or commit it first (as `OpHost.rebind` was). When integrating the second card, list its new non-op files and exports, and merge any that overlap the first card's before committing.
 6. **Record**: tick the board row, add card notes (≤ 6 lines: what, key decisions, cost) and update STATUS.
 7. **Opus cards T3.3, T3.8 and T5.1**: run the `code-review` skill (high) on the staged diff, then dispatch a Sonnet/high fix agent with the findings. Accept or reject each finding explicitly.
 
