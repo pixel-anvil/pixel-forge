@@ -3,7 +3,7 @@
  * edit becomes override(s) through `attributeEdit`; on a flat frame it writes one pixel layer's cel.
  * @packageDocumentation
  */
-import { attributeEditTxReport, referencedImages } from '@pixel-forge/core';
+import { referencedImages } from '@pixel-forge/core';
 import { IndexedImage, TiledImage } from '@pixel-forge/raster';
 import type { Rgba } from '@pixel-forge/raster';
 import type { Document, LayerId } from '@pixel-forge/schema';
@@ -17,7 +17,7 @@ import {
   transparentIndexOf,
 } from '../cel.js';
 import { defineOp } from '../define.js';
-import { partRenderer } from '../part-renderer.js';
+import { attributeFrameEdit, sameColor } from '../frame-edit.js';
 import { OpError } from '../errors.js';
 import type { InputIssue } from '../errors.js';
 import {
@@ -47,9 +47,6 @@ import type { ReadonlyDocument } from '../refs.js';
 type Cell = 'keep' | Rgba;
 
 const TRANSPARENT: Rgba = [0, 0, 0, 0];
-
-const sameColor = (a: Rgba, b: Rgba): boolean =>
-  (a[3] === 0 && b[3] === 0) || (a[0] === b[0] && a[1] === b[1] && a[2] === b[2] && a[3] === b[3]);
 
 function badGrid(message: string, issues: InputIssue[]): OpError {
   return new OpError('BAD_INPUT', message, { issues });
@@ -282,20 +279,8 @@ export const pixelsWriteGrid = defineOp({
         target: 'overrides' as const,
       };
       if (changed === 0) return { ...base, changed, overrides: [], newlyStale: [] };
-      const rig = partRenderer(ctx);
-      const report = attributeEditTxReport(
-        ctx.tx,
-        input.animation,
-        frameIndex,
-        edited,
-        rig === undefined ? {} : { rig },
-      );
-      return {
-        ...base,
-        changed,
-        overrides: [...report.ids],
-        newlyStale: report.newlyStale.map((s) => s.overrideId),
-      };
+      const result = attributeFrameEdit(ctx, ctx.tx, input.animation, frameIndex, edited);
+      return { ...base, changed, ...result };
     }
 
     // ---- flat frame: one pixel layer's cel ---------------------------------------------------

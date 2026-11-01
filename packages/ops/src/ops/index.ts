@@ -15,7 +15,9 @@ import { frameSetMeta } from './frame-set-meta.js';
 import { ioExport } from './io-export.js';
 import { ioImport } from './io-import.js';
 import { layerUpdate } from './layer-update.js';
+import { overrideImport } from './override-import.js';
 import { overrideList } from './override-list.js';
+import { pxfPack, pxfUnpack } from './pxf-pack.js';
 import { overrideResolve } from './override-resolve.js';
 import { partPaintOverlap } from './part-paint-overlap.js';
 import { partSplit } from './part-split.js';
@@ -50,7 +52,9 @@ export { frameSetMeta } from './frame-set-meta.js';
 export { ioExport } from './io-export.js';
 export { CellSpec, MAX_CELLS, expandCells, ioImport } from './io-import.js';
 export { layerUpdate } from './layer-update.js';
+export { overrideImport } from './override-import.js';
 export { overrideList } from './override-list.js';
+export { pxfPack, pxfUnpack } from './pxf-pack.js';
 export { overrideResolve } from './override-resolve.js';
 export { partPaintOverlap } from './part-paint-overlap.js';
 export { SplitSelectionInput, partSplit } from './part-split.js';
@@ -87,8 +91,11 @@ export const ALL_OPS: readonly AnyOp[] = [
   ioExport,
   ioImport,
   layerUpdate,
+  overrideImport,
   overrideList,
   overrideResolve,
+  pxfPack,
+  pxfUnpack,
   partPaintOverlap,
   partSplit,
   rigBake,

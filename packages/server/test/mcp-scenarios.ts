@@ -141,6 +141,25 @@ export const SCENARIOS: Record<string, Scenario> = {
     entry: 'one',
   },
   lint: { base: 'hero', args: ({ doc }) => ({ doc }), entry: READ },
+  override_import: {
+    base: 'hero',
+    setup: async (f, doc) => {
+      // the touched-up frame as a PNG: paint it, export it, then undo the paint so the import redoes it
+      await f.call('pixels_write_grid', {
+        doc,
+        animation: frame0,
+        frame: 0,
+        x: 26,
+        y: 4,
+        rows: ['21'],
+        legend: { '1': '#e8be96', '2': '#1e1e28' },
+      });
+      await f.call('export', { doc, path: `${f.root}/edited.png`, animations: [frame0] });
+      await f.call('undo', { doc });
+    },
+    args: ({ doc, root }) => ({ doc, animation: frame0, frame: 0, file: `${root}/edited.png` }),
+    entry: 'one',
+  },
   override_list: { base: 'hero', args: ({ doc }) => ({ doc }), entry: READ },
   override_resolve: {
     base: 'hero',
@@ -197,6 +216,19 @@ export const SCENARIOS: Record<string, Scenario> = {
       legend: { '1': '#e8be96', '2': '#1e1e28' },
     }),
     entry: 'one',
+  },
+  pxf_pack: {
+    base: 'none',
+    setup: async (f) => {
+      await f.call('pxf_unpack', { file: f.hero, dir: `${f.root}/hero.pxfd` });
+    },
+    args: ({ root }) => ({ dir: `${root}/hero.pxfd`, file: `${root}/hero-packed.pxf` }),
+    entry: { none: 'writes a file, opens no document' },
+  },
+  pxf_unpack: {
+    base: 'none',
+    args: ({ root }) => ({ file: `${root}/hero.pxf`, dir: `${root}/hero.pxfd` }),
+    entry: { none: 'writes a folder, opens no document' },
   },
   redo: {
     base: 'hero',

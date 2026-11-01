@@ -4,6 +4,7 @@ import type { OpRegistry } from '@pixel-forge/ops';
 import { runCheck } from './check.js';
 import type { CheckFlags } from './check.js';
 import { UsageError, resolveEnv } from './env.js';
+import { runGodotInstall } from './godot-install.js';
 import type { CliEnv } from './env.js';
 import { homeOption, rootOption } from './host.js';
 import { runMcp } from './mcp.js';
@@ -59,6 +60,16 @@ export function createProgram(ctx: WiringContext, registry: OpRegistry = builtin
     .addOption(homeOption())
     .action(async (flags: CheckFlags) => {
       ctx.exitCode = await runCheck(env, flags);
+    });
+
+  program
+    .command('godot')
+    .description('Godot project helpers.')
+    .command('install')
+    .description('Copy the pixel-forge addon into <res-dir>/addons/pixel_forge.')
+    .argument('<res-dir>', 'The Godot project folder (it holds project.godot).')
+    .action((resDir: string) => {
+      ctx.exitCode = runGodotInstall(env, resDir);
     });
 
   addRegistryCommands(program, ctx, registry);

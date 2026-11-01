@@ -748,6 +748,42 @@
       ]
     },
     {
+      "op": "override.import",
+      "command": ["override", "import"],
+      "summary": "Import an edited PNG of a rig frame: the pixels that differ from the render become overrides.",
+      "safety": "io",
+      "options": [
+        {
+          "name": "doc",
+          "flag": "--doc",
+          "kind": "string",
+          "required": true,
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        },
+        {
+          "name": "animation",
+          "flag": "--animation",
+          "kind": "json",
+          "required": true,
+          "description": "Animation: {\"group\": \"run\", \"direction\": \"side\"} ({\"group\": \"idle\"} for an undirected one) or {\"id\": \"anm_...\"}."
+        },
+        {
+          "name": "frame",
+          "flag": "--frame",
+          "kind": "json",
+          "required": true,
+          "description": "Frame: 0-based index or frame id (\"frm_...\")."
+        },
+        {
+          "name": "file",
+          "flag": "--file",
+          "kind": "string",
+          "required": true,
+          "description": "The edited PNG (absolute, inside the workspace roots), canvas size, scale 1."
+        }
+      ]
+    },
+    {
       "op": "override.list",
       "command": ["override", "list"],
       "summary": "List overrides: stale ones (art under them changed) and ones that fail to render, apart.",
@@ -1052,6 +1088,57 @@
           "kind": "json",
           "required": true,
           "description": "Symbol (one of 0-9A-Za-z) to colour \"#rrggbb\" or \"#rrggbbaa\". Only symbols used in `rows` need an entry."
+        }
+      ]
+    },
+    {
+      "op": "pxf.pack",
+      "command": ["pack"],
+      "summary": "Build a .pxf from a .pxfd folder (the inverse of pxf_unpack).",
+      "safety": "io",
+      "options": [
+        {
+          "name": "dir",
+          "flag": "--dir",
+          "kind": "string",
+          "required": true,
+          "description": "The .pxfd folder (absolute, inside the workspace roots)."
+        },
+        {
+          "name": "file",
+          "flag": "--file",
+          "kind": "string",
+          "required": false,
+          "description": "The .pxf to write, named *.pxf (default: beside the folder)."
+        }
+      ]
+    },
+    {
+      "op": "pxf.unpack",
+      "command": ["unpack"],
+      "summary": "Expand a .pxf into a .pxfd folder (manifest, document, images, render cache).",
+      "safety": "io",
+      "options": [
+        {
+          "name": "file",
+          "flag": "--file",
+          "kind": "string",
+          "required": true,
+          "description": "The .pxf to expand (absolute, inside the workspace roots)."
+        },
+        {
+          "name": "dir",
+          "flag": "--dir",
+          "kind": "string",
+          "required": false,
+          "description": "Folder to create, named *.pxfd (default: beside the file)."
+        },
+        {
+          "name": "overwrite",
+          "flag": "--overwrite",
+          "kind": "boolean",
+          "required": false,
+          "description": "Replace an existing folder (default false)."
         }
       ]
     },

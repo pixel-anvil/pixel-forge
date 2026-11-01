@@ -5,7 +5,13 @@ import { join } from 'node:path';
 import { Command } from 'commander';
 import { cliMetadata, registry } from '@pixel-forge/ops';
 import { describe, expect, it } from 'vitest';
-import { addRegistryCommands, createProgram, optionFor, resolveEnv } from '../src/index.js';
+import {
+  addRegistryCommands,
+  createProgram,
+  friendlyFor,
+  optionFor,
+  resolveEnv,
+} from '../src/index.js';
 import { json, pf, tempDir, workspace } from './helpers.js';
 
 /** Every command path under `command`, as "a b". */
@@ -29,9 +35,13 @@ describe('registry wiring', () => {
         if (next === undefined) throw new Error(`${spec.op}: no command ${word}`);
         at = next;
       }
+      // A hand-named command (friendly-commands.ts) takes some fields as positional arguments.
+      const positional = friendlyFor(spec.op)?.positionals ?? [];
+      expect(at.registeredArguments.length, spec.op).toBe(positional.length);
       for (const o of spec.options) {
+        const asArgument = positional.some((p) => p.field === o.name);
         expect(
-          at.options.some((x) => x.long === o.flag),
+          asArgument || at.options.some((x) => x.long === o.flag),
           `${spec.op} ${o.flag}`,
         ).toBe(true);
       }
@@ -266,7 +276,6 @@ describe('image output', () => {
   const frame = [
     'render',
     'frame',
-    '--doc',
     'hero.pxf',
     '--animation',
     '{"group":"default"}',

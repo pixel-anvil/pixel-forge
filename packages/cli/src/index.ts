@@ -14,6 +14,9 @@ export {
   resolveRefs,
 } from './check-script.js';
 export type { StepOutputs } from './check-script.js';
+export { FRIENDLY, friendlyFor, friendlyValue } from './friendly-commands.js';
+export type { FriendlySpec, Positional } from './friendly-commands.js';
+export { findAddonSource, pluginVersion, runGodotInstall } from './godot-install.js';
 export { runMcp } from './mcp.js';
 export type { McpFlags } from './mcp.js';
 export { addOpCommand, addRegistryCommands, optionFor, runOpCommand } from './registry-commands.js';

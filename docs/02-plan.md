@@ -179,7 +179,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T5.4 | server: DocumentHost, lockfiles, discovery, workspace roots | sonnet | high | M | T5.1 | ∥ | ☑ |
 | T5.5 | MCP stdio server | sonnet | high | M | T5.2a, T5.2b, T5.3, T5.4 | | ☑ |
 | T5.6a | CLI shell + `check` harness + `tsup` bundle + `pf` on PATH | sonnet | medium | M | T5.5 | | ☑ |
-| T5.6b | CLI subcommands from registry metadata (+ override import/list/resolve, `pf godot install`) | haiku | medium | S | T5.6a | ∥ | ☐ |
+| T5.6b | CLI subcommands from registry metadata (+ override import/list/resolve, `pf godot install`) | sonnet | medium | S | T5.6a | ∥ | ☑ |
 | T5.7 | Claude Code setup guide + `.mcp.json` | haiku | low | S | T5.6a | ∥ | ☑ |
 | T5.9 | W-scenario suite (`pf check` scripts for W2, W2b, W3-manual, W4-CLI) in CI | sonnet | medium | M | T5.6b, T3.9 | | ☐ |
 | T5.8 | **MCP dogfood evaluation** (CC0 character + synthetic hero) | opus | high | M | T5.9, T0.5 | | ☐ |
@@ -797,6 +797,10 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 #### T5.6b generated subcommands  [haiku] [S] ∥
 - **Deliverables** — `render`, `export`, `lint`, `override import|list|resolve` (`import` uses `attributeEdit`), `pack`, `unpack`, and `godot install <res-dir>` (copies the addon at the plugin.cfg version).
 - **Acceptance** — CLI end-to-end tests on fixtures. `override import` round trip: edit 3 px, import, and the render equals the edited PNG.
+- **Notes (2026-11-01)** — ☑ Sonnet/medium (raised from Haiku, new ops needed); about 200k tokens, 11 min, plus a first run lost to the usage limit. Orchestrator ran `lint`, `unpack` and `godot install` through the symlinked `pf`. 37 MCP tools now.
+  - New ops: `override.import` (safety `io`, not `mutate`: it reads a PNG, and mutate handlers are sync; one undo step), `pxf.pack`, `pxf.unpack` over the existing `.pxfd` layout (ADR-005). Shared `frame-edit.ts` used by `pixels.writeGrid`.
+  - Friendly commands are positional mappings on the same op path (`FRIENDLY` table), so the generic `--doc` spelling of those ops is gone. `pf render` needs `--animation`.
+  - For T5.9: the base for `override import` must come from `pf export` at scale 1, since `pf render` draws a checkerboard (CLI-05). `godot install` copies the addon baked into the bundle (CLI-06). Pack and unpack work on files, not open documents (CLI-07).
 
 #### T5.7 Claude Code guide  [haiku] [S] ∥
 - **Deliverables** — `docs/guides/claude-code.md` (an `.mcp.json` snippet, the workspace-root flag, example prompts) and `fixtures/pf.mcp.json`.

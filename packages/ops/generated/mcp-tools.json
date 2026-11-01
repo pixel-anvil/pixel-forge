@@ -2216,6 +2216,115 @@
     }
   },
   {
+    "name": "override_import",
+    "title": "override.import",
+    "description": "Import an edited PNG of a rig frame: the pixels that differ from the render become overrides.\n\nTouch-up path: export the frame (export, scale 1, one animation), edit the PNG, import it. The PNG must be canvas-sized; it is compared with the exported render. Each changed stroke becomes a part override when one part owns it, else a final one, and survives re-posing (see override_list, `newlyStale`). Needs a rig; palette-locked and indexed documents only take palette colours.\n\nReads or writes files through the host. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Import the touched-up frame 2 of the run animation): {\"doc\":\"doc_g1ed5q\",\"animation\":{\"group\":\"run\",\"direction\":\"side\"},\"frame\":2,\"file\":\"/work/run-2-edited.png\"}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        },
+        "animation": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "group": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                },
+                "direction": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                }
+              },
+              "required": ["group"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^anm_[0-9a-z]{1,24}$"
+                }
+              },
+              "required": ["id"],
+              "additionalProperties": false
+            }
+          ],
+          "description": "Animation: {\"group\": \"run\", \"direction\": \"side\"} ({\"group\": \"idle\"} for an undirected one) or {\"id\": \"anm_...\"}."
+        },
+        "frame": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^frm_[0-9a-z]{1,24}$"
+            }
+          ],
+          "description": "Frame: 0-based index or frame id (\"frm_...\")."
+        },
+        "file": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The edited PNG (absolute, inside the workspace roots), canvas size, scale 1."
+        }
+      },
+      "required": ["doc", "animation", "frame", "file"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "animation": {
+          "type": "string",
+          "description": "\"group/direction\" of the animation edited."
+        },
+        "frameIndex": {
+          "type": "integer",
+          "description": "0-based index of the frame edited."
+        },
+        "changed": {
+          "type": "integer",
+          "description": "Pixels that differ from the render (0: nothing was written)."
+        },
+        "overrides": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Ids of the overrides created, in order."
+        },
+        "newlyStale": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Ids of earlier overrides this import made stale (still applied)."
+        }
+      },
+      "required": ["animation", "frameIndex", "changed", "overrides", "newlyStale"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "override.import",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "override.import",
+      "pixel-forge/safety": "io"
+    }
+  },
+  {
     "name": "override_list",
     "title": "override.list",
     "description": "List overrides: stale ones (art under them changed) and ones that fail to render, apart.\n\nRead-only; renders the frames that have overrides. \"stale\" overrides are still applied; decide with override_resolve (keep, rebase = accept the current art, discard). \"errors\" cannot be judged because their frame does not render (missing image, no view for the direction...): fix the rig first, they cannot be rebased until it renders. Part overrides of mirror animations are never rendered and not listed.\n\nRead-only. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (List the hero overrides): {\"doc\":\"doc_g1ed5q\"}",
@@ -3319,6 +3428,105 @@
     "_meta": {
       "pixel-forge/op": "pixels.writeGrid",
       "pixel-forge/safety": "mutate"
+    }
+  },
+  {
+    "name": "pxf_pack",
+    "title": "pxf.pack",
+    "description": "Build a .pxf from a .pxfd folder (the inverse of pxf_unpack).\n\nPacks manifest.json, document.json, images/ and render/ of the folder; .gdignore and other files are ignored. The archive is built by the same deterministic writer as a save, atomically, replacing an existing file. file defaults to the folder name with .pxf. Does not open the document: open the result to validate it.\n\nReads or writes files through the host. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Rebuild hero.pxf from its folder): {\"dir\":\"/work/hero.pxfd\"}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "dir": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The .pxfd folder (absolute, inside the workspace roots)."
+        },
+        "file": {
+          "description": "The .pxf to write, named *.pxf (default: beside the folder).",
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": ["dir"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "dir": {
+          "type": "string",
+          "description": "The folder that was read."
+        },
+        "file": {
+          "type": "string",
+          "description": "The .pxf written."
+        }
+      },
+      "required": ["dir", "file"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "pxf.pack",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "pxf.pack",
+      "pixel-forge/safety": "io"
+    }
+  },
+  {
+    "name": "pxf_unpack",
+    "title": "pxf.unpack",
+    "description": "Expand a .pxf into a .pxfd folder (manifest, document, images, render cache).\n\nWrites one file per archive entry (bytes verbatim) plus an empty .gdignore so Godot ignores the PNGs; the folder diffs well in git. dir defaults to the file name with .pxfd. An existing folder is refused unless overwrite is true (only a folder named *.pxfd is ever replaced). Does not open the document; pxf_pack is the inverse.\n\nReads or writes files through the host. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Expand hero.pxf next to itself): {\"file\":\"/work/hero.pxf\"}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The .pxf to expand (absolute, inside the workspace roots)."
+        },
+        "dir": {
+          "description": "Folder to create, named *.pxfd (default: beside the file).",
+          "type": "string",
+          "minLength": 1
+        },
+        "overwrite": {
+          "default": false,
+          "description": "Replace an existing folder (default false).",
+          "type": "boolean"
+        }
+      },
+      "required": ["file"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "The .pxf that was read."
+        },
+        "dir": {
+          "type": "string",
+          "description": "The folder written."
+        }
+      },
+      "required": ["file", "dir"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "pxf.unpack",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "pxf.unpack",
+      "pixel-forge/safety": "io"
     }
   },
   {

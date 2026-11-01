@@ -64,12 +64,15 @@ Every failure is `{"code", "message", "details"}`, identical on every transport.
 | [`io.import`](#ioimport) | io | `import_file` | `pf import` | Import a PNG spritesheet (cells per animation) or an .aseprite file into a document. |
 | [`layer.update`](#layerupdate) | mutate | `layer_update` | `pf layer update` | Rename a layer, or set its visible flag, opacity (0..255) or export flag. |
 | [`lint.run`](#lintrun) | read | `lint` | `pf lint` | Check the document and list findings (palette, orphan pixels, joint gaps, stale overrides, empty frames). |
+| [`override.import`](#overrideimport) | io | `override_import` | `pf override import` | Import an edited PNG of a rig frame: the pixels that differ from the render become overrides. |
 | [`override.list`](#overridelist) | read | `override_list` | `pf override list` | List overrides: stale ones (art under them changed) and ones that fail to render, apart. |
 | [`override.resolve`](#overrideresolve) | mutate | `override_resolve` | `pf override resolve` | Resolve overrides: "keep" them, "rebase" onto the current art, or "discard" them. |
 | [`part.paintOverlap`](#partpaintoverlap) | mutate | `part_paint_overlap` | `pf part paint-overlap` | Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite does not change. |
 | [`part.split`](#partsplit) | mutate | `part_split` | `pf part split` | Split a region (rect, lasso or flood) of a flat layer's cel into a new layer bound to a bone. |
 | [`pixels.readGrid`](#pixelsreadgrid) | read | `pixels_read_grid` | `pf pixels read-grid` | Read a region (at most 64x64 px) of a frame as a text grid: one symbol per pixel, "." transparent, with a legend of the colours present. |
 | [`pixels.writeGrid`](#pixelswritegrid) | mutate | `pixels_write_grid` | `pf pixels write-grid` | Paint a text grid (at most 32x32 px) at (x, y) of a frame; symbols come from "legend". |
+| [`pxf.pack`](#pxfpack) | io | `pxf_pack` | `pf pack` | Build a .pxf from a .pxfd folder (the inverse of pxf_unpack). |
+| [`pxf.unpack`](#pxfunpack) | io | `pxf_unpack` | `pf unpack` | Expand a .pxf into a .pxfd folder (manifest, document, images, render cache). |
 | [`render.contactSheet`](#rendercontactsheet) | read | `render_contact_sheet` | `pf render contact-sheet` | Render the frames of some or all animations as one labelled PNG contact sheet (long edge at most 1568 px), optionally with bone lines and pivot markers. |
 | [`render.frame`](#renderframe) | read | `render_frame` | `pf render frame` | Render one frame to an upscaled PNG on a checkerboard (long edge at most 1568 px), optionally with bone lines and pivot markers. |
 | [`rig.applyTemplate`](#rigapplytemplate) | mutate | `rig_apply_template` | `pf rig apply-template` | Apply a humanoid skeleton template: bones matched by name are reused, missing ones are created. |
@@ -794,6 +797,43 @@ Lint the hero, joint and palette rules only:
 {"doc":"doc_g1ed5q","enable":["rig.jointGap","palette.offPalette"]}
 ```
 
+## override.import
+
+Import an edited PNG of a rig frame: the pixels that differ from the render become overrides.
+
+Touch-up path: export the frame (export, scale 1, one animation), edit the PNG, import it. The PNG must be canvas-sized; it is compared with the exported render. Each changed stroke becomes a part override when one part owns it, else a final one, and survives re-posing (see override_list, `newlyStale`). Needs a rig; palette-locked and indexed documents only take palette colours.
+
+- Safety: `io`
+- MCP tool: `override_import`
+- CLI: `pf override import`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
+| `frame` | integer >= 0 \| string | yes | Frame: 0-based index or frame id ("frm_..."). |
+| `file` | string | yes | The edited PNG (absolute, inside the workspace roots), canvas size, scale 1. |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `animation` | string | yes | "group/direction" of the animation edited. |
+| `frameIndex` | integer | yes | 0-based index of the frame edited. |
+| `changed` | integer | yes | Pixels that differ from the render (0: nothing was written). |
+| `overrides` | string[] | yes | Ids of the overrides created, in order. |
+| `newlyStale` | string[] | yes | Ids of earlier overrides this import made stale (still applied). |
+
+### Examples
+
+Import the touched-up frame 2 of the run animation:
+
+```json
+{"doc":"doc_g1ed5q","animation":{"group":"run","direction":"side"},"frame":2,"file":"/work/run-2-edited.png"}
+```
+
 ## override.list
 
 List overrides: stale ones (art under them changed) and ones that fail to render, apart.
@@ -1044,6 +1084,83 @@ Move the hero's eye one pixel left (an override on the head):
 
 ```json
 {"doc":"doc_g1ed5q","animation":{"group":"default"},"frame":0,"x":26,"y":4,"rows":["21"],"legend":{"1":"#e8be96","2":"#1e1e28"}}
+```
+
+## pxf.pack
+
+Build a .pxf from a .pxfd folder (the inverse of pxf_unpack).
+
+Packs manifest.json, document.json, images/ and render/ of the folder; .gdignore and other files are ignored. The archive is built by the same deterministic writer as a save, atomically, replacing an existing file. file defaults to the folder name with .pxf. Does not open the document: open the result to validate it.
+
+- Safety: `io`
+- MCP tool: `pxf_pack`
+- CLI: `pf pack`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `dir` | string | yes | The .pxfd folder (absolute, inside the workspace roots). |
+| `file` | string | no | The .pxf to write, named *.pxf (default: beside the folder). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `dir` | string | yes | The folder that was read. |
+| `file` | string | yes | The .pxf written. |
+
+### Examples
+
+Rebuild hero.pxf from its folder:
+
+```json
+{"dir":"/work/hero.pxfd"}
+```
+
+Output:
+
+```json
+{"dir":"/work/hero.pxfd","file":"/work/hero.pxf"}
+```
+
+## pxf.unpack
+
+Expand a .pxf into a .pxfd folder (manifest, document, images, render cache).
+
+Writes one file per archive entry (bytes verbatim) plus an empty .gdignore so Godot ignores the PNGs; the folder diffs well in git. dir defaults to the file name with .pxfd. An existing folder is refused unless overwrite is true (only a folder named *.pxfd is ever replaced). Does not open the document; pxf_pack is the inverse.
+
+- Safety: `io`
+- MCP tool: `pxf_unpack`
+- CLI: `pf unpack`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `file` | string | yes | The .pxf to expand (absolute, inside the workspace roots). |
+| `dir` | string | no | Folder to create, named *.pxfd (default: beside the file). |
+| `overwrite` | boolean | no | Replace an existing folder (default false). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `file` | string | yes | The .pxf that was read. |
+| `dir` | string | yes | The folder written. |
+
+### Examples
+
+Expand hero.pxf next to itself:
+
+```json
+{"file":"/work/hero.pxf"}
+```
+
+Output:
+
+```json
+{"file":"/work/hero.pxf","dir":"/work/hero.pxfd"}
 ```
 
 ## render.contactSheet

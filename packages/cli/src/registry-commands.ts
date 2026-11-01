@@ -16,6 +16,8 @@ import type { Command } from 'commander';
 import { cliMetadata, registry as builtinRegistry, toJsonSchema } from '@pixel-forge/ops';
 import type { CliCommand, CliOption, OpCallResult, OpHost, OpRegistry } from '@pixel-forge/ops';
 import { writeJson } from './env.js';
+import { friendlyFor, friendlyValue } from './friendly-commands.js';
+import type { FriendlySpec } from './friendly-commands.js';
 import type { CliEnv } from './env.js';
 import { homeOption, openHost, rootOption } from './host.js';
 import type { HostFlags } from './host.js';
@@ -33,7 +35,7 @@ export interface WiringContext {
 const RESERVED_FLAGS: readonly string[] = ['root', 'home', 'save', 'out'];
 
 /** Non-mutating ops that still change their document, so `--save` applies. */
-const SAVES_AFTER: ReadonlySet<string> = new Set(['io.import']);
+const SAVES_AFTER: ReadonlySet<string> = new Set(['io.import', 'override.import']);
 
 const INTEGER = /^-?\d+$/;
 
@@ -136,15 +138,20 @@ function planFor(spec: CliCommand, registry: OpRegistry): OpCommandPlan {
 
 /**
  * Adds one op as a subcommand of `parent`, under the words of `spec.command` (creating the group
- * commands on the way, e.g. `rig` for `rig set-pose`).
+ * commands on the way, e.g. `rig` for `rig set-pose`). `friendly` turns some input fields into
+ * positional arguments (see `friendly-commands.ts`); the default is the op's own friendly spec.
  */
 export function addOpCommand(
   parent: Command,
   ctx: WiringContext,
   spec: CliCommand,
   registry: OpRegistry = builtinRegistry,
+  friendly: FriendlySpec | undefined = friendlyFor(spec.op),
 ): Command {
   const plan = planFor(spec, registry);
+  const positionals = friendly?.positionals ?? [];
+  const positional = new Set(positionals.map((p) => p.field));
+  const relaxed = new Set(friendly?.relax ?? []);
   let at = parent;
   for (const word of spec.command.slice(0, -1)) {
     at =
@@ -155,14 +162,25 @@ export function addOpCommand(
   if (at.commands.some((c) => c.name() === leaf)) {
     throw new Error(`command "${spec.command.join(' ')}" is defined twice`);
   }
-  const command = at.command(leaf).description(spec.summary);
+  const command = at
+    .command(leaf, friendly?.isDefault === true ? { isDefault: true } : undefined)
+    .description(spec.summary);
+  for (const p of positionals) {
+    if (!spec.options.some((o) => o.name === p.field)) {
+      throw new Error(`${spec.op}: positional "${p.name}" fills unknown field "${p.field}"`);
+    }
+    const word = `${p.name}${p.variadic === true ? '...' : ''}`;
+    command.argument(p.optional === true ? `[${word}]` : `<${word}>`, p.description);
+  }
   for (const o of spec.options) {
     if (RESERVED_FLAGS.includes(o.name)) {
       throw new Error(
         `${spec.op}: input field "${o.name}" clashes with the --${o.name} flag of pf`,
       );
     }
-    command.addOption(optionFor(o, o.name === 'doc' && plan.hasDoc));
+    if (positional.has(o.name)) continue;
+    const flag = relaxed.has(o.name) ? { ...o, required: false } : o;
+    command.addOption(optionFor(flag, o.name === 'doc' && plan.hasDoc));
   }
   command.addOption(rootOption());
   command.addOption(homeOption());
@@ -178,8 +196,23 @@ export function addOpCommand(
       new Option('--out <file>', 'PNG file to write the image to.').makeOptionMandatory(),
     );
   }
-  command.action(async () => {
-    ctx.exitCode = await runOpCommand(ctx, plan, registry, command.opts());
+  command.action(async (...received: unknown[]) => {
+    const flags: Record<string, unknown> = { ...command.opts() };
+    positionals.forEach((p, i) => {
+      const value = received[i];
+      if (value !== undefined && !(Array.isArray(value) && value.length === 0)) {
+        flags[p.field] = value;
+      }
+    });
+    if (friendly !== undefined) {
+      for (const [field, value] of Object.entries(friendly.defaults ?? {})) {
+        flags[field] ??= value;
+      }
+      for (const o of spec.options) {
+        if (flags[o.name] !== undefined) flags[o.name] = friendlyValue(o.name, flags[o.name]);
+      }
+    }
+    ctx.exitCode = await runOpCommand(ctx, plan, registry, flags);
   });
   return command;
 }
