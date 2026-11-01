@@ -25,7 +25,7 @@ Start with [AGENTS.md](AGENTS.md) (build/test commands, conventions) and [CONTRI
 
 ## Quick start
 
-Coming in M1a.
+Coming in M1a. To use the MCP server from Claude Code, see [docs/guides/claude-code.md](docs/guides/claude-code.md).
 
 ## Credits
 

@@ -9,6 +9,7 @@ third-party game art. Prettier and ESLint ignore this folder.
 - `frozen/`: files frozen at a schema version (for example `frozen/v1/minimal-document.json`). Never
   regenerated; future migrations must keep them opening.
 - `src/`: the generator scripts for `generated/`.
+- `pf.mcp.json`: a template `.mcp.json` that starts `pf mcp --root .` (the folder Claude Code runs in); copy it to a project root. See `docs/guides/claude-code.md`.
 - `src/godot.ts` writes the Godot importer's test fixtures into `../godot/test/fixtures/` (outside this folder;
   generators may write under `../godot/` only): `walker.pxf` (RGBA; two directions, a mirror, markers, events, root
   motion, trimmed and empty frames, a shared PNG), `skins.pxf` (indexed; a palette skin and a remap skin) and

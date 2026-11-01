@@ -180,7 +180,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T5.5 | MCP stdio server | sonnet | high | M | T5.2a, T5.2b, T5.3, T5.4 | | ☑ |
 | T5.6a | CLI shell + `check` harness + `tsup` bundle + `pf` on PATH | sonnet | medium | M | T5.5 | | ☑ |
 | T5.6b | CLI subcommands from registry metadata (+ override import/list/resolve, `pf godot install`) | haiku | medium | S | T5.6a | ∥ | ☐ |
-| T5.7 | Claude Code setup guide + `.mcp.json` | haiku | low | S | T5.6a | ∥ | ☐ |
+| T5.7 | Claude Code setup guide + `.mcp.json` | haiku | low | S | T5.6a | ∥ | ☑ |
 | T5.9 | W-scenario suite (`pf check` scripts for W2, W2b, W3-manual, W4-CLI) in CI | sonnet | medium | M | T5.6b, T3.9 | | ☐ |
 | T5.8 | **MCP dogfood evaluation** (CC0 character + synthetic hero) | opus | high | M | T5.9, T0.5 | | ☐ |
 | T6.4 | Target-move rebuild from pack art (with the user) | opus orchestrating | high | session | T5.8, D1 | | ☐ |
@@ -801,6 +801,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 #### T5.7 Claude Code guide  [haiku] [S] ∥
 - **Deliverables** — `docs/guides/claude-code.md` (an `.mcp.json` snippet, the workspace-root flag, example prompts) and `fixtures/pf.mcp.json`.
 - **Acceptance** — the orchestrator runs `claude mcp list` with the config and sees `pf` connected.
+- **Notes (2026-11-01)** — ☑ Haiku/low; about 77k tokens, 3 min. The fixture config parses and shows `Pending approval` as a project server; the same command shows `Connected` under local scope. The orchestrator ran a raw `doc_open` and added to the guide that tool paths must be absolute (`BAD_INPUT` otherwise). T5.8 should watch whether that costs the model a retry.
 
 #### T5.9 W-scenario suite  [sonnet] [M]
 - **Deliverables** — `scenarios/*.steps.json` for W2 (`hero_parts.aseprite` + `gappy`/`clean`), W2b, W3-manual (poses are scripted, not from an LLM) and W4-CLI, run by `pnpm scenarios` in CI.
