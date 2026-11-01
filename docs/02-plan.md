@@ -173,7 +173,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T4.5 | io: `.aseprite` → document mapping + in-place re-import (explicit rules) | sonnet | high | M | T4.4, T4.2 | ∥ | ☑ |
 | T4.1 | lint: rules + structured findings | sonnet | medium | M | T3.4, T3.3 | ∥ | ☑ |
 | T5.1 | ops: registry framework + generators + 3 exemplar ops (+ review) | opus | high | M | T4.1, T4.2 | | ☑ |
-| T5.2a | ops (no logic, from table) | haiku | medium | S | T5.1 | ∥ | ☐ |
+| T5.2a | ops (no logic, from table) | haiku | medium | S | T5.1 | ∥ | ☑ |
 | T5.2b | ops with logic + P-06 ops | sonnet | medium | M | T5.1 | ∥ | ☐ |
 | T5.3 | ops: text grid read/write + render/contact sheet with overlays | sonnet | high | M | T5.1, T3.8, T4.3 | ∥ | ☐ |
 | T5.4 | server: DocumentHost, lockfiles, discovery, workspace roots | sonnet | high | M | T5.1 | ∥ | ☐ |
@@ -725,6 +725,8 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 - **Exemplar** — `rig.setPose` plus the PLAYBOOKS recipe.
 - **Ops** — `doc.undo`, `doc.redo`, `frame.add`, `frame.delete`, `frame.duplicate`, `lint.run`, `rig.jointCheck`, `rig.applyTemplate`.
 - **Acceptance** — each op has a schema test and an example test.
+- **Notes (2026-11-01)** — ☑ Haiku/medium; about 181k tokens. 8 ops plus generated outputs; verify passes. `frame.delete` is `mutate` (spec §9.2 asks for confirm only on bake and animation delete); undo/redo with nothing to do return `undone/redone: false`; `rig.applyTemplate` uses `doc.meta.origin`.
+  - Playbook gaps fixed in PLAYBOOKS ("Gotchas"). `lint.run` has no positive-finding example (the hero lints clean).
 
 #### T5.2b ops with logic  [sonnet] [M] ∥
 - **Ops** — `doc.create`, `doc.save` (roots, lock, atomic), `doc.setColorMode`, `anim.create`, `anim.update` (I6), `frame.setMeta`, `layer.update`, `cel.link`, `part.split`, `rig.bindParts`, `rig.editBones`, `rig.setPivot`, `rig.mirrorAnimation`, `rig.bake` (confirm), `override.list`, `override.resolve`, `io.import` (including cell ranges), `io.export`.

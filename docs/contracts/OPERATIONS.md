@@ -45,7 +45,15 @@ Every failure is `{"code", "message", "details"}`, identical on every transport.
 | Op | Safety | MCP tool | CLI | Summary |
 | --- | --- | --- | --- | --- |
 | [`doc.open`](#docopen) | io | `doc_open` | `pf doc open` | Open a .pxf file and return its document id, which every other op takes as "doc". |
+| [`doc.redo`](#docredo) | mutate | `redo` | `pf doc redo` | Redo the newest undone change of the document (one history entry). |
 | [`doc.summary`](#docsummary) | read | `doc_summary` | `pf doc summary` | Summarise an open document: canvas, palette, layers, rig (bones, parts, views) and animations. |
+| [`doc.undo`](#docundo) | mutate | `undo` | `pf doc undo` | Undo the newest applied change of the document (one history entry). |
+| [`frame.add`](#frameadd) | mutate | `frame_add` | `pf frame add` | Insert an empty frame before or after a frame; the new frame gets no bone or part keys. |
+| [`frame.delete`](#framedelete) | mutate | `frame_delete` | `pf frame delete` | Delete one frame with its bone and part keys, cels and overrides; the last frame cannot go. |
+| [`frame.duplicate`](#frameduplicate) | mutate | `frame_duplicate` | `pf frame duplicate` | Duplicate one frame; the copy goes right after it, with linked cels and copied keys. |
+| [`lint.run`](#lintrun) | read | `lint` | `pf lint` | Check the document and list findings (palette, orphan pixels, joint gaps, stale overrides, empty frames). |
+| [`rig.applyTemplate`](#rigapplytemplate) | mutate | `rig_apply_template` | `pf rig apply-template` | Apply a humanoid skeleton template: bones matched by name are reused, missing ones are created. |
+| [`rig.jointCheck`](#rigjointcheck) | read | `rig_joint_check` | `pf rig joint-check` | Sweep each joint of one rig view and report the pixel gaps that open on the outer side of a bend. |
 | [`rig.setPose`](#rigsetpose) | mutate | `rig_set_pose` | `pf rig set-pose` | Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z, visible) on one frame. |
 
 ## doc.open
@@ -86,6 +94,43 @@ Output:
 
 ```json
 {"doc":"doc_g1ed5q","path":"/work/hero.pxf","name":"hero","alreadyOpen":false,"warnings":[]}
+```
+
+## doc.redo
+
+Redo the newest undone change of the document (one history entry).
+
+Re-applies the entry that the last doc.undo reverted. A new change clears the redo entries. Nothing to redo is not an error: redone is false.
+
+- Safety: `mutate` (manages the history itself, no transaction)
+- MCP tool: `redo`
+- CLI: `pf doc redo`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `redone` | boolean | yes | True when an entry was re-applied; false when there was nothing to redo. |
+| `label` | any | yes | Label of the re-applied entry (for example "AI: rig.setPose"); null when nothing was redone. |
+
+### Examples
+
+Redo on a fresh open (nothing to redo):
+
+```json
+{"doc":"doc_g1ed5q"}
+```
+
+Output:
+
+```json
+{"redone":false,"label":null}
 ```
 
 ## doc.summary
@@ -129,6 +174,270 @@ Names in the result (bones, parts, layers, animation group/direction) are what t
 ### Examples
 
 Summarise the hero:
+
+```json
+{"doc":"doc_g1ed5q"}
+```
+
+## doc.undo
+
+Undo the newest applied change of the document (one history entry).
+
+Reverts the last applied history entry, whatever op made it. Nothing to undo is not an error: undone is false. Re-apply with doc.redo.
+
+- Safety: `mutate` (manages the history itself, no transaction)
+- MCP tool: `undo`
+- CLI: `pf doc undo`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `undone` | boolean | yes | True when an entry was reverted; false when there was nothing to undo. |
+| `label` | any | yes | Label of the reverted entry (for example "AI: rig.setPose"); null when nothing was undone. |
+
+### Examples
+
+Undo the last change of the hero (nothing to undo on a fresh open):
+
+```json
+{"doc":"doc_g1ed5q"}
+```
+
+Output:
+
+```json
+{"undone":false,"label":null}
+```
+
+## frame.add
+
+Insert an empty frame before or after a frame; the new frame gets no bone or part keys.
+
+The new frame has no keys, so bones and parts interpolate into it from the neighbouring keys. Cels and overrides are not copied (use frame.duplicate to copy them). Set its keys with rig.setPose.
+
+- Safety: `mutate`
+- MCP tool: `frame_add`
+- CLI: `pf frame add`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
+| `frame` | integer >= 0 \| string | yes | Reference frame: the new frame goes next to it. |
+| `position` | "before" \| "after" | no | "after" (default) inserts behind the reference frame, "before" in front of it. |
+| `durationMs` | integer >= 1 | no | Duration of the new frame in ms (default: the reference frame duration). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `frameId` | string | yes | Id of the new frame. |
+| `frameIndex` | integer | yes | Index of the new frame in the animation. |
+| `frames` | integer | yes | Frame count of the animation afterwards. |
+
+### Examples
+
+Add an empty frame after frame 0 of the hero:
+
+```json
+{"doc":"doc_g1ed5q","animation":{"group":"default"},"frame":0}
+```
+
+Output:
+
+```json
+{"frameId":"frm_j83g8j","frameIndex":1,"frames":2}
+```
+
+## frame.delete
+
+Delete one frame with its bone and part keys, cels and overrides; the last frame cannot go.
+
+Links to the frame cels are materialised first: the other linked frames keep their picture as their own copy. Images nothing references any more are removed. An animation keeps at least one frame.
+
+- Safety: `mutate`
+- MCP tool: `frame_delete`
+- CLI: `pf frame delete`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
+| `frame` | integer >= 0 \| string | yes | Frame: 0-based index or frame id ("frm_..."). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `frameId` | string | yes | Id of the deleted frame. |
+| `frames` | integer | yes | Frame count of the animation afterwards. |
+
+### Examples
+
+Delete frame 1 of the hero (add a second frame first; the hero has one):
+
+```json
+{"doc":"doc_g1ed5q","animation":{"group":"default"},"frame":1}
+```
+
+Output:
+
+```json
+{"frameId":"frm_j83g8j","frames":1}
+```
+
+## frame.duplicate
+
+Duplicate one frame; the copy goes right after it, with linked cels and copied keys.
+
+Cels of the copy link to the source frame (edit one, both change). Bone keys, part keys, markers, events, root motion, duration and overrides are copied.
+
+- Safety: `mutate`
+- MCP tool: `frame_duplicate`
+- CLI: `pf frame duplicate`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
+| `frame` | integer >= 0 \| string | yes | Frame: 0-based index or frame id ("frm_..."). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `frameId` | string | yes | Id of the new frame. |
+| `frameIndex` | integer | yes | Index of the new frame (source index + 1). |
+| `frames` | integer | yes | Frame count of the animation afterwards. |
+
+### Examples
+
+Duplicate frame 0 of the hero:
+
+```json
+{"doc":"doc_g1ed5q","animation":{"group":"default"},"frame":0}
+```
+
+Output:
+
+```json
+{"frameId":"frm_j83g8j","frameIndex":1,"frames":2}
+```
+
+## lint.run
+
+Check the document and list findings (palette, orphan pixels, joint gaps, stale overrides, empty frames).
+
+Read-only. Frames are rendered and checked; findings come sorted by rule, then document order. Narrow the check with enable, disable, animations or skins. Severity "error" means an invariant is broken; fix warnings before a delivery.
+
+- Safety: `read`
+- MCP tool: `lint`
+- CLI: `pf lint`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `enable` | "palette.offPalette" \| "palette.opacityInLocked" \| "pixels.orphan" \| "rig.jointGap" \| "rig.staleOverride" \| "rig.overrideError" \| "rig.rotationResidual" \| "anim.emptyFrame" \| "lint.renderError"[] | no | Run only these rule ids (default: all). |
+| `disable` | "palette.offPalette" \| "palette.opacityInLocked" \| "pixels.orphan" \| "rig.jointGap" \| "rig.staleOverride" \| "rig.overrideError" \| "rig.rotationResidual" \| "anim.emptyFrame" \| "lint.renderError"[] | no | Skip these rule ids (applied after enable). |
+| `animations` | {group, direction} \| {id}[] | no | Animations to render and check (default: all, in document order). |
+| `skins` | string[] | no | Skin names to render for palette checks; "base" is the base colours (default: base, then every skin). |
+| `maxPixels` | integer >= 1 | no | Most pixels listed per finding (default 16). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `count` | integer | yes | Number of findings. |
+| `findings` | {rule, severity, location, message, data}[] | yes | The findings, in report order. |
+
+### Examples
+
+Lint the hero, joint and palette rules only:
+
+```json
+{"doc":"doc_g1ed5q","enable":["rig.jointGap","palette.offPalette"]}
+```
+
+## rig.applyTemplate
+
+Apply a humanoid skeleton template: bones matched by name are reused, missing ones are created.
+
+Templates: humanoid-side (view "side"), humanoid-front ("front"), humanoid-back ("back"). With no view a new view is created (named after the template, or viewName); with view the rest pose is set in that view. Creates the rig when the document has none. The template origin is the document origin. Bones that exist with another parent are refused.
+
+- Safety: `mutate`
+- MCP tool: `rig_apply_template`
+- CLI: `pf rig apply-template`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `template` | "humanoid-side" \| "humanoid-front" \| "humanoid-back" | yes | Skeleton template: humanoid-side, humanoid-front or humanoid-back. |
+| `height` | integer >= 8 | no | Character height in px, feet row to top of head (default 48). |
+| `view` | string | no | Existing view to set the rest pose in (default: a new view). |
+| `viewName` | string | no | Name of the new view (default: the template name, e.g. "side"); ignored with view. |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `viewId` | string | yes | Id of the view the template was applied to. |
+| `bones` | map of string | yes | Bone id per template bone name (reused and created). |
+| `created` | string[] | yes | Names of the bones that were created. |
+
+### Examples
+
+Set the rest pose of the hero in its existing side view:
+
+```json
+{"doc":"doc_g1ed5q","template":"humanoid-side","view":"side"}
+```
+
+## rig.jointCheck
+
+Sweep each joint of one rig view and report the pixel gaps that open on the outer side of a bend.
+
+Read-only. A rig passes when summary.gapCount is 0. The sweep uses the default range and step. Fix gaps by adjusting the part pivots or overrides, then check again. Checks the view that draws the first direction of the given view (default: the first view).
+
+- Safety: `read`
+- MCP tool: `rig_joint_check`
+- CLI: `pf rig joint-check`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `view` | string | no | Rig view to check (default: the first view). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `view` | string | yes | Name of the checked view. |
+| `params` | {rangeDeg, stepDeg, radius} | yes |  |
+| `joints` | {bone, parent, pivot, gapCount, union, angles}[] | yes | One entry per joint, sorted by bone name. |
+| `summary` | {joints, jointsWithGaps, gapCount, unionCount} | yes |  |
+
+### Examples
+
+Check the first view of the hero:
 
 ```json
 {"doc":"doc_g1ed5q"}

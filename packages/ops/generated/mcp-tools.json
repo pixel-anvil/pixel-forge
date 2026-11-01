@@ -58,6 +58,48 @@
     }
   },
   {
+    "name": "redo",
+    "title": "doc.redo",
+    "description": "Redo the newest undone change of the document (one history entry).\n\nRe-applies the entry that the last doc.undo reverted. A new change clears the redo entries. Nothing to redo is not an error: redone is false.\n\nChanges the document as one undo step. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Redo on a fresh open (nothing to redo)): {\"doc\":\"doc_g1ed5q\"}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        }
+      },
+      "required": ["doc"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "redone": {
+          "type": "boolean",
+          "description": "True when an entry was re-applied; false when there was nothing to redo."
+        },
+        "label": {
+          "description": "Label of the re-applied entry (for example \"AI: rig.setPose\"); null when nothing was redone.",
+          "type": ["string", "null"]
+        }
+      },
+      "required": ["redone", "label"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "doc.redo",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "doc.redo",
+      "pixel-forge/safety": "mutate"
+    }
+  },
+  {
     "name": "doc_summary",
     "title": "doc.summary",
     "description": "Summarise an open document: canvas, palette, layers, rig (bones, parts, views) and animations.\n\nNames in the result (bones, parts, layers, animation group/direction) are what the other ops take as references.\n\nRead-only. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Summarise the hero): {\"doc\":\"doc_g1ed5q\"}",
@@ -357,6 +399,827 @@
     },
     "_meta": {
       "pixel-forge/op": "doc.summary",
+      "pixel-forge/safety": "read"
+    }
+  },
+  {
+    "name": "undo",
+    "title": "doc.undo",
+    "description": "Undo the newest applied change of the document (one history entry).\n\nReverts the last applied history entry, whatever op made it. Nothing to undo is not an error: undone is false. Re-apply with doc.redo.\n\nChanges the document as one undo step. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Undo the last change of the hero (nothing to undo on a fresh open)): {\"doc\":\"doc_g1ed5q\"}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        }
+      },
+      "required": ["doc"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "undone": {
+          "type": "boolean",
+          "description": "True when an entry was reverted; false when there was nothing to undo."
+        },
+        "label": {
+          "description": "Label of the reverted entry (for example \"AI: rig.setPose\"); null when nothing was undone.",
+          "type": ["string", "null"]
+        }
+      },
+      "required": ["undone", "label"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "doc.undo",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "doc.undo",
+      "pixel-forge/safety": "mutate"
+    }
+  },
+  {
+    "name": "frame_add",
+    "title": "frame.add",
+    "description": "Insert an empty frame before or after a frame; the new frame gets no bone or part keys.\n\nThe new frame has no keys, so bones and parts interpolate into it from the neighbouring keys. Cels and overrides are not copied (use frame.duplicate to copy them). Set its keys with rig.setPose.\n\nChanges the document as one undo step. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Add an empty frame after frame 0 of the hero): {\"doc\":\"doc_g1ed5q\",\"animation\":{\"group\":\"default\"},\"frame\":0}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        },
+        "animation": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "group": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                },
+                "direction": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                }
+              },
+              "required": ["group"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^anm_[0-9a-z]{1,24}$"
+                }
+              },
+              "required": ["id"],
+              "additionalProperties": false
+            }
+          ],
+          "description": "Animation: {\"group\": \"run\", \"direction\": \"side\"} ({\"group\": \"idle\"} for an undirected one) or {\"id\": \"anm_...\"}."
+        },
+        "frame": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^frm_[0-9a-z]{1,24}$"
+            }
+          ],
+          "description": "Reference frame: the new frame goes next to it."
+        },
+        "position": {
+          "default": "after",
+          "description": "\"after\" (default) inserts behind the reference frame, \"before\" in front of it.",
+          "type": "string",
+          "enum": ["before", "after"]
+        },
+        "durationMs": {
+          "description": "Duration of the new frame in ms (default: the reference frame duration).",
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": ["doc", "animation", "frame"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "frameId": {
+          "type": "string",
+          "description": "Id of the new frame."
+        },
+        "frameIndex": {
+          "type": "integer",
+          "description": "Index of the new frame in the animation."
+        },
+        "frames": {
+          "type": "integer",
+          "description": "Frame count of the animation afterwards."
+        }
+      },
+      "required": ["frameId", "frameIndex", "frames"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "frame.add",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "frame.add",
+      "pixel-forge/safety": "mutate"
+    }
+  },
+  {
+    "name": "frame_delete",
+    "title": "frame.delete",
+    "description": "Delete one frame with its bone and part keys, cels and overrides; the last frame cannot go.\n\nLinks to the frame cels are materialised first: the other linked frames keep their picture as their own copy. Images nothing references any more are removed. An animation keeps at least one frame.\n\nChanges the document as one undo step. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Delete frame 1 of the hero (add a second frame first; the hero has one)): {\"doc\":\"doc_g1ed5q\",\"animation\":{\"group\":\"default\"},\"frame\":1}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        },
+        "animation": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "group": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                },
+                "direction": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                }
+              },
+              "required": ["group"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^anm_[0-9a-z]{1,24}$"
+                }
+              },
+              "required": ["id"],
+              "additionalProperties": false
+            }
+          ],
+          "description": "Animation: {\"group\": \"run\", \"direction\": \"side\"} ({\"group\": \"idle\"} for an undirected one) or {\"id\": \"anm_...\"}."
+        },
+        "frame": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^frm_[0-9a-z]{1,24}$"
+            }
+          ],
+          "description": "Frame: 0-based index or frame id (\"frm_...\")."
+        }
+      },
+      "required": ["doc", "animation", "frame"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "frameId": {
+          "type": "string",
+          "description": "Id of the deleted frame."
+        },
+        "frames": {
+          "type": "integer",
+          "description": "Frame count of the animation afterwards."
+        }
+      },
+      "required": ["frameId", "frames"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "frame.delete",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "frame.delete",
+      "pixel-forge/safety": "mutate"
+    }
+  },
+  {
+    "name": "frame_duplicate",
+    "title": "frame.duplicate",
+    "description": "Duplicate one frame; the copy goes right after it, with linked cels and copied keys.\n\nCels of the copy link to the source frame (edit one, both change). Bone keys, part keys, markers, events, root motion, duration and overrides are copied.\n\nChanges the document as one undo step. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Duplicate frame 0 of the hero): {\"doc\":\"doc_g1ed5q\",\"animation\":{\"group\":\"default\"},\"frame\":0}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        },
+        "animation": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "group": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                },
+                "direction": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                }
+              },
+              "required": ["group"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^anm_[0-9a-z]{1,24}$"
+                }
+              },
+              "required": ["id"],
+              "additionalProperties": false
+            }
+          ],
+          "description": "Animation: {\"group\": \"run\", \"direction\": \"side\"} ({\"group\": \"idle\"} for an undirected one) or {\"id\": \"anm_...\"}."
+        },
+        "frame": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^frm_[0-9a-z]{1,24}$"
+            }
+          ],
+          "description": "Frame: 0-based index or frame id (\"frm_...\")."
+        }
+      },
+      "required": ["doc", "animation", "frame"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "frameId": {
+          "type": "string",
+          "description": "Id of the new frame."
+        },
+        "frameIndex": {
+          "type": "integer",
+          "description": "Index of the new frame (source index + 1)."
+        },
+        "frames": {
+          "type": "integer",
+          "description": "Frame count of the animation afterwards."
+        }
+      },
+      "required": ["frameId", "frameIndex", "frames"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "frame.duplicate",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "frame.duplicate",
+      "pixel-forge/safety": "mutate"
+    }
+  },
+  {
+    "name": "lint",
+    "title": "lint.run",
+    "description": "Check the document and list findings (palette, orphan pixels, joint gaps, stale overrides, empty frames).\n\nRead-only. Frames are rendered and checked; findings come sorted by rule, then document order. Narrow the check with enable, disable, animations or skins. Severity \"error\" means an invariant is broken; fix warnings before a delivery.\n\nRead-only. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Lint the hero, joint and palette rules only): {\"doc\":\"doc_g1ed5q\",\"enable\":[\"rig.jointGap\",\"palette.offPalette\"]}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        },
+        "enable": {
+          "description": "Run only these rule ids (default: all).",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "palette.offPalette",
+              "palette.opacityInLocked",
+              "pixels.orphan",
+              "rig.jointGap",
+              "rig.staleOverride",
+              "rig.overrideError",
+              "rig.rotationResidual",
+              "anim.emptyFrame",
+              "lint.renderError"
+            ]
+          }
+        },
+        "disable": {
+          "description": "Skip these rule ids (applied after enable).",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "palette.offPalette",
+              "palette.opacityInLocked",
+              "pixels.orphan",
+              "rig.jointGap",
+              "rig.staleOverride",
+              "rig.overrideError",
+              "rig.rotationResidual",
+              "anim.emptyFrame",
+              "lint.renderError"
+            ]
+          }
+        },
+        "animations": {
+          "description": "Animations to render and check (default: all, in document order).",
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "group": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9_-]{1,48}$"
+                  },
+                  "direction": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9_-]{1,48}$"
+                  }
+                },
+                "required": ["group"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^anm_[0-9a-z]{1,24}$"
+                  }
+                },
+                "required": ["id"],
+                "additionalProperties": false
+              }
+            ],
+            "description": "Animation: {\"group\": \"run\", \"direction\": \"side\"} ({\"group\": \"idle\"} for an undirected one) or {\"id\": \"anm_...\"}."
+          }
+        },
+        "skins": {
+          "description": "Skin names to render for palette checks; \"base\" is the base colours (default: base, then every skin).",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "maxPixels": {
+          "description": "Most pixels listed per finding (default 16).",
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": ["doc"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "integer",
+          "description": "Number of findings."
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "rule": {
+                "type": "string",
+                "enum": [
+                  "palette.offPalette",
+                  "palette.opacityInLocked",
+                  "pixels.orphan",
+                  "rig.jointGap",
+                  "rig.staleOverride",
+                  "rig.overrideError",
+                  "rig.rotationResidual",
+                  "anim.emptyFrame",
+                  "lint.renderError"
+                ],
+                "description": "Rule id, for example \"rig.jointGap\"."
+              },
+              "severity": {
+                "type": "string",
+                "enum": ["error", "warning", "info"],
+                "description": "\"error\" breaks an invariant, \"warning\" should be fixed, \"info\" may be intended."
+              },
+              "location": {
+                "type": "object",
+                "properties": {
+                  "layerId": {
+                    "description": "Layer id.",
+                    "type": "string"
+                  },
+                  "animationId": {
+                    "description": "Animation id.",
+                    "type": "string"
+                  },
+                  "frameId": {
+                    "description": "Frame id.",
+                    "type": "string"
+                  },
+                  "frameIndex": {
+                    "description": "Frame index in its animation.",
+                    "type": "integer"
+                  },
+                  "skin": {
+                    "description": "\"base\" or the skin name.",
+                    "type": "string"
+                  },
+                  "pixel": {
+                    "description": "First offending pixel, canvas coordinates.",
+                    "type": "object",
+                    "properties": {
+                      "x": {
+                        "type": "integer"
+                      },
+                      "y": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": ["x", "y"],
+                    "additionalProperties": false
+                  },
+                  "overrideId": {
+                    "description": "Override id.",
+                    "type": "string"
+                  },
+                  "view": {
+                    "description": "Rig view name.",
+                    "type": "string"
+                  },
+                  "bone": {
+                    "description": "Bone name.",
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Where the finding is; a rule fills the fields that apply."
+              },
+              "message": {
+                "type": "string",
+                "description": "One line for people."
+              },
+              "data": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "description": "Machine-readable details; keys per rule are in packages/lint/README.md."
+              }
+            },
+            "required": ["rule", "severity", "location", "message", "data"],
+            "additionalProperties": false
+          },
+          "description": "The findings, in report order."
+        }
+      },
+      "required": ["count", "findings"],
+      "additionalProperties": false,
+      "$defs": {
+        "__schema0": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema0"
+              }
+            },
+            {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "$ref": "#/$defs/__schema0"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "annotations": {
+      "title": "lint.run",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "lint.run",
+      "pixel-forge/safety": "read"
+    }
+  },
+  {
+    "name": "rig_apply_template",
+    "title": "rig.applyTemplate",
+    "description": "Apply a humanoid skeleton template: bones matched by name are reused, missing ones are created.\n\nTemplates: humanoid-side (view \"side\"), humanoid-front (\"front\"), humanoid-back (\"back\"). With no view a new view is created (named after the template, or viewName); with view the rest pose is set in that view. Creates the rig when the document has none. The template origin is the document origin. Bones that exist with another parent are refused.\n\nChanges the document as one undo step. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Set the rest pose of the hero in its existing side view): {\"doc\":\"doc_g1ed5q\",\"template\":\"humanoid-side\",\"view\":\"side\"}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        },
+        "template": {
+          "type": "string",
+          "enum": ["humanoid-side", "humanoid-front", "humanoid-back"],
+          "description": "Skeleton template: humanoid-side, humanoid-front or humanoid-back."
+        },
+        "height": {
+          "description": "Character height in px, feet row to top of head (default 48).",
+          "type": "integer",
+          "minimum": 8,
+          "maximum": 1024
+        },
+        "view": {
+          "description": "Existing view to set the rest pose in (default: a new view).",
+          "type": "string",
+          "minLength": 1
+        },
+        "viewName": {
+          "description": "Name of the new view (default: the template name, e.g. \"side\"); ignored with view.",
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": ["doc", "template"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "viewId": {
+          "type": "string",
+          "description": "Id of the view the template was applied to."
+        },
+        "bones": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Bone id per template bone name (reused and created)."
+        },
+        "created": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Names of the bones that were created."
+        }
+      },
+      "required": ["viewId", "bones", "created"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "rig.applyTemplate",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "rig.applyTemplate",
+      "pixel-forge/safety": "mutate"
+    }
+  },
+  {
+    "name": "rig_joint_check",
+    "title": "rig.jointCheck",
+    "description": "Sweep each joint of one rig view and report the pixel gaps that open on the outer side of a bend.\n\nRead-only. A rig passes when summary.gapCount is 0. The sweep uses the default range and step. Fix gaps by adjusting the part pivots or overrides, then check again. Checks the view that draws the first direction of the given view (default: the first view).\n\nRead-only. Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.\n\nExample (Check the first view of the hero): {\"doc\":\"doc_g1ed5q\"}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+        },
+        "view": {
+          "description": "Rig view to check (default: the first view).",
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": ["doc"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "view": {
+          "type": "string",
+          "description": "Name of the checked view."
+        },
+        "params": {
+          "type": "object",
+          "properties": {
+            "rangeDeg": {
+              "type": "number",
+              "description": "Sweep range, degrees either side of rest."
+            },
+            "stepDeg": {
+              "type": "number",
+              "description": "Sweep step, degrees."
+            },
+            "radius": {
+              "type": "integer",
+              "description": "Window radius of the check, px."
+            }
+          },
+          "required": ["rangeDeg", "stepDeg", "radius"],
+          "additionalProperties": false
+        },
+        "joints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "bone": {
+                "type": "string",
+                "description": "Child bone name."
+              },
+              "parent": {
+                "type": "string",
+                "description": "Parent bone name."
+              },
+              "pivot": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ],
+                "items": false,
+                "minItems": 2,
+                "maxItems": 2,
+                "description": "Joint pivot, canvas coordinates."
+              },
+              "gapCount": {
+                "type": "integer",
+                "description": "Gap pixels summed over the sweep."
+              },
+              "union": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "prefixItems": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "integer"
+                    }
+                  ],
+                  "items": false,
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "description": "A pixel [x, y], canvas coordinates."
+                },
+                "description": "Distinct gap pixels over the sweep, sorted by y then x."
+              },
+              "angles": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "angle": {
+                      "type": "number",
+                      "description": "Swept angle, degrees clockwise."
+                    },
+                    "gaps": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "prefixItems": [
+                          {
+                            "type": "integer"
+                          },
+                          {
+                            "type": "integer"
+                          }
+                        ],
+                        "items": false,
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "description": "A pixel [x, y], canvas coordinates."
+                      },
+                      "description": "Gap pixels at this angle."
+                    }
+                  },
+                  "required": ["angle", "gaps"],
+                  "additionalProperties": false
+                },
+                "description": "Every checked angle, ascending."
+              }
+            },
+            "required": ["bone", "parent", "pivot", "gapCount", "union", "angles"],
+            "additionalProperties": false
+          },
+          "description": "One entry per joint, sorted by bone name."
+        },
+        "summary": {
+          "type": "object",
+          "properties": {
+            "joints": {
+              "type": "integer"
+            },
+            "jointsWithGaps": {
+              "type": "integer"
+            },
+            "gapCount": {
+              "type": "integer",
+              "description": "0 when the rig passes."
+            },
+            "unionCount": {
+              "type": "integer"
+            }
+          },
+          "required": ["joints", "jointsWithGaps", "gapCount", "unionCount"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["view", "params", "joints", "summary"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "rig.jointCheck",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "rig.jointCheck",
       "pixel-forge/safety": "read"
     }
   },

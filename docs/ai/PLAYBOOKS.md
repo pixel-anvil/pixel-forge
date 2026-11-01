@@ -158,6 +158,12 @@ describe('frame.duplicate', () => {
 | MCP name from spec 8 differs | `mcp: { name: 'undo' }` (also `redo`, `lint`, `import_file`, `export`); `cli: { command: ['lint'] }` for a CLI name; `hidden: true` to leave a transport out. |
 | Big outputs (grids, renders) | Keep JSON compact; images are T5.3's business (MCP image content), not base64 in the output. |
 
+**Gotchas (from T5.2a, 2026-11-01):**
+- The worked example `frame.duplicate` now lives in the tree (`packages/ops/src/ops/frame-duplicate.ts`); copy it.
+- If an example needs a precondition the hero lacks (e.g. `frame.delete` on a one-frame animation), run the setup op first in the example test.
+- Readonly tuples/arrays returned by rig/core must be copied (`[...x]`) before they go into a zod output.
+- `pnpm changeset` is interactive; write `.changeset/<name>.md` by hand (frontmatter `'@pixel-forge/<pkg>': minor`, then one line).
+
 ## Add a lint rule
 Rules live in `packages/lint/src/rules.ts`; `lint(view, opts)` runs them in `RULE_IDS` order.
 1. Add the id to `RULE_IDS` in `packages/lint/src/types.ts` (`area.name`; the position fixes the report order).
