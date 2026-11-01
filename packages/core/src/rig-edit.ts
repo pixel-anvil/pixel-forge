@@ -10,15 +10,26 @@ import { IndexedImage } from '@pixel-forge/raster';
 import {
   DEFAULT_VARIANT_NAME,
   bindByOverlap,
+  copyPose,
   parsePartLayerName,
+  pastePose,
   partLayerName,
   snapSkeleton,
 } from '@pixel-forge/rig';
-import type { OverlapOptions, PartLayerName, PartShape, SkeletonTemplate } from '@pixel-forge/rig';
+import type {
+  OverlapOptions,
+  PartLayerName,
+  PartShape,
+  PastePoseOptions,
+  PoseClip,
+  SkeletonTemplate,
+} from '@pixel-forge/rig';
 import { DIRECTION_REGEX, NAME_REGEX } from '@pixel-forge/schema';
 import type {
+  AnimRef,
   BoneId,
   Document,
+  FrameRef,
   ImageId,
   Layer,
   LayerId,
@@ -28,7 +39,9 @@ import type {
   ViewId,
 } from '@pixel-forge/schema';
 import { CoreError } from './errors.js';
+import { resolveAnimation, resolveFrame } from './frames.js';
 import type { DeepReadonly } from './json.js';
+import { rigCall } from './rig-render.js';
 import type { Transaction } from './transaction.js';
 
 /**
@@ -39,7 +52,8 @@ import type { Transaction } from './transaction.js';
  * under itself or a descendant; `has-parts`: the bone (or a descendant being deleted) has parts;
  * `has-children`: delete without `cascade`; `has-variants`: the view still holds variants;
  * `bad-value`: a non-integer or non-finite number; `bone-mismatch`: a template bone of that name
- * exists with another parent.
+ * exists with another parent; `mirror-animation`: the animation is a derived mirror and has no bone
+ * keys of its own.
  */
 export type RigEditReason =
   | 'unknown-bone'
@@ -54,7 +68,8 @@ export type RigEditReason =
   | 'has-children'
   | 'has-variants'
   | 'bad-value'
-  | 'bone-mismatch';
+  | 'bone-mismatch'
+  | 'mirror-animation';
 
 function refuse(reason: RigEditReason, message: string): CoreError {
   return new CoreError('BAD_ARGUMENT', message, { reason });
@@ -960,4 +975,64 @@ function locate(layers: Layer[], id: LayerId): { list: Layer[]; index: number } 
     }
   }
   return undefined;
+}
+
+// ---- pose clipboard -------------------------------------------------------------------------------
+
+function authoredFrame(tx: Transaction, anim: AnimRef, frame: FrameRef) {
+  const ai = resolveAnimation(tx.doc, anim);
+  const a = tx.doc.animations[ai];
+  if (a === undefined) throw new Error('unreachable');
+  if ('mirrorOf' in a) {
+    throw refuse('mirror-animation', `animation ${a.id} is a mirror and has no bone keys`);
+  }
+  return { ai, fi: resolveFrame(a, frame), frame: a.frames[resolveFrame(a, frame)] };
+}
+
+/**
+ * Copies the pose (the bone keys) of one frame of an authored animation (FR-RIG-17). Reads only: it
+ * does not change the transaction, and the clip is plain data that can be pasted into any frame or
+ * document. See `@pixel-forge/rig` `copyPose`.
+ * @throws CoreError `BAD_ARGUMENT` (`unknown-animation`, `unknown-frame`, or `mirror-animation`).
+ */
+export function copyPoseTx(tx: Transaction, anim: AnimRef, frame: FrameRef): PoseClip {
+  const f = authoredFrame(tx, anim, frame).frame;
+  if (f === undefined) throw new Error('unreachable');
+  return rigCall(() => copyPose(rigOf(tx.doc), f));
+}
+
+/** What {@link pastePoseTx} did. */
+export interface PastePoseResult {
+  /** Bones that received a key. */
+  readonly pasted: readonly BoneId[];
+  /** Clip names that no bone matched (after the `_l`/`_r` swap when mirrored). */
+  readonly skipped: readonly string[];
+}
+
+/**
+ * Pastes a pose onto one frame of an authored animation (FR-RIG-17), optionally `mirrored`: `_l`/`_r`
+ * bones swap and angles and offset `x` are negated (see `@pixel-forge/rig` `pastePose`). Each pasted
+ * bone's key is replaced; other keys of the frame stay, and the animation's other frames are not
+ * touched. One transaction edit.
+ * @throws CoreError `BAD_ARGUMENT` (`unknown-animation`, `unknown-frame`, or `mirror-animation`).
+ */
+export function pastePoseTx(
+  tx: Transaction,
+  anim: AnimRef,
+  frame: FrameRef,
+  clip: PoseClip,
+  opts: PastePoseOptions = {},
+): PastePoseResult {
+  const { ai, fi } = authoredFrame(tx, anim, frame);
+  const { keys, skipped } = rigCall(() => pastePose(rigOf(tx.doc), clip, opts));
+  const ids = Object.keys(keys) as BoneId[];
+  if (ids.length > 0) {
+    tx.update((d) => {
+      const a = d.animations[ai];
+      const f = a !== undefined && !('mirrorOf' in a) ? a.frames[fi] : undefined;
+      if (f === undefined) return;
+      for (const [id, key] of Object.entries(keys)) f.boneKeys[id as BoneId] = key;
+    });
+  }
+  return { pasted: ids, skipped };
 }

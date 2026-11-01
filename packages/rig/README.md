@@ -4,7 +4,7 @@ FK/IK, key interpolation and quantisation, snapping, variant selection, part ren
 
 **Depends on:** `schema`, `raster`
 
-**Status:** T3.1: forward kinematics, key interpolation and quantisation, hierarchical snapping (FR-RIG-10/11/12, FR-RIG-20 steps 1–2). T3.2: templates, part names, overlap binding. T3.3: the part render pipeline, part overrides and staleness (FR-RIG-20 steps 3–4, FR-RIG-21/22; see "Part render and overrides"). T3.4: the joint check (FR-RIG-05; see "Joint check (T3.4)"). T3.8: edit attribution (FR-RIG-22/24; see "Edit attribution"). The pose clipboard (T3.6) comes later.
+**Status:** T3.1: forward kinematics, key interpolation and quantisation, hierarchical snapping (FR-RIG-10/11/12, FR-RIG-20 steps 1–2). T3.2: templates, part names, overlap binding. T3.3: the part render pipeline, part overrides and staleness (FR-RIG-20 steps 3–4, FR-RIG-21/22; see "Part render and overrides"). T3.4: the joint check (FR-RIG-05; see "Joint check (T3.4)"). T3.8: edit attribution (FR-RIG-22/24; see "Edit attribution"). T3.6: the pose clipboard, `copyPose` / `pastePose` (FR-RIG-17; see "Pose clipboard").
 
 Pure: no Node built-ins, no clock, no randomness, and **no floating-point trig or accumulation** in any decision. Angles are exact BigInt rationals until they are rounded once; rotations use raster's committed Q16 table (NFR-02, ADR-010). The conventions are recorded in [ADR-012](../../docs/adr/ADR-012.md) (Accepted), which refines spec §3.4.7.
 
@@ -112,7 +112,7 @@ Coverage: 100 % of lines, 95 % of branches.
 - **T3.2 (templates, rest poses, pivots):** author rest positions as canvas offsets at rest (child pivot − parent pivot, both as drawn); no inverse rotation is needed and every pixel is reachable. Rest angles are parent-relative bone directions and do not move pivots. Use `boneOrder` for outliners and anything that walks the tree.
 - **T3.3 (part render):** done, see "Part render and overrides (T3.3)" below. Part keys use `keySpan` (hold before the first key, loop wrap).
 - **T3.4 (joint check):** done, see "Joint check (T3.4)" below. The sweep is `snapSkeleton(rig, view, new Map([[B, {angle: θ}]]))`. `pivot` = B's rest pivot (B's own rotation never moves it), `childDir` = B's `restAngle` at the quantum used (0.25 gives the finest table direction).
-- **T3.6 (pose clipboard):** key angles are relative to rest, so "paste mirrored" negates `angle` (and swaps `_l`/`_r`). Quantisation is odd, so the pasted pose evaluates to exactly the negated rotations. Whether to negate offset `x` is T3.6's call.
+- **T3.6 (pose clipboard):** key angles are relative to rest, so "paste mirrored" negates `angle` (and swaps `_l`/`_r`). Quantisation is odd, so the pasted pose evaluates to exactly the negated rotations. Decision: offset `x` is negated too (`y` kept), as in the mirror-a-rig rule; `flipX` and `interp` are kept.
 
 ## Templates, part names and overlap binding (T3.2)
 
@@ -198,3 +198,9 @@ FR-RIG-22 ("drawing on a rig frame writes a part override if the stroke falls wi
 **Round trip.** Rendering the frame with the overrides appended gives `edited` exactly (alpha-0 pixels as `(0,0,0,0)`), and every new override checks valid. A new part override does change the canvas under the frame's **existing** final overrides: one whose region (bbox ±1) it touches goes stale, and is still applied; so can the mirrors' finals when the import is into their source (KNOWN_ISSUES RIG-04; core's `attributeEditTxReport` lists them).
 
 Evidence (`test/attribute.test.ts`, hand-written ASCII): an edit inside one part (part override, anchor and `set` image), an edit straddling two touching parts (final), an erase at the silhouette (part erase mask, two components merged), an addition just outside a silhouette (final) next to separate leg and arm edits (two part overrides), edit then re-pose (follows a translation, stale on a 90° rotation), translucent edits, a part pixel under a layer above (demoted), overlapping parts (final), edits on top of earlier overrides, indexed parts and indexed finals; every case asserts the pixel-hash round trip and that the new overrides are valid.
+
+## Pose clipboard
+
+`copyPose(rig, frame) -> PoseClip` copies the **bone keys** of one frame (angle, offset, flipX, interp; part keys are not part of a pose) into `{bones: {[boneName]: BoneKey}}`, keyed by name so a clip can be pasted into another document. `pastePose(rig, clip, {mirrored?}) -> {keys, skipped}` maps a clip onto a rig's bones: `keys` is by target `BoneId`, `skipped` lists clip names with no bone (a one-sided rig). Both are pure and throw `RigError('BAD_VALUE')` when a bone name is used twice. Core's `copyPoseTx` / `pastePoseTx` write the keys.
+
+A **mirrored** paste moves the key of `x_l` to `x_r` and the reverse (`mirrorBoneName`: a trailing `_l`/`_r` after a non-empty base; any other name maps to itself), negates `angle` and the offset's `x`, and keeps `y`, `flipX` and `interp`. Zero stays `+0`. Because angles are relative to rest and quantisation is odd, the pasted pose resolves to exactly the negated rotations. A bone whose partner is missing is skipped, never pasted onto another bone.

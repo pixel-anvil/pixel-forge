@@ -88,7 +88,7 @@ export interface OverrideCheckOptions {
  * Why an override resolution was refused: `CoreError('BAD_ARGUMENT')` `details.reason`.
  * `unknown-override`: no animation has an override with that id; `no-target`: the override's target
  * is not rendered (a hidden part, a deleted frame), so there is nothing to re-base on;
- * `mirror-part-override`: a mirror animation's part override (T3.6).
+ * `mirror-part-override`: a mirror animation's part override: never rendered, so never listed or changed (T3.6 decision).
  */
 export type OverrideOpReason = 'unknown-override' | 'no-target' | 'mirror-part-override';
 
@@ -185,7 +185,7 @@ const isMirrorPart = (anim: Ro<Animation>, o: Ro<Override>): boolean =>
  * them stale with `no-target`. Final overrides are hashed over the composite after the post-passes
  * (step 6, the input of step 7) of `opts.render`; a mirror's own final overrides over the flipped
  * source render. An override of a frame that does not exist is `no-target`. A mirror's part overrides
- * are not listed yet (T3.6). Pure: renders, never writes.
+ * are never rendered, so they are not listed. Pure: renders, never writes.
  *
  * A render that fails (missing images, a direction with no view, `BAD_RIG`, ...) does not abort the
  * listing: the overrides that depend on it are reported stale with `reason: 'error'` and the
@@ -263,7 +263,10 @@ function locate(view: DocumentView, ids: readonly OverrideId[]): Map<number, Set
     if (anim === undefined) throw refuse('unknown-override', `no override ${id}`);
     const o = anim.overrides.find((x) => x.id === id);
     if (o !== undefined && isMirrorPart(anim, o)) {
-      throw refuse('mirror-part-override', `override ${id} is a mirror's part override (T3.6)`);
+      throw refuse(
+        'mirror-part-override',
+        `override ${id} is a mirror's part override, which is never rendered`,
+      );
     }
     const set = out.get(ai) ?? new Set<OverrideId>();
     set.add(id);
@@ -318,7 +321,7 @@ export function rebaseOverrides(
  * a stale override is still applied as it is.
  *
  * @throws CoreError `BAD_ARGUMENT` with `reason` `unknown-override` or `mirror-part-override` (a
- * mirror's part overrides are T3.6's, as for {@link rebaseOverrides}).
+ * mirror's part overrides are never rendered (T3.6 decision), as for {@link rebaseOverrides}).
  */
 export function discardOverrides(tx: Transaction, ids: readonly OverrideId[]): void {
   const plan: { ai: number; keep: Ro<Override>[] }[] = [];
@@ -387,7 +390,7 @@ export interface AttributeEditReport {
  *
  * The footprints are the parts this render draws (hidden or non-exported part layers have none). A
  * mirror animation gets only final overrides, in its own list, checked against the flipped render
- * (its part overrides are T3.6's). In an indexed document the `set` images are indexed, and an
+ * (its part overrides are never rendered, T3.6 decision). In an indexed document the `set` images are indexed, and an
  * edited colour the palette lacks is refused.
  *
  * @throws CoreError `BAD_ARGUMENT` for an unknown animation (`details.reason: 'unknown-animation'`)

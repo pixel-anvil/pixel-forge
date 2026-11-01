@@ -529,3 +529,41 @@ export function renderStages(
   // step 8
   return { beforeFinals, beforeMirrorFinals, result: skinRgba(result, plan, skinPalette) };
 }
+
+/**
+ * Mirrors marker positions about the origin column: `x' = 2·origin.x − x`, `y` and the names kept
+ * (FR-RIG-16). This is the same rule as the pixel flip of a mirror's render, which moves pixel index
+ * `x` to `2·origin.x − x`, and it agrees with the Godot contract: the origin point is the
+ * bottom-centre of the origin pixel (continuous `ox + 0.5`), and a marker is the pixel centre
+ * `(mx + 0.5, my + 0.5)`. Reflecting about `ox + 0.5` gives `2·ox − mx + 0.5`, which is the centre of
+ * pixel `2·ox − mx`. The formula is affine, so it holds for a half-pixel coordinate too: write a marker
+ * in continuous pixel space as `c = x + 0.5` and it maps to `c' = 2·ox + 1 − c`, i.e. `x' = 2·origin.x − x`
+ * on the pixel-index coordinate `x = c − 0.5`. Mirroring twice gives the original. The marker may leave
+ * the canvas.
+ */
+export function mirrorMarkers(
+  markers: DeepReadonly<Record<string, { x: number; y: number }>>,
+  originX: number,
+): Record<string, { x: number; y: number }> {
+  const out: Record<string, { x: number; y: number }> = {};
+  for (const [name, p] of Object.entries(markers)) out[name] = { x: 2 * originX - p.x, y: p.y };
+  return out;
+}
+
+/**
+ * The markers of a frame as the render shows them, in canvas pixels, keyed by marker name: the frame's
+ * markers, mirrored by {@link mirrorMarkers} about `meta.origin.x` when `anim` is a mirror (the markers
+ * of the mirror's source frame; names are kept, so a `hand_l` marker stays `hand_l`).
+ *
+ * @throws CoreError `BAD_ARGUMENT` (unknown animation or frame), `BAD_VALUE` `BAD_MIRROR`.
+ */
+export function frameMarkers(
+  view: DocumentView,
+  anim: AnimRef,
+  frame: FrameRef,
+): Record<string, { x: number; y: number }> {
+  const plan = planFrame(view, anim, frame);
+  return plan.mirrored
+    ? mirrorMarkers(plan.frame.markers, view.doc.meta.origin.x)
+    : { ...plan.frame.markers };
+}

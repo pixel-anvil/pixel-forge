@@ -163,7 +163,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T3.8 | rig: `attributeEdit(render, edited) → overrides` (+ review) | opus | high | M | T3.3 | | ☐☑ |
 | T3.4 | rig: `jointCheck` (implements the T3.0 definition) | sonnet | high | M | T3.0, T3.3 | | ☑ |
 | T3.5 | rig `overlapMask` + core `splitRegion` transaction | sonnet | high | M | T3.4 | ∥ | ☐ |
-| T3.6 | core: derived mirror in `renderFrame`; rig: pose clipboard (mirrored) | sonnet | medium | S | T3.3 | ∥ | ☐ |
+| T3.6 | core: derived mirror in `renderFrame`; rig: pose clipboard (mirrored) | sonnet | medium | S | T3.3 | ∥ | ☑ |
 | T3.7 | core: bake | sonnet | medium | S | T3.3 | ∥ | ☐ |
 | T3.9 | fixtures: synthetic humanoid "hero" (TS doc + `.aseprite` via Lua) | sonnet | medium | M | T3.2, T0.3 | ∥ | ☑ |
 | T3.9b | fixtures: widen hero joint caps until `jointCheck` is clean; regenerate `hero.pxf` with a render cache | sonnet | medium | S | T3.4, T3.3 | ∥ | ☑ |
@@ -625,6 +625,8 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 #### T3.6 mirroring + pose clipboard  [sonnet] [S] ∥
 - **Deliverables** — the derived mirror in `renderFrame` (flipped around `origin.x`; markers mirrored, names kept), and `copyPose` / `pastePose({mirrored})`.
 - **Oracle** — the mirror equals `flipH` about the origin. The marker formula `x' = 2·origin.x − x`. A mirrored paste swaps `_l`/`_r` and negates angles.
+- **Notes (2026-11-01)** — ☑ Sonnet/medium; about 128k tokens. T2.3 already flipped the pixels; added core `mirrorMarkers`/`frameMarkers` (names and y kept; consistent with the contract's ox+0.5 origin point). Mirror **part** overrides stay refused (never rendered or listed; rebase/discard refuse them; correctly absent from `renderInputKey`), which closes IO-02.
+  - rig `copyPose`/`pastePose({mirrored})`/`mirrorBoneName`; core `copyPoseTx`/`pastePoseTx` (merges into the frame; refuses a mirror animation). A mirrored paste swaps `_l`/`_r`, negates angles **and offset.x** (accepted: a mirror flips x translation). Bone keys only; a missing partner is skipped and reported.
 
 #### T3.7 bake  [sonnet] [S] ∥
 - **Deliverables** — `bakeAnimation(doc, animRef, {mode})`, with overrides merged.

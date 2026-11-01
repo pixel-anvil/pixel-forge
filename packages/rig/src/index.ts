@@ -47,8 +47,16 @@ export type {
   TemplateBone,
   TemplateOptions,
 } from './templates.js';
-export { DEFAULT_VARIANT_NAME, PART_PREFIX, parsePartLayerName, partLayerName } from './names.js';
+export {
+  DEFAULT_VARIANT_NAME,
+  PART_PREFIX,
+  mirrorBoneName,
+  parsePartLayerName,
+  partLayerName,
+} from './names.js';
 export type { PartLayerName } from './names.js';
+export { copyPose, pastePose } from './pose.js';
+export type { PastePoseOptions, PastedPose, PoseClip, PoseRig } from './pose.js';
 export { DEFAULT_OVERLAP, bindByOverlap } from './bind.js';
 export type { BindSkeleton, OverlapOptions, OverlapResult, PartShape } from './bind.js';
 export {

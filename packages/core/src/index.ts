@@ -63,7 +63,7 @@ export {
 export type { FrameOpReason, InsertFrameOptions } from './frames.js';
 export { FINDING_CODES, validate } from './validate.js';
 export type { Finding, FindingCode, Severity, ValidateOptions } from './validate.js';
-export { renderFrame } from './render.js';
+export { frameMarkers, mirrorMarkers, renderFrame } from './render.js';
 export type { RenderOptions, SkinRef } from './render.js';
 export { createFrameRenderer, renderInputKey } from './render-cache.js';
 export type { FrameRenderer } from './render-cache.js';
@@ -91,6 +91,8 @@ export {
   addView,
   applySkeletonTemplate,
   bindParts,
+  copyPoseTx,
+  pastePoseTx,
   deleteBone,
   deleteView,
   renameBone,
@@ -109,6 +111,7 @@ export type {
   BindSkipReason,
   BoneRest,
   BoundPart,
+  PastePoseResult,
   DeleteBoneOptions,
   RigEditReason,
 } from './rig-edit.js';

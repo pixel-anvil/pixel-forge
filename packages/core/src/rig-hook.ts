@@ -27,7 +27,7 @@ export interface RigFrameContext {
   /**
    * The authored animation that owns the frame. For a mirror animation this is its source (the
    * mirror's flip and its own final overrides are applied by `renderFrame`; its part overrides are
-   * T3.6).
+   * never rendered: T3.6 decision, see `OverrideOpReason`).
    */
   readonly animation: DeepReadonly<AuthoredAnimation>;
   /** Index of `frame` in `animation.frames`. */
@@ -76,8 +76,9 @@ export interface RenderedPart {
  *   5), runs the animation's post-passes (6), applies its `'final'` overrides (7), flips mirrors and
  *   applies the mirror's own final overrides, and applies the skin by colour (8). Part layers keep
  *   their layer opacity, which `renderFrame` applies when compositing.
- * - Mirror animations: `ctx.animation` is the mirror's source. A mirror's own part overrides are not
- *   passed to the renderer yet; that belongs to T3.6.
+ * - Mirror animations: `ctx.animation` is the mirror's source. A mirror's own part overrides are never
+ *   rendered or passed to the renderer (T3.6 decision: a mirror only takes final overrides, over the flipped
+ *   render).
  */
 export interface RigRenderer {
   /**

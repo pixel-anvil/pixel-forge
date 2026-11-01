@@ -140,7 +140,7 @@ function describe(view: DocumentView, plan: RenderPlan, opts: RenderOptions): Js
  * other frames' overrides are not in it. That narrowing applies only to a renderer that gives a
  * `renderKey` (`createRigRenderer` does); for one without a key the key holds the whole animation
  * node and every image of the document, as it did before T3.3. A mirror's part overrides are not in
- * the key yet (T3.6).
+ * the key because they are never rendered (T3.6 decision); the key does cover its final overrides.
  *
  * Hence it changes iff an input that can reach the pixels changes: renaming a layer, editing a hidden
  * or filtered-out layer, or touching another animation leaves it unchanged. Throws like `renderFrame`

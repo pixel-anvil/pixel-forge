@@ -56,3 +56,14 @@ export function parsePartLayerName(name: string): PartLayerName | null {
 export function partLayerName(parsed: PartLayerName): string {
   return parsed.part === undefined ? parsed.bone : `${parsed.bone}_${parsed.part}`;
 }
+
+/**
+ * The left/right partner of a bone name (FR-RIG-16/17): a trailing `_l` becomes `_r` and the reverse;
+ * the base must be non-empty. A name with no side suffix has no partner and is returned unchanged
+ * (a centre bone mirrors onto itself). Case-sensitive, like every name.
+ */
+export function mirrorBoneName(name: string): string {
+  if (name.length > 2 && name.endsWith('_l')) return `${name.slice(0, -2)}_r`;
+  if (name.length > 2 && name.endsWith('_r')) return `${name.slice(0, -2)}_l`;
+  return name;
+}

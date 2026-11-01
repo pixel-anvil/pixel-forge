@@ -42,7 +42,7 @@ export interface EditContext {
   readonly parts: readonly PartRender[];
   /**
    * `true`: no part has a footprint, so every edit becomes a final override (a mirror animation,
-   * whose part overrides are T3.6's). `parts` stays the real list that `render` draws. Default `false`.
+   * whose part overrides are never rendered, T3.6 decision). `parts` stays the real list that `render` draws. Default `false`.
    */
   readonly finalOnly?: boolean;
   /**
