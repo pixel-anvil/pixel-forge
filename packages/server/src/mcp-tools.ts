@@ -10,16 +10,48 @@
  * - A failure is `isError: true` whose text is the `{code, message, details}` of the `OpError`.
  * @packageDocumentation
  */
+import { CONVENTIONS, MUTATE_NOTE } from '@pixel-forge/ops';
 import type { McpToolDefinition, OpCallResult, OpErrorJson } from '@pixel-forge/ops';
 
 /** A tool as `tools/list` returns it: a {@link McpToolDefinition} without `outputSchema`. */
-export type ListedTool = Omit<McpToolDefinition, 'outputSchema' | 'inputSchema'> & {
+export type ListedTool = Omit<McpToolDefinition, 'outputSchema' | 'inputSchema' | 'annotations'> & {
+  readonly annotations: Omit<McpToolDefinition['annotations'], 'title'>;
   readonly inputSchema: { readonly type: 'object' } & Readonly<Record<string, unknown>>;
 };
 
 /** The route of the op behind a tool: the `_meta['pixel-forge/op']` of its definition. */
 export function opOfTool(tool: Pick<McpToolDefinition, '_meta'>): string {
   return tool._meta['pixel-forge/op'];
+}
+
+/**
+ * A tool description as `tools/list` carries it: without the text every tool repeats. The
+ * conventions line and the plain `mutate` note ("Edit: one undo step.") are stated once in the
+ * server instructions. The `read`, `io`, `destructive` and history notes stay (they differ per class
+ * and the destructive one names `confirm`).
+ */
+export function listedDescription(description: string): string {
+  const paragraphs = description
+    .replace(` ${CONVENTIONS}`, '')
+    .split('\n\n')
+    .filter((p) => p !== MUTATE_NOTE);
+  return paragraphs.join('\n\n');
+}
+
+/**
+ * A JSON Schema without `additionalProperties: false`. Every object schema zod makes is closed, so
+ * the keyword says nothing a client acts on (105 copies, about 3 KB); the server still validates
+ * with zod and rejects unknown keys. An `additionalProperties` that is a schema (a map) stays.
+ */
+export function openSchema<T>(node: T): T {
+  if (Array.isArray(node)) return node.map(openSchema) as T;
+  if (typeof node !== 'object' || node === null) return node;
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(node)) {
+    if (key === 'additionalProperties' && value === false) continue;
+    out[key] = openSchema(value);
+  }
+  return out as T;
 }
 
 /**
@@ -30,9 +62,13 @@ export function listedTools(definitions: readonly McpToolDefinition[]): ListedTo
   return definitions.map((def) => ({
     name: def.name,
     title: def.title,
-    description: def.description,
-    inputSchema: { ...def.inputSchema, type: 'object' as const },
-    annotations: def.annotations,
+    description: listedDescription(def.description),
+    inputSchema: { ...openSchema(def.inputSchema), type: 'object' as const },
+    annotations: {
+      readOnlyHint: def.annotations.readOnlyHint,
+      destructiveHint: def.annotations.destructiveHint,
+      openWorldHint: def.annotations.openWorldHint,
+    },
     _meta: def._meta,
   }));
 }

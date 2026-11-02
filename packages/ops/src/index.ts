@@ -82,6 +82,7 @@ export {
   CONFIRM_SCHEMA,
   CONVENTIONS,
   GENERATED_PATHS,
+  MUTATE_NOTE,
   cliMetadata,
   exampleInput,
   generatedFiles,

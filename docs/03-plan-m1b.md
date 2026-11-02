@@ -37,7 +37,7 @@ Limits stay the same: two agents at a time, at most one on Opus.
 | T5.16 | Fit a template to art from landmarks | sonnet | medium | M | T5.17 | ☐ |
 | B0.1 | `rig.fitPose`: search poses against a target image | sonnet | high | M | T5.17 | ☐ |
 | B0.2 | Fill colour of `part_paint_overlap` (RIG-08) and tool names in descriptions (MCP-06) | sonnet | medium | S | T5.14 | ☐ |
-| B0.3 | `tools/list` budget: move shared text to server instructions, strip schema noise (MCP-04) | sonnet | medium | S | — | ☐ |
+| B0.3 | `tools/list` budget: move shared text to server instructions, strip schema noise (MCP-04) | sonnet | medium | S | — | ☑ |
 | E1.1 | IK solvers: analytic two-bone and FABRIK, bake to FK | opus | high | M | — | ☐ |
 | E1.2 | End-effector targets in `rig_set_pose`, `rig_ik_target` | sonnet | medium | S | E1.1, T5.17 | ☐ |
 | E2.1 | Variant auto-select with hysteresis | sonnet | high | M | — | ☐ |
