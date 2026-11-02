@@ -279,6 +279,11 @@ export const SCENARIOS: Record<string, Scenario> = {
     }),
     entry: 'one',
   },
+  rig_apply_preset: {
+    base: 'hero',
+    args: ({ doc }) => ({ doc, preset: 'walk', frames: 6 }),
+    entry: 'one',
+  },
   rig_bake: {
     base: 'hero',
     args: ({ doc }) => ({ doc, animation: frame0, mode: 'new', confirm: true }),

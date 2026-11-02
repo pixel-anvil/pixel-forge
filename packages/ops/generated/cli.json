@@ -1314,6 +1314,77 @@
       ]
     },
     {
+      "op": "rig.applyPreset",
+      "command": ["rig", "apply-preset"],
+      "summary": "Generate a motion preset (walk, run, jump, idle-breathe, swing) as an animation.",
+      "safety": "mutate",
+      "options": [
+        {
+          "name": "doc",
+          "flag": "--doc",
+          "kind": "string",
+          "required": true,
+          "description": "Document id from doc_open or doc_create."
+        },
+        {
+          "name": "preset",
+          "flag": "--preset",
+          "kind": "string",
+          "required": true,
+          "description": "Preset name: idle-breathe, jump, run, swing, walk."
+        },
+        {
+          "name": "params",
+          "flag": "--params",
+          "kind": "json",
+          "required": false,
+          "description": "Numeric parameters (defaults in the output)."
+        },
+        {
+          "name": "group",
+          "flag": "--group",
+          "kind": "string",
+          "required": false,
+          "description": "Default: the preset name."
+        },
+        {
+          "name": "direction",
+          "flag": "--direction",
+          "kind": "string",
+          "required": false,
+          "description": "Default \"side\"."
+        },
+        {
+          "name": "frames",
+          "flag": "--frames",
+          "kind": "integer",
+          "required": false,
+          "description": "Same as params.frames."
+        },
+        {
+          "name": "durationMs",
+          "flag": "--duration-ms",
+          "kind": "integer",
+          "required": false,
+          "description": "Frame ms (default 100)."
+        },
+        {
+          "name": "view",
+          "flag": "--view",
+          "kind": "string",
+          "required": false,
+          "description": "Character view; only \"side\" (default)."
+        },
+        {
+          "name": "replace",
+          "flag": "--replace",
+          "kind": "boolean",
+          "required": false,
+          "description": "Overwrite an existing animation."
+        }
+      ]
+    },
+    {
       "op": "rig.applyTemplate",
       "command": ["rig", "apply-template"],
       "summary": "Apply a humanoid skeleton template: bones matched by name are reused, missing ones are created.",

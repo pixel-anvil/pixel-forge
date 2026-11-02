@@ -76,6 +76,7 @@ Every failure is `{"code", "message", "details"}`, identical on every transport.
 | [`pxf.unpack`](#pxfunpack) | io | `pxf_unpack` | `pf unpack` | Expand a .pxf into a .pxfd folder (manifest, document, images, render cache). |
 | [`render.contactSheet`](#rendercontactsheet) | read | `render_contact_sheet` | `pf render contact-sheet` | Render the frames of some or all animations as one labelled PNG contact sheet (long edge at most 1568 px), optionally with bone lines and pivot markers. |
 | [`render.frame`](#renderframe) | read | `render_frame` | `pf render frame` | Render one frame to an upscaled PNG on a checkerboard (long edge at most 1568 px), optionally with bone lines and pivot markers. |
+| [`rig.applyPreset`](#rigapplypreset) | mutate | `rig_apply_preset` | `pf rig apply-preset` | Generate a motion preset (walk, run, jump, idle-breathe, swing) as an animation. |
 | [`rig.applyTemplate`](#rigapplytemplate) | mutate | `rig_apply_template` | `pf rig apply-template` | Apply a humanoid skeleton template: bones matched by name are reused, missing ones are created. |
 | [`rig.bake`](#rigbake) | destructive | `rig_bake` | `pf rig bake` | Bake a rig animation into one plain pixel layer: as a new animation, or in place. |
 | [`rig.bindParts`](#rigbindparts) | mutate | `rig_bind_parts` | `pf rig bind-parts` | Bind pixel layers to bones as parts, by layer name ("part:<bone>[.<part>][@variant][#view]") or by overlap. |
@@ -1286,6 +1287,53 @@ Look at frame 0 of the hero with the skeleton drawn:
 
 ```json
 {"doc":"doc_g1ed5q","animation":{"group":"default"},"frame":0,"scale":8,"bones":true,"pivots":true}
+```
+
+## rig.applyPreset
+
+Generate a motion preset (walk, run, jump, idle-breathe, swing) as an animation.
+
+Needs the humanoid template bone names. Writes animation <group>/side (group defaults to the preset); an existing one needs replace:true and loses its bone keys. Output: the resolved params, rootMotion and labels per frame. Next: render_contact_sheet.
+
+- Safety: `mutate`
+- MCP tool: `rig_apply_preset`
+- CLI: `pf rig apply-preset`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
+| `preset` | string | yes | Preset name: idle-breathe, jump, run, swing, walk. |
+| `params` | map of number | no | Numeric parameters (defaults in the output). |
+| `group` | string | no | Default: the preset name. |
+| `direction` | string | no | Default "side". |
+| `frames` | integer | no | Same as params.frames. |
+| `durationMs` | integer >= 1 | no | Frame ms (default 100). |
+| `view` | string | no | Character view; only "side" (default). |
+| `replace` | boolean | no | Overwrite an existing animation. |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `animation` | string | yes | Animation id. |
+| `label` | string | yes | "group/direction". |
+| `created` | boolean | yes | False when an existing animation was replaced. |
+| `frames` | integer | yes | Frame count. |
+| `loop` | string | yes | Loop mode of the preset. |
+| `angleQuantum` | number | yes | Angle quantum the keys use, deg. |
+| `params` | map of number | yes | Every parameter with defaults filled in. |
+| `rootMotion` | {dx, dy}[] | yes | Root motion per frame, px (also stored on the frames). |
+| `labels` | map of string[] | yes | Labels per frame, e.g. foot_l. |
+| `warnings` | string[] | yes |  |
+
+### Examples
+
+A 10-frame walk:
+
+```json
+{"doc":"doc_g1ed5q","preset":"walk","frames":10}
 ```
 
 ## rig.applyTemplate

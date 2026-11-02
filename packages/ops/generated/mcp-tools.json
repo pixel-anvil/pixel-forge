@@ -3974,6 +3974,164 @@
     }
   },
   {
+    "name": "rig_apply_preset",
+    "title": "rig.applyPreset",
+    "description": "Generate a motion preset (walk, run, jump, idle-breathe, swing) as an animation.\n\nNeeds the humanoid template bone names. Writes animation <group>/side (group defaults to the preset); an existing one needs replace:true and loses its bone keys. Output: the resolved params, rootMotion and labels per frame. Next: render_contact_sheet.\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (A 10-frame walk): {\"doc\":\"doc_g1ed5q\",\"preset\":\"walk\",\"frames\":10}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id from doc_open or doc_create."
+        },
+        "preset": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Preset name: idle-breathe, jump, run, swing, walk."
+        },
+        "params": {
+          "description": "Numeric parameters (defaults in the output).",
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "group": {
+          "description": "Default: the preset name.",
+          "type": "string",
+          "pattern": "^[a-z0-9_-]{1,48}$"
+        },
+        "direction": {
+          "description": "Default \"side\".",
+          "type": "string",
+          "pattern": "^[a-z0-9_-]{1,48}$"
+        },
+        "frames": {
+          "description": "Same as params.frames.",
+          "type": "integer"
+        },
+        "durationMs": {
+          "description": "Frame ms (default 100).",
+          "type": "integer",
+          "minimum": 1
+        },
+        "view": {
+          "description": "Character view; only \"side\" (default).",
+          "type": "string"
+        },
+        "replace": {
+          "description": "Overwrite an existing animation.",
+          "type": "boolean"
+        }
+      },
+      "required": ["doc", "preset"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "animation": {
+          "type": "string",
+          "description": "Animation id."
+        },
+        "label": {
+          "type": "string",
+          "description": "\"group/direction\"."
+        },
+        "created": {
+          "type": "boolean",
+          "description": "False when an existing animation was replaced."
+        },
+        "frames": {
+          "type": "integer",
+          "description": "Frame count."
+        },
+        "loop": {
+          "type": "string",
+          "description": "Loop mode of the preset."
+        },
+        "angleQuantum": {
+          "type": "number",
+          "description": "Angle quantum the keys use, deg."
+        },
+        "params": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Every parameter with defaults filled in."
+        },
+        "rootMotion": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "dx": {
+                "type": "integer"
+              },
+              "dy": {
+                "type": "integer"
+              }
+            },
+            "required": ["dx", "dy"],
+            "additionalProperties": false
+          },
+          "description": "Root motion per frame, px (also stored on the frames)."
+        },
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "description": "Labels per frame, e.g. foot_l."
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "animation",
+        "label",
+        "created",
+        "frames",
+        "loop",
+        "angleQuantum",
+        "params",
+        "rootMotion",
+        "labels",
+        "warnings"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "rig.applyPreset",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "rig.applyPreset",
+      "pixel-forge/safety": "mutate"
+    }
+  },
+  {
     "name": "rig_apply_template",
     "title": "rig.applyTemplate",
     "description": "Apply a humanoid skeleton template: bones matched by name are reused, missing ones are created.\n\nTemplates: humanoid-side (view \"side\"), humanoid-front (\"front\"), humanoid-back (\"back\"). Without view a new view is created (named after the template, or viewName); with view the rest pose is set there. The template origin is the document origin. Rest: pelvis -90 (up), limbs 180 relative to it (down). Proportions are generic: compare with render_frame (bones) and refit with rig_edit_bones before any part_split. Bones that exist with another parent are refused.\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Set the rest pose of the hero in its existing side view): {\"doc\":\"doc_g1ed5q\",\"template\":\"humanoid-side\",\"view\":\"side\"}",
