@@ -17,10 +17,13 @@
  * kept: the output is FK.
  *
  * **Body.** The pelvis dips by `bob` px at touchdown (0% and 50% of the cycle, the contact poses,
- * whatever the stance percentage) and is highest a quarter cycle later (two bobs per cycle), so the
- * legs can reach: the stride is limited by the leg length and the bob (`RigError('BAD_VALUE')` when a
- * foot cannot be reached, or cannot stay planted within 1 px at the angle quantum). The arms swing against the legs: the arm
- * on the side of the forward leg is back. The torso leans by `lean` degrees and the head stays level.
+ * whatever the stance percentage) and is highest a quarter cycle later (two bobs per cycle). The
+ * default is the smallest dip, from 0, with which the legs reach: at this size a dip of a pixel or two
+ * folds a knee 30 to 50 degrees, and the drawn walks the presets are measured against (E7.5) keep
+ * the legs nearly straight and the head level. The stride is limited by the leg length and the bob
+ * (`RigError('BAD_VALUE')` when a foot cannot be reached, or cannot stay planted within 1 px at the
+ * angle quantum). The arms swing against the legs: the arm on the side of the forward leg is back. The
+ * torso leans by `lean` degrees and the head stays level.
  *
  * **Loop.** Frame `n` would be frame 0: every quantity is periodic in the frame index, so the last
  * frame is one step before frame 0 and no frame is duplicated.
@@ -58,7 +61,7 @@ export const WALK_PARAMS: PresetParamSpecs = {
     min: 1,
     max: 256,
     description:
-      'Px a planted foot travels relative to the body (the step span); default half the shorter leg',
+      'Px a planted foot travels relative to the body (the step span); default three fifths of the shorter leg',
   },
   stancePercent: {
     kind: 'int',
@@ -73,13 +76,14 @@ export const WALK_PARAMS: PresetParamSpecs = {
     min: 0,
     max: 32,
     description:
-      'Px the pelvis dips at touchdown (peak to peak); default the smallest dip from a tenth of the shorter leg (at least 1) with which the feet reach and stay planted',
+      'Px the pelvis dips at touchdown (peak to peak); default the smallest dip from 0 with which the feet reach and stay planted (a dip folds the knees)',
   },
   lift: {
     kind: 'int',
     min: 0,
     max: 64,
-    description: 'Px the swinging foot rises; default a fifth of the shorter leg',
+    description:
+      'Px the swinging foot rises; default a 24th of the shorter leg, rounded down (0 under 24 px: lifting folds the knee)',
   },
   armSwing: {
     kind: 'number',
@@ -251,9 +255,9 @@ function generate(rig: PresetRig, input: PresetParams = {}): PresetResult {
   if (legLength < 2) throw new RigError('BAD_VALUE', 'walk: the legs are too short');
   // An auto default is kept inside the range of its spec, so a tall rig never fails on a value the
   // caller did not give (a value the caller gives is checked as it is).
-  const autoStride = clampTo(WALK_PARAMS.strideLength, Math.max(2, divRound(legLength, 2)));
-  const autoLift = clampTo(WALK_PARAMS.lift, Math.max(1, divRound(legLength, 5)));
-  const firstBob = clampTo(WALK_PARAMS.bob, Math.max(1, divRound(legLength, 10)));
+  const autoStride = clampTo(WALK_PARAMS.strideLength, Math.max(2, divRound(legLength * 3, 5)));
+  const autoLift = clampTo(WALK_PARAMS.lift, Math.floor(legLength / 24));
+  const firstBob = 0;
   const p = resolveParams(WALK_PARAMS, input, {
     strideLength: autoStride,
     bob: firstBob, // replaced below by the smallest dip that works when the caller gave none

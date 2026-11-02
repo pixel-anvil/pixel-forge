@@ -363,9 +363,10 @@ describe('walk: the support foot does not slide', () => {
           run = [];
         }
         expect(planted).toBeGreaterThanOrEqual(1);
-        // Swing frames are off the ground (the lift is at least one px at the middle of the swing).
+        // Swing frames are off the ground when the lift is at least one px (the default lift is 0 on
+        // legs under 24 px, E7.5).
         const lifted = pos[s].filter((p) => p[1] < ground[s]).length;
-        expect(lifted).toBeGreaterThanOrEqual(1);
+        if (r.params.lift !== 0) expect(lifted).toBeGreaterThanOrEqual(1);
         // And the ankle moves backwards across the canvas during stance (the ground goes by).
         const stanceFrames = r.frames
           .map((f, i) => (f.labels[`foot_${s}`] === 'stance' ? i : -1))
@@ -584,10 +585,29 @@ describe('walk: parameters', () => {
     expect(refused).toBeGreaterThan(0);
   });
 
+  it('the default walk keeps the legs nearly straight, like drawn walks at this size (E7.5)', () => {
+    // Measured on the CC0 reference walk (contact frames): thigh +-17..26 deg, knee 0..16 deg, no
+    // pelvis bob. The defaults must stay in that family on every set of proportions.
+    for (const set of Object.keys(SETS)) {
+      const rig = must(rigs[set]);
+      const r = walk.generate(rig);
+      let worstKnee = 0;
+      for (const f of r.frames) {
+        for (const side of ['l', 'r']) {
+          const knee = f.boneKeys[bid(`shin_${side}`)]?.angle ?? 0;
+          worstKnee = Math.max(worstKnee, Math.abs(knee));
+        }
+      }
+      // A 1 px lift on a longer leg (tall64) folds the knee about 30 deg at mid swing; the old defaults gave 70 to 78.
+      expect(worstKnee, set).toBeLessThanOrEqual(35);
+      expect(r.params.bob, set).toBeLessThanOrEqual(1);
+    }
+  });
+
   it('names the parameter to change when the dip or the stride cannot work', () => {
     const e = (() => {
       try {
-        walk.generate(rigA, { angleQuantum: 15 });
+        walk.generate(rigA, { angleQuantum: 45 }); // 15 works since E7.5 (straight legs)
       } catch (err) {
         return err as Error;
       }
@@ -674,8 +694,8 @@ describe('walk: determinism (ADR-010)', () => {
   });
 
   it('matches the committed hash of the case table', () => {
-    // Pinned on macOS (2026-11-02, re-pinned after the pelvis timing fix); CI must reproduce it on Linux (ADR-010).
-    expect(hash(table())).toBe('261fa3e541d3a92c3bc76566f3b0da7b6c755545c61afe3d5b92fed4f661011e');
+    // Pinned on macOS (2026-11-02, re-pinned after the pelvis timing fix and again in E7.5 for the new default stride, lift and bob); CI must reproduce it on Linux (ADR-010).
+    expect(hash(table())).toBe('40d7b41a9b5e8b2a85fcb44461333dec86cb5010165ef29f57c2375f5d233dbc');
   });
 
   it('uses no Math trig, no Math.sqrt, no Math.random and no clock', () => {

@@ -72,7 +72,7 @@ export const RUN_PARAMS: PresetParamSpecs = {
     kind: 'int',
     min: 0,
     max: 64,
-    description: 'Px the swinging foot rises; default two fifths of the shorter leg',
+    description: 'Px the swinging foot rises; default a quarter of the shorter leg',
   },
   armSwing: {
     kind: 'number',
@@ -113,7 +113,7 @@ function generate(rig: PresetRig, input: PresetParams = {}): PresetResult {
   const legLength = Math.min(legOf('l'), legOf('r'));
   if (legLength < 2) throw new RigError('BAD_VALUE', 'run: the legs are too short');
   const autoStride = clampTo(RUN_PARAMS.strideLength, Math.max(2, divRound(4 * legLength, 5)));
-  const autoLift = clampTo(RUN_PARAMS.lift, Math.max(2, divRound(2 * legLength, 5)));
+  const autoLift = clampTo(RUN_PARAMS.lift, Math.max(2, divRound(legLength, 4)));
   const firstBob = clampTo(RUN_PARAMS.bob, Math.max(2, divRound(legLength, 6)));
   const p = resolveParams(RUN_PARAMS, input, {
     strideLength: autoStride,

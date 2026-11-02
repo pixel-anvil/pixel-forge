@@ -771,9 +771,9 @@ describe('run and jump: determinism (ADR-010)', () => {
   });
 
   it('matches the committed hashes of the case tables', () => {
-    // Pinned on macOS (2026-11-02); CI must reproduce them on Linux (ADR-010).
+    // Pinned on macOS (2026-11-02; run re-pinned in E7.5 after the default lift change); CI must reproduce them on Linux (ADR-010).
     expect(hash(runTable())).toBe(
-      'e85adf5ea2521bf1ad158e55269070ecaf01e5bd6028193cd7e1f6c02d31faef',
+      'df9b65856eec684bffb36fc8a6d97ffa2faeb9b7f54cad51523c5e7c035f1855',
     );
     expect(hash(jumpTable())).toBe(
       '30f316367704f2715d308c045528322d40a58de74b1d110602d7d0958bb4aa7f',

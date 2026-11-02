@@ -40,5 +40,9 @@ Planning steps 1 to 5 are done (research, spec, plan and their reviews). Impleme
 
 - **Test sprites (2026-11-02):** (1) likeness sheet, local only, `~/pf-work/local-sprites/sheet-local.png`, never commit. (2) `ninja_full.png` (320x640, native pixels, 32x64 cells, 10 columns and 10 rows; user says CC0; committed at `fixtures/cc0/male_base_ninja/` with a LICENSE.md that notes the author and source are unrecorded): has walking in the first frames; use for W1 and E7.3.
 
+- ☑ E7.4 second test rig (`fixtures/src/ninja.ts`, `fixtures/generated/ninja.pxf`, scenario `ninja-presets`; RIG-13..17). `advnt_full.png` (same pack, same CC0, confirmed by the user) is committed beside the ninja sheet. W3-manual/W4-CLI lint expectations fixed (they disable or filter `rig.rotationResidual`).
+- ☑ E7.5 presets tuned to the drawn walks (report `.claude/reports/E7.5.md`). Cause: the drawn walk has nearly straight legs (knee 0 to 16°), no bob, feet about 11 px apart; old defaults folded knees 45 to 78°. Walk defaults: `bob` search starts at 0, `lift` = floor(leg/24), `strideLength` = 3/5 leg; run `lift` = leg/4. Ninja rig: far limbs use the sheet's shade, knee and elbow joint pieces (20 parts), jointCheck 0 gaps. Walk and run hashes re-pinned (macOS only). Deviations: fitted with the `fitPose` engine from a script, not the op; hero default walk changed (stride 10 to 12, bob 0, lift 0). Doubts: straight legs may glide on big rigs (RIG-18); fit is rough (about ±5°); run has no reference, still noisy (knees to about 100°). Sheets for user review: `~/pf-work/sheets-e75/{before,after}/` (`walk_vs_reference.png` first).
+- **Next:** user reviews the E7.5 sheets; then G2b. Leftover worktrees to delete: `agent-a50ee4dc9968f1705`, `agent-a72abdb9cdc7b6a40`.
+
 ## Open questions for the user
 1. E4.0 (before wave B3): the JPEG/WebP decoder choice and its dependency, for approval.

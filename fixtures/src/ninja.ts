@@ -11,7 +11,10 @@
 //   1. `fitHumanoid('side', landmarks)`  -> bone lengths from four landmarks (op `rig.fitTemplate`)
 //   2. the arm pivots move 2 px forward: the art hangs the arm in front of the torso, not on the centre line
 //   3. one pixel layer per part, cut by rectangles and a few exceptions (below), then `bindParts`.
-// Every child part reaches 2 px past its pivot into its parent (the joint cap, JOINT_CHECK.md).
+// Every child part reaches 2 px past its pivot into its parent (the joint cap, JOINT_CHECK.md), except at
+// the knees and elbows (E7.5): there the upper part ends at the pivot, the lower part starts at it, and a
+// joint piece (a second part on the lower bone, cut from the same pixels, corners off) covers the joint,
+// so a bent knee or elbow shows no cap sticking out. The far limbs use only colours of the sheet.
 
 type Rgb = readonly [number, number, number];
 
@@ -39,6 +42,8 @@ export interface NinjaPart {
   readonly keep?: (x: number, y: number) => boolean;
   /** A darker copy for the far side (z behind the body). */
   readonly far?: boolean;
+  /** A joint piece (E7.5): a second part on the same bone, named `<bone>.<piece>`, drawn above the limb at the same z. */
+  readonly piece?: string;
 }
 
 const near = (bone: string): string => `${bone}_r`;
@@ -60,20 +65,24 @@ function cut(side: 'near' | 'far'): NinjaPart[] {
     // legs: the near leg is the 4 px strip; the far copy also takes the thin far-leg sliver (cols 17 and 18)
     {
       bone: b('thigh'),
-      rows: [41, 54],
+      rows: [41, 52], // ends at the knee pivot (row 52): the knee piece covers the joint, no cap sticks out
       cols: f ? [12, 18] : [12, 16],
       keep: f ? (x, y) => x <= 16 || y >= 45 : undefined,
       far: f,
     },
     {
       bone: b('shin'),
-      rows: [50, 61],
+      rows: [52, 61],
       cols: f ? [12, 18] : [12, 16],
       far: f,
     },
     { bone: b('foot'), rows: [59, 63], cols: [11, 17], far: f },
-    arm('upper_arm', [29, 37]),
-    arm('lower_arm', [33, 43]),
+    arm('upper_arm', [29, 35]), // ends at the elbow pivot (row 35)
+    arm('lower_arm', [35, 41]), // starts at it; the hand (rows 40 to 44) overlaps the last 2 rows
+    // Joint pieces: the real pixels of the joint, 2 px either side of the pivot, with the corners cut
+    // off, so a bent joint shows a round edge and no cap (RIG-12, RIG-15).
+    { bone: b('shin'), piece: 'knee', rows: [50, 54], cols: [13, 16], keep: (x, y) => y > 50 && y < 54 || (x >= 14 && x <= 15), far: f },
+    { bone: b('lower_arm'), piece: 'elbow', rows: [34, 36], cols: [17, 19], keep: (x, y) => y === 35 || x === 18, far: f },
     { bone: b('hand'), rows: [40, 44], cols: [17, 20], far: f },
   ];
 }
@@ -100,12 +109,15 @@ function isOutline(x: number, y: number): boolean {
   return p[3] > 0 && p[0] === OUTLINE[0] && p[1] === OUTLINE[1] && p[2] === OUTLINE[2];
 }
 
-/** The darker colour of a far-side pixel: fill and shade darken, the outline and the transparent stay. */
+/**
+ * The colour of a far-side pixel: fill drops to the sheet's own shade colour and the cuff to its shade
+ * (the sheet draws its legs mostly in that shade); the outline and the transparent stay. No colour is
+ * added to the 5-colour palette (E7.5: the first far copies used two new, darker colours that read as a
+ * second outline next to the 1 px outline and made both legs one dark mass).
+ */
 const FAR: Readonly<Record<string, Rgb>> = {
-  '85,84,145': [54, 54, 104],
-  '70,70,125': [42, 42, 88],
-  '175,130,71': [120, 90, 52],
-  '162,109,41': [105, 72, 30],
+  '85,84,145': [70, 70, 125],
+  '175,130,71': [162, 109, 41],
 };
 
 /** One part rasterised on the full cell canvas (RGBA). */
@@ -224,11 +236,11 @@ export async function buildNinjaPxf(): Promise<Uint8Array> {
       }
       const imageId = tx.createImage(raster.TiledImage.fromRGBA({ width: bw, height: bh, data }));
       const id = tx.newId('layer');
-      rawNames[id] = `part:${part.bone}`;
+      rawNames[id] = part.piece === undefined ? `part:${part.bone}` : `part:${part.bone}.${part.piece}`;
       return {
         kind: 'pixel',
         id,
-        name: part.bone,
+        name: part.piece === undefined ? part.bone : `${part.bone}_${part.piece}`,
         visible: true,
         opacity: 255,
         export: true,

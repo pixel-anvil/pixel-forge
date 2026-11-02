@@ -14,7 +14,7 @@ const ninja = (await import(/* @vite-ignore */ pathToFileURL(`${fixtures}src/nin
   NINJA_CELL: { w: number; h: number };
   NINJA_COLUMN: number;
   NINJA_PAD_X: number;
-  ninjaParts(): { bone: string; far?: boolean }[];
+  ninjaParts(): { bone: string; far?: boolean; piece?: string }[];
   rasterizeNinjaPart(p: unknown): Uint8Array;
   loadNinjaSource(): Promise<void>;
   buildNinjaPxf(): Promise<Uint8Array>;
@@ -29,10 +29,18 @@ describe('ninja.pxf', () => {
     expect(Buffer.from(bytes).equals(readFileSync(`${fixtures}generated/ninja.pxf`))).toBe(true);
   });
 
-  it('has 16 parts, one on each bone except the root', () => {
+  it('has 16 parts, one on each bone except the root, and 4 joint pieces (E7.5)', () => {
     expect(file.doc.meta.canvas).toEqual({ w: ninja.NINJA_CELL.w + 2 * ninja.NINJA_PAD_X, h: 64 });
-    expect(rig.parts).toHaveLength(16);
+    expect(rig.parts).toHaveLength(20);
+    // The knee pieces sit on the shin bones and the elbow pieces on the lower-arm bones.
     expect(new Set(rig.parts.map((p) => p.boneId)).size).toBe(16);
+    expect(
+      ninja
+        .ninjaParts()
+        .filter((p) => p.piece !== undefined)
+        .map((p) => `${p.bone}.${p.piece ?? ''}`)
+        .sort(),
+    ).toEqual(['lower_arm_l.elbow', 'lower_arm_r.elbow', 'shin_l.knee', 'shin_r.knee']);
   });
 
   it('jointCheck is clean', () => {
@@ -66,7 +74,7 @@ describe('ninja.pxf', () => {
   });
 
   it('has a darker far copy of each near limb', () => {
-    const far = ninja.ninjaParts().filter((p) => p.far === true);
+    const far = ninja.ninjaParts().filter((p) => p.far === true && p.piece === undefined);
     expect(far.map((p) => p.bone).sort()).toEqual([
       'foot_l',
       'hand_l',
