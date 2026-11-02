@@ -134,4 +134,4 @@ Every card: standard context pack, definition of done and oracles (`docs/02-plan
 - **E9.2 The rest of §8.** Audit the §8 table against `packages/ops` first. `layer_update`, `rig_set_pivot` and `rig_bake` exist already, and others have changed names. Keep the tool count near 40.
 - **E9.3 Prompts.** FR-AI-16.
 - **E9.4 Second dogfood.** Same method as T5.8. It adds an art-quality check, because the T5.8 revisions improved the process and not the art. Measure the T5.8 numbers again (pose calls, bone edits, overrides).
-- **G3 Gate.** `code-review` over M1b, all W-scenarios, bench and determinism, docs, v0.2.0, M2 cards, user sign-off.
+- **G3 Gate.** `code-review` over M1b, final `tools/list` size check (the limit raised during development must be brought back down: groups plus a text trim, user rule 2026-11-02), all W-scenarios, bench and determinism, docs, v0.2.0, M2 cards, user sign-off.
