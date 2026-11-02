@@ -7,3 +7,9 @@
 - **Date added:** 2026-11-02
 
 Credit to MoikMellah is appreciated.
+
+## Second sheet: `advnt_full.png`
+
+- **File:** `advnt_full.png` (320x640, native pixels, 32x64 cells, 10 columns), from the same "maleBase" pack as `ninja_full.png`.
+- **Author, source, licence:** the same as above (MoikMellah, https://opengameart.org/content/mv-platformer-male-32x64, CC0 1.0). The maintainer confirmed on 2026-11-02 that it is the same pack with the same CC0 licence.
+- **Date added:** 2026-11-02
