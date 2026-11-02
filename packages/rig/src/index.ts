@@ -184,3 +184,5 @@ export type {
 } from './preset.js';
 export { WALK_PARAMS, walk } from './walk.js';
 export { PRESETS, PRESET_NAMES, getPreset } from './presets.js';
+export { IDLE_BREATHE_PARAMS, idleBreathe } from './idle-breathe.js';
+export { SWING_PARAMS, swing } from './swing.js';

@@ -3,11 +3,17 @@
  * @packageDocumentation
  */
 import { RigError } from './errors.js';
+import { idleBreathe } from './idle-breathe.js';
 import type { Preset } from './preset.js';
+import { swing } from './swing.js';
 import { walk } from './walk.js';
 
 /** Every motion preset by name. */
-export const PRESETS: Readonly<Record<string, Preset>> = { walk };
+export const PRESETS: Readonly<Record<string, Preset>> = {
+  walk,
+  'idle-breathe': idleBreathe,
+  swing,
+};
 
 /** The names in {@link PRESETS}, sorted. */
 export const PRESET_NAMES: readonly string[] = Object.keys(PRESETS).sort();

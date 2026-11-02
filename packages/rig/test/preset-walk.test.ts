@@ -149,7 +149,7 @@ const CASES: { set: string; params: Record<string, number> }[] = [
 
 describe('walk: API shape', () => {
   it('is registered, with documented parameters', () => {
-    expect(PRESET_NAMES).toEqual(['walk']);
+    expect(PRESET_NAMES).toContain('walk');
     expect(getPreset('walk')).toBe(walk);
     expect(PRESETS.walk).toBe(walk);
     expect(errorCode(() => getPreset('moonwalk'))).toBe('BAD_VALUE');
