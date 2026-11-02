@@ -37,6 +37,7 @@ Limits stay the same: two agents at a time, at most one on Opus.
 | T5.16 | Fit a template to art from landmarks | sonnet | medium | M | T5.17 | ☐ |
 | B0.1 | `rig.fitPose`: search poses against a target image | sonnet | high | M | T5.17 | ☐ |
 | B0.2 | Fill colour of `part_paint_overlap` (RIG-08) and tool names in descriptions (MCP-06) | sonnet | medium | S | T5.14 | ☐ |
+| B0.3 | `tools/list` budget: move shared text to server instructions, strip schema noise (MCP-04) | sonnet | medium | S | — | ☐ |
 | E1.1 | IK solvers: analytic two-bone and FABRIK, bake to FK | opus | high | M | — | ☐ |
 | E1.2 | End-effector targets in `rig_set_pose`, `rig_ik_target` | sonnet | medium | S | E1.1, T5.17 | ☐ |
 | E2.1 | Variant auto-select with hysteresis | sonnet | high | M | — | ☐ |
@@ -85,6 +86,7 @@ Every card: standard context pack, definition of done and oracles (`docs/02-plan
 - **T5.12 Lint rules.** LINT-01: art cut off at the canvas edge. LINT-02: 1 px holes inside rotated parts. **Oracle:** the T5.8 frames with the missing foot and the speckle, rebuilt as synthetic fixtures with hand-written expectations. **Acceptance:** both are found, and all W-scenarios stay clean (no false findings).
 - **T5.16 Fit a template.** Given landmark points (head top, hips, feet, hands), fit bone lengths and rest pose in one call. **Acceptance:** 31 to 42 bone edits (T5.8) drop to 1 call plus at most 5 edits on the CC0 character.
 - **B0.1 `rig.fitPose`.** Search bone angles, and only bones and variants, so that the render matches a target image. T6.4 did this with a local script over the real renderer. Write it fresh for the public repo, with a seeded and deterministic search. No game names and no game art: tests use the CC0 character and synthetic art. **Acceptance:** on a synthetic rig posed by a known pose, the search reaches an exact match in a bounded number of renders, and the same seed gives the same result on macOS and Linux.
+- **B0.3 `tools/list` budget.** Added 2026-11-02 at the user's request. Move text that repeats in every tool into the server `instructions`, and drop schema noise from the listed definitions only. **Acceptance:** `tools/list` is clearly smaller, validation is as strict as before, no tool is added or removed, and W3 is re-run at G2b to check call quality. Tool groups (`--tools core,rig`) are planned before wave B4.
 - **B0.2 Small fixes.** RIG-08: the fill colour must not be the outline colour on small parts. MCP-06: descriptions must say that clients prefix tool names. Note that description length is limited by a test (MCP-04).
 
 ### Wave B1: rig
