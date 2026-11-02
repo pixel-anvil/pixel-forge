@@ -79,6 +79,7 @@ The order that worked in the T5.8 evaluation for a sprite sheet with no parts:
 - **Rig a character:** "Open `hero.pxf` and import `hero_parts.aseprite`. Apply the humanoid-side template with `rig_apply_template`, bind the layers with `rig_bind_parts`, set the pivots with `rig_set_pivot`, then run `rig_joint_check` and fix any gaps."
 - **Six-frame run:** "Create a `run` animation with `anim_create`, pose its frames with `rig_set_pose` for a side-view run at 12 fps, render a `render_contact_sheet` and tell me what looks wrong, then run `lint`."
 - **Fix 3 px on frame 2:** "Read the area around the eye on frame 2 with `pixels_read_grid`, then paint the three pixels with `pixels_write_grid` using a legend. Check with `render_frame`, then `doc_save`."
+- **Match a reference pose:** "Fit the `upper_arm_r` and `lower_arm_r` angles of frame 0 to `reference.png` with `rig_fit_pose` (also `parts: [\"lower_arm_r\"]` for the sleeve), then pass its `bones` and `parts` to `rig_set_pose` and compare with `render_frame`." `exact: false` is not proof that no pose fits (KNOWN_ISSUES FIT-01): fit the parents first, narrow `range`, or raise `maxRenders`.
 - **Bake for export:** "Bake the `idle` animation as a new animation with `rig_bake` (with `confirm: true`), then render a contact sheet."
 
 ## Troubleshooting

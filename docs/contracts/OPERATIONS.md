@@ -80,6 +80,7 @@ Every failure is `{"code", "message", "details"}`, identical on every transport.
 | [`rig.bake`](#rigbake) | destructive | `rig_bake` | `pf rig bake` | Bake a rig animation into one plain pixel layer: as a new animation, or in place. |
 | [`rig.bindParts`](#rigbindparts) | mutate | `rig_bind_parts` | `pf rig bind-parts` | Bind pixel layers to bones as parts, by layer name ("part:<bone>[.<part>][@variant][#view]") or by overlap. |
 | [`rig.editBones`](#rigeditbones) | mutate | `rig_edit_bones` | `pf rig edit-bones` | Edit the skeleton: add/delete/reparent/rename bones, set length and rest pose per view, add/rename/delete views. |
+| [`rig.fitPose`](#rigfitpose) | io | `rig_fit_pose` | `pf rig fit-pose` | Find the bone angles (deg, relative to rest) and part variants whose render of one frame matches a target image. |
 | [`rig.fitTemplate`](#rigfittemplate) | mutate | `rig_fit_template` | `pf rig fit-template` | Fit a humanoid template to landmark points: lengths and rest pose in one call. |
 | [`rig.jointCheck`](#rigjointcheck) | read | `rig_joint_check` | `pf rig joint-check` | Sweep each joint of one rig view and report the pixel gaps that open on the outer side of a bend. |
 | [`rig.mirrorAnimation`](#rigmirroranimation) | mutate | `rig_mirror_animation` | `pf rig mirror-animation` | Add a mirror of an animation under a new direction: same group, flipped around the origin. |
@@ -1434,6 +1435,51 @@ Add a tail bone under the torso, then lengthen the head:
 
 ```json
 {"doc":"doc_g1ed5q","edits":[{"action":"addBone","name":"tail","parent":"torso","length":8},{"action":"setLength","bone":"head","length":9}]}
+```
+
+## rig.fitPose
+
+Find the bone angles (deg, relative to rest) and part variants whose render of one frame matches a target image.
+
+Target: file (PNG, canvas size) or targetFrame. Searches each bone angle within ±range and each listed part variant. Pass the output bones and parts to rig_set_pose to apply them. exact: no pixel differs; else error counts them. Seeded: the same input gives the same result. A miss is not proof that no pose fits: raise maxRenders or narrow range.
+
+- Safety: `io`
+- MCP tool: `rig_fit_pose`
+- CLI: `pf rig fit-pose`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
+| `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
+| `frame` | integer >= 0 \| string | yes | The frame to pose; its other keys stay as they are. |
+| `file` | string | no | Target PNG, the size of the canvas. |
+| `targetFrame` | integer >= 0 \| string | no | Target: another frame of this animation, rendered. |
+| `bones` | string[] | no | Bones whose angle to search (names or ids; default: every bone). |
+| `parts` | string[] | no | Parts whose variant to search (default: none). |
+| `range` | number | no | Search each angle within ±range deg of rest (default 180). |
+| `seed` | integer | no | Seed of the random restarts (default 1). |
+| `maxRenders` | integer >= 1 | no | Most renders (default 3000). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `animation` | string | yes | "group/direction" of the animation. |
+| `frameIndex` | integer | yes | The frame that was fitted. |
+| `exact` | boolean | yes | True when the render equals the target (error 0). |
+| `error` | integer | yes | Pixels that differ from the target at the best pose. |
+| `renders` | integer | yes | Renders used. |
+| `bones` | map of {angle} | yes | Best angle by bone name: the bones input of rig_set_pose. |
+| `parts` | map of {variant} | yes | Best variant by part name: the parts input of rig_set_pose. |
+
+### Examples
+
+Pose the right arm like a reference image:
+
+```json
+{"doc":"doc_g1ed5q","animation":{"group":"default"},"frame":0,"file":"/work/reference.png","bones":["upper_arm_r","lower_arm_r"],"parts":["lower_arm_r"]}
 ```
 
 ## rig.fitTemplate

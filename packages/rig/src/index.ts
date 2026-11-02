@@ -127,3 +127,18 @@ export type {
 } from './overlap.js';
 export { fitHumanoid } from './fit-template.js';
 export type { FittedTemplate, Landmark, TemplateKind, TemplateLandmarks } from './fit-template.js';
+export {
+  FIT_POSE_COARSE,
+  FIT_POSE_MAX_RENDERS,
+  FIT_POSE_RESTARTS,
+  fitPose,
+  pixelMismatch,
+} from './fit-pose.js';
+export type {
+  FitBone,
+  FitImage,
+  FitPoseCandidate,
+  FitPoseInput,
+  FitPoseResult,
+  FitVariantSlot,
+} from './fit-pose.js';

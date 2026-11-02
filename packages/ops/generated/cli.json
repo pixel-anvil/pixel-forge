@@ -1481,6 +1481,84 @@
       ]
     },
     {
+      "op": "rig.fitPose",
+      "command": ["rig", "fit-pose"],
+      "summary": "Find the bone angles (deg, relative to rest) and part variants whose render of one frame matches a target image.",
+      "safety": "io",
+      "options": [
+        {
+          "name": "doc",
+          "flag": "--doc",
+          "kind": "string",
+          "required": true,
+          "description": "Document id from doc_open or doc_create."
+        },
+        {
+          "name": "animation",
+          "flag": "--animation",
+          "kind": "json",
+          "required": true,
+          "description": "Animation: {\"group\": \"run\", \"direction\": \"side\"} ({\"group\": \"idle\"} for an undirected one) or {\"id\": \"anm_...\"}."
+        },
+        {
+          "name": "frame",
+          "flag": "--frame",
+          "kind": "json",
+          "required": true,
+          "description": "The frame to pose; its other keys stay as they are."
+        },
+        {
+          "name": "file",
+          "flag": "--file",
+          "kind": "string",
+          "required": false,
+          "description": "Target PNG, the size of the canvas."
+        },
+        {
+          "name": "targetFrame",
+          "flag": "--target-frame",
+          "kind": "json",
+          "required": false,
+          "description": "Target: another frame of this animation, rendered."
+        },
+        {
+          "name": "bones",
+          "flag": "--bones",
+          "kind": "json",
+          "required": false,
+          "description": "Bones whose angle to search (names or ids; default: every bone)."
+        },
+        {
+          "name": "parts",
+          "flag": "--parts",
+          "kind": "json",
+          "required": false,
+          "description": "Parts whose variant to search (default: none)."
+        },
+        {
+          "name": "range",
+          "flag": "--range",
+          "kind": "number",
+          "required": false,
+          "description": "Search each angle within ±range deg of rest (default 180)."
+        },
+        {
+          "name": "seed",
+          "flag": "--seed",
+          "kind": "integer",
+          "required": false,
+          "description": "Seed of the random restarts (default 1)."
+        },
+        {
+          "name": "maxRenders",
+          "flag": "--max-renders",
+          "kind": "integer",
+          "required": false,
+          "description": "Most renders (default 3000)."
+        }
+      ]
+    },
+    {
       "op": "rig.fitTemplate",
       "command": ["rig", "fit-template"],
       "summary": "Fit a humanoid template to landmark points: lengths and rest pose in one call.",

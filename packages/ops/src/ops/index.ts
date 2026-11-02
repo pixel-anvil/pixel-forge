@@ -45,6 +45,7 @@ import { pixelsReadGrid } from './pixels-read-grid.js';
 import { pixelsWriteGrid } from './pixels-write-grid.js';
 import { renderContactSheet } from './render-contact-sheet.js';
 import { renderFrame } from './render-frame.js';
+import { rigFitPose } from './rig-fit-pose.js';
 
 export { animCreate } from './anim-create.js';
 export { animUpdate } from './anim-update.js';
@@ -86,6 +87,7 @@ export { pixelsReadGrid } from './pixels-read-grid.js';
 export { pixelsWriteGrid } from './pixels-write-grid.js';
 export { renderContactSheet } from './render-contact-sheet.js';
 export { OverlayBone, renderFrame } from './render-frame.js';
+export { rigFitPose } from './rig-fit-pose.js';
 
 /** The built-in ops. */
 export const ALL_OPS: readonly AnyOp[] = [
@@ -130,6 +132,7 @@ export const ALL_OPS: readonly AnyOp[] = [
   pixelsWriteGrid,
   renderContactSheet,
   renderFrame,
+  rigFitPose,
 ];
 
 /** The registry of the built-in ops, shared by the MCP server, the CLI and the harness. */
