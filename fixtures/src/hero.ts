@@ -92,6 +92,38 @@ export const HERO_PARTS: readonly HeroPart[] = [
 ];
 
 /**
+ * Knee pieces (joint pieces): a second part on each shin bone, centred on the knee pivot (24,35),
+ * drawn above the leg. 6 wide, 5 tall, corners cut, so a bent knee shows a rounded edge. The thighs
+ * of `HERO_JOINT_PARTS` end at the pivot, so no cap sticks out when the knee bends.
+ */
+function kneePiece(layer: string, bone: string, x: number, c: Rgb): HeroPart {
+  return {
+    layer,
+    bone,
+    rects: [
+      [x + 1, 33, 4, 1, c],
+      [x, 34, 6, 3, c],
+      [x + 1, 37, 4, 1, c],
+    ],
+  };
+}
+
+/** Default z of the knee pieces (by part layer name): just above their own leg, so a piece never crosses the other leg. */
+export const HERO_JOINT_Z: Readonly<Record<string, number>> = { shin_l_knee: -2, shin_r_knee: 2 };
+
+/**
+ * The hero with joint pieces (generated/hero_joints.pxf): thighs end at the knee pivot (rows 24 to 35,
+ * 12 tall) and each leg has a knee piece. Parts in ascending z, like `HERO_PARTS`.
+ */
+export const HERO_JOINT_PARTS: readonly HeroPart[] = HERO_PARTS.flatMap((part): HeroPart[] => {
+  if (part.bone === 'thigh_l') return [{ ...part, rects: [[20, 24, 6, 12, PANTS_FAR]] }];
+  if (part.bone === 'thigh_r') return [{ ...part, rects: [[21, 24, 6, 12, PANTS]] }];
+  if (part.layer === 'part:foot_l') return [part, kneePiece('part:shin_l.knee', 'shin_l', 20, PANTS_FAR)];
+  if (part.layer === 'part:foot_r') return [part, kneePiece('part:shin_r.knee', 'shin_r', 21, PANTS)];
+  return [part];
+});
+
+/**
  * Hand-computed rest-pose joint caps: per joint (child bone) the rectangle `[x, y, w, h]` that both
  * the parent's and the child's part cover, 2 px deep along the bone and spanning the limb at the
  * pivot. The pivot pixel lies inside it.
@@ -142,7 +174,10 @@ interface Ctx {
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /** Builds the document and returns the `.pxf` bytes. Deterministic (fixed ids and clock). */
-export async function buildHeroPxf(): Promise<Uint8Array> {
+export async function buildHeroPxf(
+  parts: readonly HeroPart[] = HERO_PARTS,
+  zByBone: Readonly<Record<string, number>> = {},
+): Promise<Uint8Array> {
   // Workspace packages are loaded from their build output: the generator runs under plain node.
   const pkg = (name: string): string =>
     new URL(`../../packages/${name}/dist/index.js`, import.meta.url).href;
@@ -178,7 +213,7 @@ export async function buildHeroPxf(): Promise<Uint8Array> {
   store.transact('hero', (tx: any) => {
     core.applySkeletonTemplate(tx, template);
     const frameId = tx.newId('frame');
-    const layers = HERO_PARTS.map((part) => {
+    const layers = parts.map((part) => {
       const [bx, by, bw, bh] = partBox(part);
       const full = rasterizePart(part);
       const data = new Uint8Array(bw * bh * 4);
@@ -221,7 +256,7 @@ export async function buildHeroPxf(): Promise<Uint8Array> {
         overrides: [],
       });
     });
-    const res = core.bindParts(tx, { rawNames, byOverlap: false, zByBone: template.z });
+    const res = core.bindParts(tx, { rawNames, byOverlap: false, zByBone: { ...template.z, ...zByBone } });
     if (res.skipped.length > 0) {
       throw new Error(`hero: unbound layers ${JSON.stringify(res.skipped)}`);
     }
@@ -236,4 +271,5 @@ export async function buildHeroPxf(): Promise<Uint8Array> {
 
 export default async function generate(ctx: Ctx): Promise<void> {
   ctx.writeFile('generated/hero.pxf', await buildHeroPxf());
+  ctx.writeFile('generated/hero_joints.pxf', await buildHeroPxf(HERO_JOINT_PARTS, HERO_JOINT_Z));
 }
