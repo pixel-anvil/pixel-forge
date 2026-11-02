@@ -17,8 +17,9 @@ Planning steps 1 to 5 are done (research, spec, plan and their reviews). Impleme
 - **Open:** one unexplained flaky full-suite failure in the B0.3 agent's run (3 reruns passed). W3 must be re-run at G2b: a client that ignores server instructions loses the conventions line.
 - Also done: ☑ T5.17 `rig_set_pose` takes `frames:[…]` and `keyAll` (one undo step; output says `keyed` and `interpolated` bones; `keyAll` keys unnamed bones at rest, angle 0). ☑ T5.14 `part_paint_variant` (RIG-07 fully resolved; `PART_RENDER_VERSION` not bumped, overrides go stale by the image hash). `tools/list` was 75,684 bytes after T5.14 alone; the combined size is under the 76,300 limit (test passes), but the margin is very thin.
 - ☑ T5.15 `rig_joint_check` option `compact:true` (named `compact` because `summary` already exists in the output; reports counts and problem bones, kind is always `gap`; under 500 bytes on the clean hero). ☑ T5.12 lint rules `pixels.clipped` (LINT-01, resolved) and `rig.partHole` (LINT-02, partly: it is a heuristic, hole count above the unrotated variant; not tried on real art; pixel-layer cels not checked for clipping). Rule ids are `area.name`, so not LINT-01/02. The merge was 59 bytes over the `tools/list` limit; I shortened the `lint` text. Margin is now about zero.
-- **In flight:** nothing.
-- **Next:** T5.16 and B0.1 (T5.17 is done); then B0.2 (T5.14 is done). The `tools/list` limit may be raised for now (see Tool size rule).
+- ☑ T5.16 `rig_fit_template` (`fitHumanoid` in rig; landmarks headTop, hips, feet, optional hands with hanging arms). Deviation: the minimum hand edit list is 17, not 31 to 42 (that figure had trial and error); test shows 17 → 1 call + 3 edits. Landmarks were measured by eye. `tools/list` limit raised 76,300 → 79,000 (list 78,594; the tool is ~2.3 KB; needs TG.1 or a trim before G3).
+- **In flight:** B0.1 `rig.fitPose` (agent aa6f435e0e6568767, worktree `.claude/worktrees/agent-aa6f435e0e6568767`). If it also raised the limit, keep the larger number on merge.
+- **Next:** integrate B0.1; then B0.2. The `tools/list` limit may be raised for now (see Tool size rule).
 
 ## Open questions for the user
 1. E4.0 (before wave B3): the JPEG/WebP decoder choice and its dependency, for approval.
