@@ -7,7 +7,7 @@
 | 3. Spec review & critique | ✅ done, all findings accepted | `docs/01-spec-review.md` |
 | 4. Plan + task breakdown (model-cost-aware) | ✅ v0.3 approved by user | `docs/02-plan.md` |
 | 5. Plan review & critique | ✅ done, 24 findings accepted | `docs/02-plan-review.md` |
-| 6. Implementation | 🔄 M1a Wave 5: G2 done except the user's sign-off | tasks tracked in `docs/02-plan.md` |
+| 6. Implementation | ✅ M1a done and tagged `v0.1.0`; M1b next (`docs/03-plan-m1b.md`) | tasks tracked in `docs/02-plan.md` |
 
 User wants to review the spec and the plan before proceeding past each.
 
@@ -20,7 +20,7 @@ User wants to review the spec and the plan before proceeding past each.
 - 2026-10-26: Effort level per card added (plan v0.3). Repo will be PUBLIC under a new GitHub org `pixel-anvil` (the user creates it on the web), MIT, pseudonymous commit identity `pixel-forge dev <dev@pixel-forge.invalid>`, game details kept local in `~/pf-work/GAME_NOTES.md` (new card T0.6 before the first push). CI: ubuntu+macOS on every push (free).
 
 ## Current focus / Next
-- **Cost mode (user, 2026-11-01):** run the orchestrator on **Sonnet/medium** from now on. This replaces the Opus/medium and gate-at-high lines in `docs/ai/ORCHESTRATOR.md`. Keep the short report contract (including the Deviations / External sources / Design decisions lines); Opus cards still run at high.
+- **Cost mode (user, 2026-11-01; applied with `/model sonnet`, `/effort medium` on 2026-11-02):** run the orchestrator on **Sonnet/medium**. This replaces the Opus/medium and gate-at-high lines in `docs/ai/ORCHESTRATOR.md`. Keep the short report contract (including the Deviations / External sources / Design decisions lines); Opus cards still run at high.
 - **User is away (2026-11-01):** after the usage limit resets, continue the work without asking. The user's sign-off is still needed before the v0.1.0 tag and the merge to `main`: prepare them, do not do them. If an agent stopped at the limit, resume it with `SendMessage`.
 - 2026-10-26: Plan v0.3 approved. Wave 0 started: T0.1 (sonnet/medium), T0.4 (opus/high), T0.5 (haiku/low) dispatched in parallel.
 - Deviation: no git repo yet, so W0 cards share the working tree (they write to separate directories). **No commits until T0.6 has scrubbed game references**, so the public history stays clean.
@@ -36,12 +36,12 @@ User wants to review the spec and the plan before proceeding past each.
 - **T6.4 approved by the user:** `~/pf-work/target_move/rig_final.pxf`, sheet `compare.png` (top original, bottom rig). 12 frames from 3 key frames, 38 cuts; poses found by a local fitter (`tools/fit.mjs`, bones and variants only). Key frames match 100%; all frames mean 91%, worst 77%; lint 0; joint gaps 72 to 0. Overrides on 4 frames only (6 to 19% of opaque pixels, 6 overrides, all valid; the check is hand-run as the user chose). Markers `ball`, `hand_r`; events and durations kept. Trap: key every bone on every frame, or keys interpolate (the first apply dropped 2 key frames to 42%).
 - **T6.5 approved by the user and committed (2026-11-01)** on the game's local branch (never push it). In the game's demo worktree the flat `.pxf` is replaced by the rigged one (renamed for its content; `trim=false` must stay in its `.import`). Game tests pass at 120 and 60 fps (445/445). Cache equals a fresh render (12/12). Old against rig, same scripted run: animation, frame and flags equal on 229 of 230 ticks (the other is GD-02), held prop delta 0. Files in `~/pf-work/t65/`, sheet `ingame_sheet.png` (old, rig, diff; one row per frame).
 - **G2 so far (macOS):** scenarios 5/5, GUT 162/162, fixtures check passes, determinism tests 41 passed and 1 skipped, game tests 445/445. Bench p95: RotSprite cold 0.56 ms, rig frame warm 0.09 ms, open 13 MB 105 ms. Godot import step for 20 animations (160 noise frames): about 115 ms, target 1 s; editor overhead not included. Code review: 10 findings, all accepted after reading the code; the fix agent must show a failing test for each. M1b cards drafted in `docs/03-plan-m1b.md`, user approval pending.
-- **G2 ready for the user (2026-11-02):** the 10 review fixes are merged on `m1a-wave1` (`63d2950`), and the release is prepared there (all packages 0.1.0, changelogs, no tag). **Waiting for the user to:** (a) sign off M1a, (b) approve `docs/03-plan-m1b.md`, (c) say go for the PR `m1a-wave1` to `main` and the `v0.1.0` tag. Do none of these without the user. After sign-off: open the PR, wait for green CI, merge, tag `v0.1.0`, tick G2, then start M1b wave B0 (Sonnet/medium orchestrator).
+- **M1a closed (2026-11-02):** the user signed off M1a. PR #1 merged into `main` (`4198c86`, merge commit), tag `v0.1.0` pushed. G2 ticked. Work for M1b goes on branch `m1b-wave0`.
+- **M1b plan `docs/03-plan-m1b.md` is a draft.** The user answered only the open points so far: (1) E4.0 (how JPEG/WebP decode): when the choice is known, tell the user, who approves any new dependency; (2) W1 photo: try to make one; the user can also give CC0 sprites for more tests, not only the ball. The user has NOT said "approved" for the plan: ask once, at the start of the next session, and start wave B0 only after a yes. B0 needs no new dependency.
 - Token-saving workflow (2026-11-01): for mechanical, output-heavy steps (test loops, captures, comparisons), the orchestrator gives the user commands that write to log files and print only totals; it reads only the failing parts. Use subagents for code-writing cards.
 
   Max two agents at a time; at most one on Opus.
 
 ## Open questions for the user
-1. Sign-off on M1a (G2 exit).
-2. Approval of the M1b plan, `docs/03-plan-m1b.md`. Two things inside it need a decision: E4.0 (how JPEG/WebP are decoded, maybe a new dependency) and the W1 fixture photo.
-3. Go for the merge to `main` and the `v0.1.0` tag.
+1. Approve the M1b plan (`docs/03-plan-m1b.md`)? Wave B0 can start on a yes.
+2. E4.0 (before wave B3): the JPEG/WebP decoder choice and its dependency, for approval.
