@@ -28,7 +28,7 @@ Limits stay the same: two agents at a time, at most one on Opus.
 
 | Card | Title | Model | Effort | Size | Deps | ☐/☑ |
 |---|---|---|---|---|---|---|
-| T5.10 | `rig.readPose` read op (MCP-03) | sonnet | medium | S | — | ☐ |
+| T5.10 | `rig.readPose` read op (MCP-03) | sonnet | medium | S | — | ☑ |
 | T5.17 | Pose several frames in one call, one undo step | sonnet | medium | S | T5.10 | ☐ |
 | T5.13 | Set a part's default z after creation (RIG-07) | sonnet | medium | S | — | ☑ |
 | T5.15 | Compact `rig.jointCheck` output, additive (MCP-05) | haiku | low | S | — | ☐ |
