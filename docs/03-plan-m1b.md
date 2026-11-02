@@ -30,7 +30,7 @@ Limits stay the same: two agents at a time, at most one on Opus.
 |---|---|---|---|---|---|---|
 | T5.10 | `rig.readPose` read op (MCP-03) | sonnet | medium | S | — | ☐ |
 | T5.17 | Pose several frames in one call, one undo step | sonnet | medium | S | T5.10 | ☐ |
-| T5.13 | Set a part's default z after creation (RIG-07) | sonnet | medium | S | — | ☐ |
+| T5.13 | Set a part's default z after creation (RIG-07) | sonnet | medium | S | — | ☑ |
 | T5.15 | Compact `rig.jointCheck` output, additive (MCP-05) | haiku | low | S | — | ☐ |
 | T5.14 | Paint a part variant's own art (RIG-07) | sonnet | medium | M | T5.13 | ☐ |
 | T5.12 | `lint` rules for canvas clipping and holes in rotated parts (LINT-01, LINT-02) | sonnet | medium | M | — | ☐ |
