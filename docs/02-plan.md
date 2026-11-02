@@ -836,7 +836,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - revise the descriptions and examples;
   - file new cards for missing tools.
 - **Acceptance** — W3-manual is done by the LLM on both characters. `docs/ai/MCP_EVAL_M1a.md` has the evidence. Every tool description has been revised at least once based on it.
-- **Notes (2026-11-01)** — ☑ Opus/high; about 385k tokens plus 7 `claude -p` Sonnet runs (about $6.60 of API-equivalent cost), stopped once by the usage limit. Both characters pass W3 on the final text (hero r7, CC0 r6); 37/37 descriptions revised. Evidence: `docs/ai/MCP_EVAL_M1a.md`.
+- **Notes (2026-11-01)** — ☑ Opus/high; about 410k tokens plus 7 `claude -p` Sonnet runs (about $6.60 of API-equivalent cost), stopped once by the usage limit. Both characters pass W3 on the final text (hero r7, CC0 r6); 37/37 descriptions revised. Evidence: `docs/ai/MCP_EVAL_M1a.md`.
   - Run r5 met all of W3's conditions with 47% of a frame pasted from the sheet, so W3 cannot tell a rig animation from pasted art. The evaluation added a 5% override check, which is not in the spec (open question in STATUS).
   - The revisions improved the process, not the art: the final CC0 jump has speckle and poor arms in frame 3, and lint finds none of it.
   - Cards T5.10 to T5.17 are proposals from the evaluation, added to the board, not yet scheduled. RIG-08 and MCP-06 were left unrevised so the tested text is what ships.
