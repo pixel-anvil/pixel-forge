@@ -1,6 +1,6 @@
 {
   "name": "@pixel-forge/ops",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Op registry, definitions, handlers, error types and generators (MCP tool JSON, CLI, docs).",
   "license": "MIT",
   "type": "module",

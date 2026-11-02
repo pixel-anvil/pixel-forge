@@ -1,6 +1,6 @@
 {
   "name": "@pixel-forge/convert",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Image-to-sprite steps and ConvertRecipe.",
   "license": "MIT",
   "type": "module",

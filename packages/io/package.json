@@ -1,6 +1,6 @@
 {
   "name": "@pixel-forge/io",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": ".pxf read/write and migrations, render cache, PNG/GIF/JPEG/WebP codecs, spritesheet JSON and .aseprite import. Takes a FileSystem port.",
   "license": "MIT",
   "type": "module",

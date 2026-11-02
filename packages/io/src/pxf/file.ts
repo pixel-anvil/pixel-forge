@@ -7,7 +7,7 @@ import type { DeepReadonly, DocumentView, StoreOptions, StoredImage } from '@pix
 import type { Document, ImageId, Manifest, RenderIndex } from '@pixel-forge/schema';
 
 /** Version written to `manifest.json` `app` as `pixel-forge <version>`; a test keeps it equal to `package.json`. */
-export const PIXEL_FORGE_VERSION = '0.0.0';
+export const PIXEL_FORGE_VERSION = '0.1.0';
 
 /** The `manifest.json` `app` value this build writes. */
 export const PXF_APP = `pixel-forge ${PIXEL_FORGE_VERSION}`;

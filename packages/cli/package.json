@@ -1,6 +1,6 @@
 {
   "name": "@pixel-forge/cli",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "The pf binary: serve, mcp, check, convert, render, export, lint, override import, pack/unpack.",
   "license": "MIT",
   "type": "module",

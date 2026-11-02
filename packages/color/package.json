@@ -1,6 +1,6 @@
 {
   "name": "@pixel-forge/color",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "OKLab/OKLCH, palette operations, ramps, quantisation and palette file formats.",
   "license": "MIT",
   "type": "module",

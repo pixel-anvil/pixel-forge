@@ -193,7 +193,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T5.17 | Pose several frames in one call, one undo step | sonnet | medium | S | T5.8 | | ☐ |
 | T6.4 | Target-move rebuild from pack art (with the user) | opus orchestrating | high | session | T5.8, D1 | | ☑ |
 | T6.5 | Swap the rigged target move into the first consumer game (user approval) | sonnet | medium | S | T6.4 | | ☑ |
-| G2 | **Gate: M1a exit** + v0.1.0 + M1b breakdown | opus | high | — | all | | ☐ |
+| G2 | **Gate: M1a exit** + v0.1.0 + M1b breakdown | opus | high | — | all | | ⏳ |
 
 **Mix**: Opus 12 cards (T0.4, T1.1, T1.6, T2.1, T3.0, T3.1, T3.3, T3.8, T6.0, T5.1, T5.8, T6.4) + 2 gates; Sonnet 32; Haiku 6; orchestrator steps 2 (O-1, D1). Opus is about 25 % of the cards and roughly 35 % of the tokens. Sonnet carries most of the volume.
 
@@ -867,6 +867,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 - **Changesets → v0.1.0 tag**, and the addon version bumped to match.
 - **Rolling wave**: write the M1b cards, using what was learned about the models.
 - **Exit** — the user signs off on M1a.
+- **Notes (2026-11-02)** — ⏳ **Waiting for the user's sign-off; the tag is not created.** Re-run on macOS: scenarios 5/5, GUT 162/162, fixtures check, determinism tests, `pnpm bench` (all targets met, see STATUS), game tests 445/445. Godot import step for 20 animations about 115 ms (target 1 s; editor overhead not measured). `code-review` high: 10 findings, all confirmed by reading the code; Sonnet/high fix pass (about 238k tokens) fixed 9 and found the 10th (unpack) was not a defect. New issues IO-05, IO-06, SRV-03, LINT-03. Review of this size found 10 bugs again after 10 at G1: keep a gate review in M1b (G2b, G3). Release prepared: a minor changeset moved all 12 public packages to 0.1.0 and wrote the changelogs (the addon was already 0.1.0). `changeset version` crashes in its formatter step (`spawn ENOEXEC`) after writing the files, so the consumed changesets were deleted by hand. M1b cards: `docs/03-plan-m1b.md`.
 
 ---
 
