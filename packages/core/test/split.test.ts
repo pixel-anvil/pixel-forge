@@ -706,7 +706,12 @@ describe('binding', () => {
 });
 
 /** The W2b scene: a flat two-segment limb split into upper and lower arm parts, with a gap at the elbow. */
-function w2bSplit(): { s: DocumentStore; before: string; lowerId: BoneId | undefined } {
+/** `z`: the forearm's default z; `null` leaves it unset, so both parts tie on z. */
+function w2bSplit(z: number | null = -1): {
+  s: DocumentStore;
+  before: string;
+  lowerId: BoneId | undefined;
+} {
   const s = makeStore({ art: 'blank' });
   const r0 = s.doc.rig;
   const view = r0?.views[0];
@@ -728,7 +733,7 @@ function w2bSplit(): { s: DocumentStore; before: string; lowerId: BoneId | undef
   split(
     s,
     { kind: 'rect', x: x - 2, y, w: 4, h: 8 },
-    { partName: 'part:lower_arm_r', zByBone: { lower_arm_r: -1 } },
+    { partName: 'part:lower_arm_r', ...(z === null ? {} : { zByBone: { lower_arm_r: z } }) },
   );
   expect(hashOf(s)).toBe(before); // W2b: the parts recomposite the source frame
 
@@ -766,6 +771,14 @@ describe('W2b end to end: split, find the gaps, paint the overlap, composite unc
     expect(errorsOf(s)).toEqual([]);
     expect(check().summary.gapCount).toBe(0); // and the joint is closed
   });
+  it('keeps the composite when the two parts tie on z: the render breaks ties by layer order (SCN-03)', () => {
+    const { s, before } = w2bSplit(null);
+    // A colour the art does not use: a paint in the forearm's own colour could not show.
+    const done = s.transact('paint', (tx) => paintOverlapTx(tx, { color: [255, 0, 255, 255] }));
+    expect(done.painted.length).toBeGreaterThan(0);
+    expect(hashOf(s)).toBe(before);
+  });
+
   it('paints nothing under an upper part whose layer is translucent (G1-fix 8)', () => {
     const { s } = w2bSplit();
     const rig = s.doc.rig;

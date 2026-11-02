@@ -3,6 +3,7 @@
 // property.
 import { TiledImage } from '@pixel-forge/raster';
 import type { RgbaImage } from '@pixel-forge/raster';
+import type { LayerId } from '@pixel-forge/schema';
 import { asciiToImage } from '@pixel-forge/testkit';
 import type { Legend } from '@pixel-forge/testkit';
 import { describe, expect, it } from 'vitest';
@@ -136,6 +137,18 @@ function composite(upper: RgbaImage, lower: RgbaImage): string {
   }
   return out.join('\n');
 }
+
+describe('overlapMasks: the draw order of equal z', () => {
+  it('follows layerOrder, as the frame render does; z still comes first (SCN-03)', () => {
+    const paintOf = (s: Setup, layerOrder?: readonly LayerId[]): string =>
+      need(overlapMasks({ ...s, ...(layerOrder === undefined ? {} : { layerOrder }) }).joints[0])
+        .paint;
+    expect(paintOf(elbow())).toBe('parent'); // ties in rig.parts order: the child is on top
+    expect(paintOf(elbow(), [LAY('upper'), LAY('lower')])).toBe('parent');
+    expect(paintOf(elbow(), [LAY('lower'), LAY('upper')])).toBe('child');
+    expect(paintOf(elbow({ childUnder: true }), [LAY('upper'), LAY('lower')])).toBe('child');
+  });
+});
 
 describe('overlapMask: the worked examples of the contract (section 7)', () => {
   it('gappy_elbow, child under the parent: the hand-computed mask, nothing uncovered', () => {

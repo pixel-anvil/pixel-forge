@@ -168,12 +168,15 @@ export function paintOverlapTx(
           c[3],
         ])
       : undefined;
+  // Paint only hides under a part that is drawn at full opacity (translucent uppers show it through).
+  const layerOpacity = partLayerOpacity(doc.layers);
   const report = overlapMasks({
     rig,
     images: tx,
     canvas: doc.meta.canvas,
-    // Paint only hides under a part that is drawn at full opacity (translucent uppers show it through).
-    layerOpacity: partLayerOpacity(doc.layers),
+    layerOpacity,
+    // The walk above is the render's, so its keys are the render's tie order on equal z.
+    layerOrder: Object.keys(layerOpacity) as LayerId[],
     ...(direction === undefined ? {} : { direction }),
     ...(palette === undefined ? {} : { palette }),
   });

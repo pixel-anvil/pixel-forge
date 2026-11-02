@@ -845,7 +845,7 @@
     {
       "op": "part.paintOverlap",
       "command": ["part", "paint-overlap"],
-      "summary": "Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite stays only when the child is drawn below its parent.",
+      "summary": "Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite stays the same.",
       "safety": "mutate",
       "options": [
         {

@@ -67,7 +67,7 @@ Every failure is `{"code", "message", "details"}`, identical on every transport.
 | [`override.import`](#overrideimport) | io | `override_import` | `pf override import` | Import an edited PNG of a rig frame: the pixels that differ from the render become overrides. |
 | [`override.list`](#overridelist) | read | `override_list` | `pf override list` | List overrides: stale ones (art under them changed) and ones that fail to render, apart. |
 | [`override.resolve`](#overrideresolve) | mutate | `override_resolve` | `pf override resolve` | Resolve overrides: "keep" them, "rebase" onto the current art, or "discard" them. |
-| [`part.paintOverlap`](#partpaintoverlap) | mutate | `part_paint_overlap` | `pf part paint-overlap` | Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite stays only when the child is drawn below its parent. |
+| [`part.paintOverlap`](#partpaintoverlap) | mutate | `part_paint_overlap` | `pf part paint-overlap` | Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite stays the same. |
 | [`part.split`](#partsplit) | mutate | `part_split` | `pf part split` | Split a region (rect, lasso or flood) of a flat layer's cel into a new layer bound to a bone. |
 | [`pixels.readGrid`](#pixelsreadgrid) | read | `pixels_read_grid` | `pf pixels read-grid` | Read a region (at most 64x64 px) of a frame as a text grid: one symbol per pixel, "." transparent, with a legend of the colours present. |
 | [`pixels.writeGrid`](#pixelswritegrid) | mutate | `pixels_write_grid` | `pf pixels write-grid` | Paint a text grid (at most 32x32 px) at (x, y) of a frame; symbols come from "legend". |
@@ -911,7 +911,7 @@ Output:
 
 ## part.paintOverlap
 
-Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite stays only when the child is drawn below its parent.
+Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite stays the same.
 
 For each joint with gaps (rig_joint_check), paints only pixels the upper part covers at rest, growing the variant image and shifting its pivot to keep the part in place. One flat colour: the variant's most frequent opaque one, or color. At big bends it shows as a patch with no outline, so check the pose. "uncovered" lists joints no hidden paint can close; "skipped" joints with several parts per bone or a part rotated at rest. Run rig_joint_check next.
 

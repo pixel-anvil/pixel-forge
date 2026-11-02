@@ -225,6 +225,12 @@ export interface OverlapMasksInput extends JointCheckInput {
    * 255 never covers. A layer that is not listed counts as 255.
    */
   readonly layerOpacity?: Readonly<Partial<Record<LayerId, number>>>;
+  /**
+   * The part layers bottom to top, which is how the frame render breaks a tie on `z`. Without it ties
+   * follow `rig.parts`, which differs from the render after `part.split` (KNOWN_ISSUES SCN-03). A layer
+   * that is not listed sorts first.
+   */
+  readonly layerOrder?: readonly LayerId[];
 }
 
 /** One joint with gaps in an {@link OverlapReport}. */
@@ -263,7 +269,8 @@ const codeUnit = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
 /**
  * The overlap masks of every joint of a rig that has gaps: runs the joint sweep (same input and
  * defaults as `jointCheck`, so the masks answer exactly the reported gaps), picks the part drawn lower
- * at rest (render order: `z`, then rig order) and calls {@link overlapMask}. Joints without gaps are
+ * at rest (render order: `z`, then {@link OverlapMasksInput.layerOrder}, then rig order) and calls
+ * {@link overlapMask}. Joints without gaps are
  * left out. Only solid pixels hide paint (alpha 255 on a layer whose {@link OverlapMasksInput.layerOpacity}
  * is 255); gaps that only a translucent upper part covers are `uncovered`. A joint whose bones do not
  * each have exactly one visible part, or whose painted part is
@@ -275,7 +282,13 @@ export function overlapMasks(input: OverlapMasksInput): OverlapReport {
   const sweep = sweepJoints(input);
   const joints: OverlapJoint[] = [];
   const skipped: OverlapSkipped[] = [];
-  const order = new Map(sweep.restParts.map((p, i) => [p.partId, i]));
+  const rank = new Map(input.layerOrder?.map((id, i) => [id, i]));
+  const rankOf = (p: PartRender): number => rank.get(p.layerId) ?? -1;
+  const drawn =
+    input.layerOrder === undefined
+      ? sweep.restParts
+      : [...sweep.restParts].sort((a, b) => a.z - b.z || rankOf(a) - rankOf(b));
+  const order = new Map(drawn.map((p, i) => [p.partId, i]));
   for (const j of sweep.joints) {
     if (j.result.gapCount === 0) continue;
     const names = { bone: j.bone.name, parent: j.parent.name };

@@ -2588,7 +2588,7 @@
   {
     "name": "part_paint_overlap",
     "title": "part.paintOverlap",
-    "description": "Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite stays only when the child is drawn below its parent.\n\nFor each joint with gaps (rig_joint_check), paints only pixels the upper part covers at rest, growing the variant image and shifting its pivot to keep the part in place. One flat colour: the variant's most frequent opaque one, or color. At big bends it shows as a patch with no outline, so check the pose. \"uncovered\" lists joints no hidden paint can close; \"skipped\" joints with several parts per bone or a part rotated at rest. Run rig_joint_check next.\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Close the elbow gap of the hero): {\"doc\":\"doc_g1ed5q\",\"bones\":[\"lower_arm_r\"]}",
+    "description": "Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite stays the same.\n\nFor each joint with gaps (rig_joint_check), paints only pixels the upper part covers at rest, growing the variant image and shifting its pivot to keep the part in place. One flat colour: the variant's most frequent opaque one, or color. At big bends it shows as a patch with no outline, so check the pose. \"uncovered\" lists joints no hidden paint can close; \"skipped\" joints with several parts per bone or a part rotated at rest. Run rig_joint_check next.\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Close the elbow gap of the hero): {\"doc\":\"doc_g1ed5q\",\"bones\":[\"lower_arm_r\"]}",
     "inputSchema": {
       "type": "object",
       "properties": {
