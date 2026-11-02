@@ -3,7 +3,7 @@
 How the main session runs the plan cheaply and safely. Read this after `docs/STATUS.md`. The full protocol is plan §0.
 
 ## Session setup
-- **Model:** run the orchestrator on **Opus at medium effort** (`/model opus`, `/effort medium`). Use `/effort high` for gates (G1, G2) and when integrating Opus cards (reading their code reviews). The saving comes mostly from short, fresh contexts. The orchestrator keeps Opus because its main value is judgment (licensing, design deviations, spec conflicts).
+- **Model:** see STATUS "Standing rules" (cost mode: Sonnet/medium). Originally: **Opus at medium effort** (`/model opus`, `/effort medium`). Use `/effort high` for gates (G1, G2) and when integrating Opus cards (reading their code reviews). The saving comes mostly from short, fresh contexts. The orchestrator keeps Opus because its main value is judgment (licensing, design deviations, spec conflicts).
 - **Keep the context short.** When a session gets long, start a fresh one from `docs/STATUS.md`. Nothing is lost: all state lives in the repo, the worktrees and `~/pf-work/`.
 - **Parallelism:** at most two background agents at a time, and at most one of them on Opus. The session usage quota is the real limit.
 
@@ -11,7 +11,7 @@ How the main session runs the plan cheaply and safely. Read this after `docs/STA
 The orchestrator cannot read its token count, so it counts work instead.
 - After each integrated card, end the message with one line: `Session: <n> cards integrated, ~<m> turns`.
 - **Tell the user to reset** at the first of these: 3 cards integrated; 1 Opus card with its code review; about 60 tool calls; a wave ended; or the harness has summarised the conversation once.
-- Before saying so, get STATUS current (in-flight agents with their ids and worktrees, next step), commit it, then print: `RESET NOW: context is long, STATUS is current. Start a fresh session with: Read docs/STATUS.md and docs/ai/ORCHESTRATOR.md, then continue M1a`.
+- Before saying so, get STATUS current (in-flight agents with their ids and worktrees, next step), commit it, then print: `RESET NOW: context is long, STATUS is current. Start a fresh session with: Read docs/STATUS.md and docs/ai/ORCHESTRATOR.md, then continue the current milestone`.
 - With agents in flight, record them in STATUS first. Do not start a new card after the warning.
 
 ## The loop
@@ -19,7 +19,7 @@ The orchestrator cannot read its token count, so it counts work instead.
 2. **Dispatch** with the Agent tool:
    - `model` and `effort` from the card;
    - `isolation: "worktree"` and `run_in_background: true`;
-   - a brief that starts with: `git merge --ff-only m1a-wave1`, then `pnpm install && pnpm build`, then "Do NOT commit/push; never use git stash";
+   - a brief that starts with: `git merge --ff-only <the wave branch named in STATUS>`, then `pnpm install && pnpm build`, then "Do NOT commit/push; never use git stash";
    - the card's context pack, naming exact files and spec IDs;
    - the **report contract** below.
 3. **On a report**, verify in the worktree:
