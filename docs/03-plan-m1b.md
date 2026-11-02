@@ -33,7 +33,7 @@ Limits stay the same: two agents at a time, at most one on Opus.
 | T5.13 | Set a part's default z after creation (RIG-07) | sonnet | medium | S | — | ☑ |
 | T5.15 | Compact `rig.jointCheck` output, additive (MCP-05) | haiku | low | S | — | ☑ |
 | T5.14 | Paint a part variant's own art (RIG-07) | sonnet | medium | M | T5.13 | ☑ |
-| T5.12 | `lint` rules for canvas clipping and holes in rotated parts (LINT-01, LINT-02) | sonnet | medium | M | — | ☐ |
+| T5.12 | `lint` rules for canvas clipping and holes in rotated parts (LINT-01, LINT-02) | sonnet | medium | M | — | ☑ |
 | T5.16 | Fit a template to art from landmarks | sonnet | medium | M | T5.17 | ☐ |
 | B0.1 | `rig.fitPose`: search poses against a target image | sonnet | high | M | T5.17 | ☐ |
 | B0.2 | Fill colour of `part_paint_overlap` (RIG-08) and tool names in descriptions (MCP-06) | sonnet | medium | S | T5.14 | ☐ |
