@@ -1520,6 +1520,13 @@
           "kind": "integer",
           "required": false,
           "description": "Window radius of the check, px."
+        },
+        {
+          "name": "compact",
+          "flag": "--compact",
+          "kind": "boolean",
+          "required": false,
+          "description": "Short form: summary and problems, no joints."
         }
       ]
     },

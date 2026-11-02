@@ -1439,7 +1439,7 @@ Add a tail bone under the torso, then lengthen the head:
 
 Sweep each joint of one rig view and report the pixel gaps that open on the outer side of a bend.
 
-A rig passes when summary.gapCount is 0. The output is long, about 400 characters per joint even when clean: for pass or fail alone use lint with enable ["rig.jointGap"]. The sweep moves one joint at a time, rangeDeg around rest (default 30): a pose beyond that is not checked, so look at the render. Fix gaps with part_paint_overlap, or by moving part pivots, then check again. Checks the view that draws the first direction of the given view (default: the first view).
+A rig passes when summary.gapCount is 0. The full output is about 400 characters per joint: pass compact for a short form, or use lint with enable ["rig.jointGap"] for pass or fail. The sweep moves one joint at a time, rangeDeg around rest (default 30): a pose beyond that is not checked, so look at the render. Fix gaps with part_paint_overlap, or by moving part pivots, then check again. Checks the view that draws the first direction of the given view (default: the first view).
 
 - Safety: `read`
 - MCP tool: `rig_joint_check`
@@ -1454,6 +1454,7 @@ A rig passes when summary.gapCount is 0. The output is long, about 400 character
 | `rangeDeg` | number | no | Sweep range, degrees either side of rest. |
 | `stepDeg` | number | no | Sweep step, degrees. |
 | `radius` | integer >= 1 | no | Window radius of the check, px. |
+| `compact` | boolean | no | Short form: summary and problems, no joints. |
 
 ### Output
 
@@ -1461,7 +1462,8 @@ A rig passes when summary.gapCount is 0. The output is long, about 400 character
 | --- | --- | --- | --- |
 | `view` | string | yes | Name of the checked view. |
 | `params` | {rangeDeg, stepDeg, radius} | yes |  |
-| `joints` | {bone, parent, pivot, gapCount, union, angles}[] | yes | One entry per joint, sorted by bone name. |
+| `joints` | {bone, parent, pivot, gapCount, union, angles}[] | no | One entry per joint, sorted by bone name. Absent when compact. |
+| `problems` | {bone, kind, gapCount, unionCount}[] | no | Joints with gaps. Only when compact. |
 | `summary` | {joints, jointsWithGaps, gapCount, unionCount} | yes |  |
 
 ### Examples
