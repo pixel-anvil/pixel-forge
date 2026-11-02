@@ -63,6 +63,7 @@ export {
   PART_RENDER_KEY,
   PART_RENDER_VERSION,
   createPartCache,
+  partResiduals,
   partTarget,
   renderParts,
 } from './render.js';
@@ -72,6 +73,8 @@ export type {
   PartFrame,
   PartRender,
   PartRenderCache,
+  PartResidual,
+  PartResidualsInput,
   PartRig,
   PartVariant,
   PartView,

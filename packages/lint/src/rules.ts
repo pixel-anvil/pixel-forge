@@ -432,8 +432,9 @@ const rotationResidual: LintRule = {
   summary:
     'A part is rotated by more than maxResidualDeg (default 22.5) from its drawn variant (FR-RIG-14). Stub.',
   run() {
-    // TODO(M1b, card for FR-RIG-14 variant auto-select): report residual > maxResidualDeg. Variant
-    // auto-select does not exist yet, so there is no residual to measure; registered, no findings.
+    // TODO(E2.2): report abs(residual) > Part.maxResidualDeg ?? MAX_RESIDUAL_DEG_DEFAULT. The input
+    // exists since E2.1: `partResiduals({rig, animation})` of @pixel-forge/rig (per frame and drawn
+    // part, signed residual, same variant fold as the renderer). Registered, no findings yet.
     return [];
   },
 };

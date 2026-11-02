@@ -14,7 +14,7 @@ import {
   rotateAbout,
 } from '@pixel-forge/raster';
 import type { PreparedRotSprite, Rect, RotatableImage } from '@pixel-forge/raster';
-import { AUTO_VARIANT } from '@pixel-forge/schema';
+import { AUTO_VARIANT, HYSTERESIS_DEG_DEFAULT } from '@pixel-forge/schema';
 import type {
   BoneId,
   FrameId,
@@ -51,15 +51,26 @@ import {
 import type { BoneGraph } from './order.js';
 import { paintOverride, unionRect } from './overrides.js';
 import type { ImageLookup, OverrideLike, OverrideTargetRender } from './overrides.js';
-import { type RestPose, type SnappedBone, evaluatePose, selectView } from './snap.js';
+import {
+  type RestPose,
+  type SnappedBone,
+  type SnappedSkeleton,
+  evaluatePose,
+  selectView,
+} from './snap.js';
 
 /**
  * Version of the {@link renderParts} output for the same input. Core's render input key (the `.pxf`
  * render cache) includes it: **bump it whenever a change to this pipeline changes any rendered
  * pixel**, so cached frames are re-rendered. A change to the rotation itself is versioned by raster's
  * `ROTSPRITE_VERSION`, which {@link PART_RENDER_KEY} includes, so it needs no bump here.
+ *
+ * History: 1 = T3.3; 2 = E2.1, `variant: 'auto'` picks the nearest `drawnAngle` (it used to mean the
+ * view's default variant), so a frame with an auto key can render other pixels. The render input key
+ * itself needed no new field: it already holds every frame's bone and part keys, loop, quantum,
+ * direction and `doc.rig`, which are all the fold reads.
  */
-export const PART_RENDER_VERSION = 1;
+export const PART_RENDER_VERSION = 2;
 
 /**
  * The identity of the part renderer for caches: {@link PART_RENDER_VERSION} and raster's
@@ -202,6 +213,20 @@ interface AnimationData {
   readonly keyed: ReadonlyMap<PartId, Readonly<Record<PartField, readonly number[]>>>;
   /** Per part, then per frame id, the part overrides in array order. */
   readonly overrides: ReadonlyMap<PartId, ReadonlyMap<FrameId, readonly FrameOverride[]>>;
+  /** The variant fold of the parts that have an `'auto'` key (see {@link foldAuto}). */
+  readonly auto: AutoState;
+}
+
+/**
+ * The deterministic fold of variant auto-select (FR-RIG-14): per part, the variant of frames
+ * `0 .. frames - 1`. It grows on demand and only ever appends, so a frame's entry never depends on
+ * which frame was asked for first.
+ */
+interface AutoState {
+  readonly parts: readonly RigPart[];
+  readonly tracks: Map<PartId, (VariantId | undefined)[]>;
+  /** Frames folded so far (the length of every track). */
+  frames: number;
 }
 
 interface CacheStore {
@@ -239,7 +264,34 @@ function prepareData(rig: PartRig, animation: PartAnimation): AnimationData {
     if (list === undefined) byFrame.set(o.frameId, [o]);
     else list.push(o);
   }
-  return { prepared: prepareAnimation(rig, animation), keyed, overrides };
+  const hasAuto = new Set<PartId>();
+  for (const f of animation.frames) {
+    for (const id of Object.keys(f.partKeys)) {
+      if (own(f.partKeys, id)?.variant === AUTO_VARIANT) hasAuto.add(id as PartId);
+    }
+  }
+  const parts = rig.parts.filter((p) => hasAuto.has(p.id));
+  const tracks = new Map<PartId, (VariantId | undefined)[]>(parts.map((p) => [p.id, []]));
+  return {
+    prepared: prepareAnimation(rig, animation),
+    keyed,
+    overrides,
+    auto: { parts, tracks, frames: 0 },
+  };
+}
+
+/** The prepared data of `animation` for `rig`, from the cache when it has it. */
+function dataFor(
+  store: CacheStore | undefined,
+  rig: PartRig,
+  animation: PartAnimation,
+): AnimationData {
+  let data = store?.prepared.get(animation);
+  if (data?.prepared.rig !== rig) {
+    data = prepareData(rig, animation);
+    store?.prepared.set(animation, data);
+  }
+  return data;
 }
 
 const STORES = new WeakMap<PartRenderCache, CacheStore>();
@@ -355,10 +407,89 @@ function residual(bone: SnappedBone, variant: PartVariant, quantum: number): num
   return stepsToDeg(wrapSteps(quantizeDyadic(d, quantumSteps(quantum))));
 }
 
+/** Distance of a residual in `[0, 360)` from zero, going the short way round: `[0, 180]`. */
+const residualDistance = (r: number): number => Math.min(r, 360 - r);
+
+/**
+ * Auto-select for one part at one frame (FR-RIG-14). Candidates are the part's variants of the view
+ * (`part.variants` order). The nearest is the one with the smallest residual distance (the exact
+ * quantised residual that would be rendered, the short way round); a tie goes to the earlier variant
+ * in `part.variants`, which also settles `+180` against `-180` (both are 180 away). Hysteresis: the
+ * previous frame's variant `prev` stays unless the nearest is closer than it by **more than**
+ * `hysteresisDeg`. A `prev` that is not a candidate (none yet, or an explicit key of another view)
+ * does not hold. `undefined` when the part has no variant in the view.
+ */
+function pickAuto(
+  part: RigPart,
+  view: PartView,
+  bone: SnappedBone,
+  quantum: number,
+  prev: VariantId | undefined,
+  hysteresisDeg: number,
+): PartVariant | undefined {
+  let best: PartVariant | undefined;
+  let bestDist = Infinity;
+  let held: { v: PartVariant; dist: number } | undefined;
+  for (const v of part.variants) {
+    if (v.viewId !== view.id) continue;
+    const dist = residualDistance(residual(bone, v, quantum));
+    if (dist < bestDist) {
+      best = v;
+      bestDist = dist;
+    }
+    if (held === undefined && v.id === prev) held = { v, dist };
+  }
+  if (held !== undefined && held.dist - bestDist <= hysteresisDeg) return held.v;
+  return best;
+}
+
+/**
+ * Extends the variant fold of every auto part to frames `0 .. upto` (inclusive). The fold is the
+ * **definition** of auto-select, in frame order from frame 0, whatever the order frames are asked
+ * for or played in:
+ *
+ * - frame 0 has no previous variant, even in a `loop` animation (the state does not wrap);
+ * - at frame `f` the part key's value is resolved like every part key (`partKeyValue`: step, hold,
+ *   and the loop wrap of the key lookup); an explicit variant of the part is the frame's variant (an
+ *   unknown id gives none, and the frame throws `UNKNOWN_VARIANT` when it is rendered);
+ * - `'auto'` calls {@link pickAuto} with the variant of frame `f - 1` (explicit or auto);
+ * - hidden parts and bones outside the view are folded like visible ones, so a visibility key never
+ *   changes which variant a later frame gets.
+ */
+function foldAuto(
+  rig: PartRig,
+  view: PartView,
+  animation: PartAnimation,
+  data: AnimationData,
+  upto: number,
+): void {
+  const auto = data.auto;
+  while (auto.frames <= upto) {
+    const f = auto.frames;
+    const skeleton = evaluatePose(rig, view, data.prepared, f);
+    for (const part of auto.parts) {
+      const track = auto.tracks.get(part.id);
+      /* v8 ignore next */
+      if (track === undefined) throw new Error('unreachable: auto part without a track');
+      const choice = partKeyValue(data, animation, f, part.id, 'variant');
+      const bone = skeleton.bones.get(part.boneId);
+      let id: VariantId | undefined;
+      if (choice === undefined || bone === undefined) id = undefined;
+      else if (choice === AUTO_VARIANT) {
+        const prev = track[f - 1];
+        id = pickAuto(part, view, bone, skeleton.angleQuantum, prev, HYSTERESIS_DEG_DEFAULT)?.id;
+      } else id = part.variants.some((v) => v.id === choice) ? choice : undefined;
+      track.push(id);
+    }
+    auto.frames = f + 1;
+  }
+}
+
 function chooseVariant(
   part: RigPart,
   view: PartView,
   choice: PartKey['variant'],
+  autoId: () => VariantId | undefined,
 ): PartVariant | undefined {
   if (choice !== undefined && choice !== AUTO_VARIANT) {
     const v = part.variants.find((x) => x.id === choice);
@@ -367,8 +498,55 @@ function chooseVariant(
     }
     return v;
   }
-  // 'auto' (FR-RIG-14) is M1b: until then it means the view's default variant.
+  if (choice === AUTO_VARIANT) {
+    const id = autoId();
+    return id === undefined ? undefined : part.variants.find((x) => x.id === id);
+  }
   return part.variants.find((x) => x.viewId === view.id);
+}
+
+/** A part that is drawn at one frame: its bone, variant and residual rotation. */
+interface DrawnPart {
+  readonly bone: SnappedBone;
+  readonly variant: PartVariant;
+  /** The residual rotation, degrees in `[0, 360)`. */
+  readonly angle: number;
+}
+
+/**
+ * The steps of {@link renderParts} that need no image: the part's bone (`UNKNOWN_BONE`), its
+ * visibility, and the variant with its residual. `undefined` when the part is not drawn.
+ */
+function resolveDrawn(
+  rig: PartRig,
+  view: PartView,
+  animation: PartAnimation,
+  data: AnimationData,
+  skeleton: SnappedSkeleton,
+  part: RigPart,
+  fi: number,
+): DrawnPart | undefined {
+  const bone = skeleton.bones.get(part.boneId);
+  if (bone === undefined) {
+    throw new RigError('UNKNOWN_BONE', `part ${part.id} is bound to unknown bone ${part.boneId}`);
+  }
+  if (!bone.inView) return undefined;
+  const visible =
+    partKeyValue(data, animation, fi, part.id, 'visible') ??
+    own(view.partVisibility, part.id) ??
+    true;
+  if (!visible) return undefined;
+  const variant = chooseVariant(
+    part,
+    view,
+    partKeyValue(data, animation, fi, part.id, 'variant'),
+    () => {
+      foldAuto(rig, view, animation, data, fi);
+      return data.auto.tracks.get(part.id)?.[fi];
+    },
+  );
+  if (variant === undefined) return undefined;
+  return { bone, variant, angle: residual(bone, variant, skeleton.angleQuantum) };
 }
 
 interface ResolvedPartOverride {
@@ -441,9 +619,14 @@ function applyPartOverrides(
  * 2. **Visibility**: a part is drawn when its bone has a rest entry in the view (`inView`), its `visible`
  *    part key (else the view's `partVisibility`, else true) is true, and it has a variant to draw.
  * 3. **Variant**: an explicit `variant` part key wins (any variant of the part, `UNKNOWN_VARIANT`
- *    otherwise); else, or for `'auto'` until FR-RIG-14 lands (M1b), the view's default variant (the
- *    first with the view's id); a part with no variant in the view is not drawn. Part keys step and
- *    hold like the bone channels (`keySpan`, loop wrap included).
+ *    otherwise); no key: the view's default variant (the first with the view's id); `'auto'`
+ *    (FR-RIG-14): the variant whose `drawnAngle` is nearest to the bone's world angle (a missing
+ *    `drawnAngle` is the bone's rest angle), among the part's variants of the view, ties to the
+ *    earlier variant; the previous frame's variant holds until another is closer by more than
+ *    `HYSTERESIS_DEG_DEFAULT` degrees. The previous frame comes from a fold over frames
+ *    `0 .. frame` of the animation, so a frame renders the same however it is reached (see
+ *    `foldAuto`; frame 0 has no history, also in a loop). A part with no variant in the view is
+ *    not drawn. Part keys step and hold like the bone channels (`keySpan`, loop wrap included).
  * 4. **Rotation**: the residual is the bone's `rotation` (no `drawnAngle`) or `worldAngle −
  *    drawnAngle` quantised exactly to the animation's quantum, in `[0, 360)`. The variant is rotated
  *    about its pivot pixel with the part's algorithm (`rotsprite` default, `nearest`, `none`; no new
@@ -465,11 +648,7 @@ export function renderParts(input: RenderPartsInput): PartRender[] {
   const { rig, animation, images } = input;
   const store = input.cache === undefined ? undefined : STORES.get(input.cache);
   const view = selectView(rig, animation.direction);
-  let data = store?.prepared.get(animation);
-  if (data?.prepared.rig !== rig) {
-    data = prepareData(rig, animation);
-    store?.prepared.set(animation, data);
-  }
+  const data = dataFor(store, rig, animation);
   const { prepared } = data;
   const fi = indexOfFrame(animation, input.frame);
   const frame = animation.frames[fi];
@@ -482,29 +661,15 @@ export function renderParts(input: RenderPartsInput): PartRender[] {
   rig.parts.forEach((part, partIndex) => {
     const tie = input.layers === undefined ? partIndex : order.get(part.layerId);
     if (tie === undefined) return;
-    const bone = skeleton.bones.get(part.boneId);
-    if (bone === undefined) {
-      throw new RigError('UNKNOWN_BONE', `part ${part.id} is bound to unknown bone ${part.boneId}`);
-    }
-    if (!bone.inView) return;
-    const visible =
-      partKeyValue(data, animation, fi, part.id, 'visible') ??
-      own(view.partVisibility, part.id) ??
-      true;
-    if (!visible) return;
-    const variant = chooseVariant(
-      part,
-      view,
-      partKeyValue(data, animation, fi, part.id, 'variant'),
-    );
-    if (variant === undefined) return;
+    const drawn = resolveDrawn(rig, view, animation, data, skeleton, part, fi);
+    if (drawn === undefined) return;
+    const { bone, variant, angle } = drawn;
     checkCoord(variant.pivot.x, `variant ${variant.id} pivot.x`);
     checkCoord(variant.pivot.y, `variant ${variant.id} pivot.y`);
     const img = images.image(variant.imageId);
     if (img === undefined) {
       throw new RigError('IMAGE_MISSING', `variant ${variant.id}: no image ${variant.imageId}`);
     }
-    const angle = residual(bone, variant, skeleton.angleQuantum);
     const algo = part.rotation ?? 'rotsprite';
     // 'none' ignores the angle: one cache entry per variant and flip, whatever the residual.
     const r = rotated(store, variant, img, algo === 'none' ? 0 : angle, algo, bone.flipX);
@@ -558,4 +723,67 @@ export function partTarget(part: PartRender): OverrideTargetRender {
     image: part.base.image,
     offset: { x: part.base.offset.x - part.pivot.x, y: part.base.offset.y - part.pivot.y },
   };
+}
+
+/** Input of {@link partResiduals}. */
+export interface PartResidualsInput {
+  readonly rig: PartRig;
+  /** An authored animation. A mirror has none of its own: ask for its source (FR-RIG-16). */
+  readonly animation: PartAnimation;
+  /** The cache of {@link renderParts}: its prepared data and variant fold are shared. */
+  readonly cache?: PartRenderCache;
+}
+
+/** One drawn part at one frame, as {@link partResiduals} reports it. */
+export interface PartResidual {
+  /** Frame index in `animation.frames`. */
+  readonly frame: number;
+  readonly partId: PartId;
+  readonly boneId: BoneId;
+  /** The variant {@link renderParts} draws (explicit, auto-selected or the view's default). */
+  readonly variantId: VariantId;
+  /**
+   * The residual rotation applied to the variant, signed the short way round, in `(-180, 180]`
+   * (exactly `PartRender.angle`, with angles above 180 turned into negatives). It is the rotation
+   * the variant needs beyond its drawn angle: the number a "residual too large" lint compares with
+   * the part's `maxResidualDeg` (schema `Part`, default `MAX_RESIDUAL_DEG_DEFAULT`) by its magnitude.
+   */
+  readonly residual: number;
+  /** The same rotation as `PartRender.angle`, degrees in `[0, 360)`. */
+  readonly angle: number;
+}
+
+/**
+ * The residual rotation of every drawn part at every frame of `animation` (FR-RIG-14), without
+ * rendering: no images are read, so it is cheap and cannot fail on a missing image. Frames come in
+ * ascending order, parts in `rig.parts` order, and a part appears exactly when {@link renderParts}
+ * would draw it (bone in the view, visible, a variant to draw, the layers filter aside). It runs the
+ * same variant fold as the renderer, so the variant and angle of a row always equal the
+ * `variantId` and `angle` of the matching `PartRender`.
+ *
+ * Throws the `RigError`s of `evaluatePose`, `selectView` and the variant choice (`UNKNOWN_BONE`,
+ * `UNKNOWN_VARIANT` for a drawn part with an explicit unknown variant).
+ */
+export function partResiduals(input: PartResidualsInput): PartResidual[] {
+  const { rig, animation } = input;
+  const store = input.cache === undefined ? undefined : STORES.get(input.cache);
+  const view = selectView(rig, animation.direction);
+  const data = dataFor(store, rig, animation);
+  const out: PartResidual[] = [];
+  for (let fi = 0; fi < animation.frames.length; fi++) {
+    const skeleton = evaluatePose(rig, view, data.prepared, fi);
+    for (const part of rig.parts) {
+      const drawn = resolveDrawn(rig, view, animation, data, skeleton, part, fi);
+      if (drawn === undefined) continue;
+      out.push({
+        frame: fi,
+        partId: part.id,
+        boneId: part.boneId,
+        variantId: drawn.variant.id,
+        residual: drawn.angle > 180 ? drawn.angle - 360 : drawn.angle,
+        angle: drawn.angle,
+      });
+    }
+  }
+  return out;
 }

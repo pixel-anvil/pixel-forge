@@ -335,7 +335,7 @@ describe('renderParts: variants, visibility, z and part keys', () => {
     expect(ids(renderParts({ rig, animation: anim([{}]), frame: 0, images }))).toEqual([P('arm')]);
   });
 
-  it("variant: an explicit key wins, 'auto' is the view default until M1b, a part without a variant in the view is hidden", () => {
+  it("variant: an explicit key wins, 'auto' picks the nearest drawn angle (auto-variant.test.ts), a part without a variant in the view is hidden", () => {
     expect(variantAt(anim([{ parts: { [P('arm')]: { variant: V('arm2') } } }]), 0)).toBe(V('arm2'));
     expect(variantAt(anim([{ parts: { [P('arm')]: { variant: 'auto' } } }]), 0)).toBe(V('arm'));
     const rig = fixtureRig();
