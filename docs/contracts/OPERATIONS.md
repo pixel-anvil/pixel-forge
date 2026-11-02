@@ -80,6 +80,7 @@ Every failure is `{"code", "message", "details"}`, identical on every transport.
 | [`rig.bake`](#rigbake) | destructive | `rig_bake` | `pf rig bake` | Bake a rig animation into one plain pixel layer: as a new animation, or in place. |
 | [`rig.bindParts`](#rigbindparts) | mutate | `rig_bind_parts` | `pf rig bind-parts` | Bind pixel layers to bones as parts, by layer name ("part:<bone>[.<part>][@variant][#view]") or by overlap. |
 | [`rig.editBones`](#rigeditbones) | mutate | `rig_edit_bones` | `pf rig edit-bones` | Edit the skeleton: add/delete/reparent/rename bones, set length and rest pose per view, add/rename/delete views. |
+| [`rig.fitTemplate`](#rigfittemplate) | mutate | `rig_fit_template` | `pf rig fit-template` | Fit a humanoid template to landmark points: lengths and rest pose in one call. |
 | [`rig.jointCheck`](#rigjointcheck) | read | `rig_joint_check` | `pf rig joint-check` | Sweep each joint of one rig view and report the pixel gaps that open on the outer side of a bend. |
 | [`rig.mirrorAnimation`](#rigmirroranimation) | mutate | `rig_mirror_animation` | `pf rig mirror-animation` | Add a mirror of an animation under a new direction: same group, flipped around the origin. |
 | [`rig.readPose`](#rigreadpose) | read | `rig_read_pose` | `pf rig read-pose` | Read one frame: bone and part values, and which are real keys (the rest are interpolated or held). |
@@ -1433,6 +1434,43 @@ Add a tail bone under the torso, then lengthen the head:
 
 ```json
 {"doc":"doc_g1ed5q","edits":[{"action":"addBone","name":"tail","parent":"torso","length":8},{"action":"setLength","bone":"head","length":9}]}
+```
+
+## rig.fitTemplate
+
+Fit a humanoid template to landmark points: lengths and rest pose in one call.
+
+Like rig_apply_template, but sizes the bones from landmarks (canvas px, arms hanging): headTop, hips, feet (between the soles; becomes the root), optional handL/handR fingertips. Existing bones are resized. Check with render_frame (bones), then touch up with rig_edit_bones.
+
+- Safety: `mutate`
+- MCP tool: `rig_fit_template`
+- CLI: `pf rig fit-template`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
+| `template` | "humanoid-side" \| "humanoid-front" \| "humanoid-back" | yes | Skeleton template. |
+| `landmarks` | {headTop, hips, feet, handL, handR} | yes | Landmarks in canvas px. |
+| `view` | string | no | Existing view to set the rest pose in (default: new). |
+| `viewName` | string | no | Name of the new view; ignored with view. |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `viewId` | string | yes | Id of the view the fit was written to. |
+| `height` | integer | yes | Character height, px. |
+| `created` | string[] | yes | Names of the bones that were created. |
+| `resized` | string[] | yes | Names of the existing bones whose length changed. |
+
+### Examples
+
+Fit the side template to a 47 px character:
+
+```json
+{"doc":"doc_g1ed5q","template":"humanoid-side","view":"side","landmarks":{"headTop":{"x":31,"y":16},"hips":{"x":30,"y":44},"feet":{"x":30,"y":63},"handR":{"x":38,"y":47}}}
 ```
 
 ## rig.jointCheck

@@ -31,7 +31,8 @@ describe('tools/list', () => {
     const long = tools.filter((t) => (t.description ?? '').length > 800);
     expect(long.map((t) => `${t.name}: ${String(t.description?.length)}`)).toEqual([]);
     const bytes = Buffer.byteLength(JSON.stringify({ tools }));
-    expect(bytes).toBeLessThan(76_300); // MCP-04: 75,775 bytes after B0.3 (was 83,005)
+    // MCP-04: 75,775 bytes after B0.3 (was 83,005); 78,594 after T5.16 `rig_fit_template` (limit 76,300 -> 79,000).
+    expect(bytes).toBeLessThan(79_000);
   });
 
   it('states the shared conventions once, in the server instructions', async () => {

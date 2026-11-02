@@ -4639,6 +4639,155 @@
     }
   },
   {
+    "name": "rig_fit_template",
+    "title": "rig.fitTemplate",
+    "description": "Fit a humanoid template to landmark points: lengths and rest pose in one call.\n\nLike rig_apply_template, but sizes the bones from landmarks (canvas px, arms hanging): headTop, hips, feet (between the soles; becomes the root), optional handL/handR fingertips. Existing bones are resized. Check with render_frame (bones), then touch up with rig_edit_bones.\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Fit the side template to a 47 px character): {\"doc\":\"doc_g1ed5q\",\"template\":\"humanoid-side\",\"view\":\"side\",\"landmarks\":{\"headTop\":{\"x\":31,\"y\":16},\"hips\":{\"x\":30,\"y\":44},\"feet\":{\"x\":30,\"y\":63},\"handR\":{\"x\":38,\"y\":47}}}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id from doc_open or doc_create."
+        },
+        "template": {
+          "type": "string",
+          "enum": ["humanoid-side", "humanoid-front", "humanoid-back"],
+          "description": "Skeleton template."
+        },
+        "landmarks": {
+          "type": "object",
+          "properties": {
+            "headTop": {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "integer"
+                },
+                "y": {
+                  "type": "integer"
+                }
+              },
+              "required": ["x", "y"],
+              "additionalProperties": false,
+              "description": "Top pixel of the head."
+            },
+            "hips": {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "integer"
+                },
+                "y": {
+                  "type": "integer"
+                }
+              },
+              "required": ["x", "y"],
+              "additionalProperties": false,
+              "description": "Hip joint (thigh pivot); between headTop and feet."
+            },
+            "feet": {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "integer"
+                },
+                "y": {
+                  "type": "integer"
+                }
+              },
+              "required": ["x", "y"],
+              "additionalProperties": false,
+              "description": "Between the feet on the sole row: the root pivot."
+            },
+            "handL": {
+              "description": "Fingertip of the left hand (+x in front view).",
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "integer"
+                },
+                "y": {
+                  "type": "integer"
+                }
+              },
+              "required": ["x", "y"],
+              "additionalProperties": false
+            },
+            "handR": {
+              "description": "Fingertip of the right hand; one hand serves both.",
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "integer"
+                },
+                "y": {
+                  "type": "integer"
+                }
+              },
+              "required": ["x", "y"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["headTop", "hips", "feet"],
+          "additionalProperties": false,
+          "description": "Landmarks in canvas px."
+        },
+        "view": {
+          "description": "Existing view to set the rest pose in (default: new).",
+          "type": "string",
+          "minLength": 1
+        },
+        "viewName": {
+          "description": "Name of the new view; ignored with view.",
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": ["doc", "template", "landmarks"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "viewId": {
+          "type": "string",
+          "description": "Id of the view the fit was written to."
+        },
+        "height": {
+          "type": "integer",
+          "description": "Character height, px."
+        },
+        "created": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Names of the bones that were created."
+        },
+        "resized": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Names of the existing bones whose length changed."
+        }
+      },
+      "required": ["viewId", "height", "created", "resized"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "rig.fitTemplate",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "rig.fitTemplate",
+      "pixel-forge/safety": "mutate"
+    }
+  },
+  {
     "name": "rig_joint_check",
     "title": "rig.jointCheck",
     "description": "Sweep each joint of one rig view and report the pixel gaps that open on the outer side of a bend.\n\nA rig passes when summary.gapCount is 0. The full output is about 400 characters per joint: pass compact for a short form, or use lint with enable [\"rig.jointGap\"] for pass or fail. The sweep moves one joint at a time, rangeDeg around rest (default 30): a pose beyond that is not checked, so look at the render. Fix gaps with part_paint_overlap, or by moving part pivots, then check again. Checks the view that draws the first direction of the given view (default: the first view).\n\nRead-only. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Check the first view of the hero): {\"doc\":\"doc_g1ed5q\"}",

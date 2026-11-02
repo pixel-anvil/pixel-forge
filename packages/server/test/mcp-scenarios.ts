@@ -264,6 +264,21 @@ export const SCENARIOS: Record<string, Scenario> = {
     args: ({ doc }) => ({ doc, template: 'humanoid-side', viewName: 'side', height: 60 }),
     entry: 'one',
   },
+  rig_fit_template: {
+    base: 'flatRig',
+    args: ({ doc }) => ({
+      doc,
+      template: 'humanoid-side',
+      view: 'side',
+      landmarks: {
+        headTop: { x: 31, y: 16 },
+        hips: { x: 30, y: 44 },
+        feet: { x: 30, y: 63 },
+        handR: { x: 38, y: 47 },
+      },
+    }),
+    entry: 'one',
+  },
   rig_bake: {
     base: 'hero',
     args: ({ doc }) => ({ doc, animation: frame0, mode: 'new', confirm: true }),

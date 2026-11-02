@@ -37,6 +37,7 @@ import { frameDelete } from './frame-delete.js';
 import { frameDuplicate } from './frame-duplicate.js';
 import { lintRun } from './lint-run.js';
 import { rigApplyTemplate } from './rig-apply-template.js';
+import { rigFitTemplate } from './rig-fit-template.js';
 import { rigJointCheck } from './rig-joint-check.js';
 import { rigReadPose } from './rig-read-pose.js';
 import { rigSetPose } from './rig-set-pose.js';
@@ -77,6 +78,7 @@ export { frameDelete } from './frame-delete.js';
 export { frameDuplicate } from './frame-duplicate.js';
 export { lintRun } from './lint-run.js';
 export { rigApplyTemplate } from './rig-apply-template.js';
+export { rigFitTemplate } from './rig-fit-template.js';
 export { rigJointCheck } from './rig-joint-check.js';
 export { rigReadPose } from './rig-read-pose.js';
 export { BoneKeyInput, PartKeyInput, rigSetPose } from './rig-set-pose.js';
@@ -120,6 +122,7 @@ export const ALL_OPS: readonly AnyOp[] = [
   frameDuplicate,
   lintRun,
   rigApplyTemplate,
+  rigFitTemplate,
   rigJointCheck,
   rigReadPose,
   rigSetPose,

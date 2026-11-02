@@ -125,3 +125,5 @@ export type {
   OverlapReport,
   OverlapSkipped,
 } from './overlap.js';
+export { fitHumanoid } from './fit-template.js';
+export type { FittedTemplate, Landmark, TemplateKind, TemplateLandmarks } from './fit-template.js';

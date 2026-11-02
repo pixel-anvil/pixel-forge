@@ -1481,6 +1481,50 @@
       ]
     },
     {
+      "op": "rig.fitTemplate",
+      "command": ["rig", "fit-template"],
+      "summary": "Fit a humanoid template to landmark points: lengths and rest pose in one call.",
+      "safety": "mutate",
+      "options": [
+        {
+          "name": "doc",
+          "flag": "--doc",
+          "kind": "string",
+          "required": true,
+          "description": "Document id from doc_open or doc_create."
+        },
+        {
+          "name": "template",
+          "flag": "--template",
+          "kind": "string",
+          "required": true,
+          "description": "Skeleton template.",
+          "choices": ["humanoid-side", "humanoid-front", "humanoid-back"]
+        },
+        {
+          "name": "landmarks",
+          "flag": "--landmarks",
+          "kind": "json",
+          "required": true,
+          "description": "Landmarks in canvas px."
+        },
+        {
+          "name": "view",
+          "flag": "--view",
+          "kind": "string",
+          "required": false,
+          "description": "Existing view to set the rest pose in (default: new)."
+        },
+        {
+          "name": "viewName",
+          "flag": "--view-name",
+          "kind": "string",
+          "required": false,
+          "description": "Name of the new view; ignored with view."
+        }
+      ]
+    },
+    {
       "op": "rig.jointCheck",
       "command": ["rig", "joint-check"],
       "summary": "Sweep each joint of one rig view and report the pixel gaps that open on the outer side of a bend.",

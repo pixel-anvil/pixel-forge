@@ -141,6 +141,7 @@ export {
   renderFrame,
   OverlayBone,
   rigApplyTemplate,
+  rigFitTemplate,
   rigBake,
   rigBindParts,
   rigEditBones,
