@@ -21,7 +21,7 @@ Planning steps 1 to 5 are done (research, spec, plan and their reviews). Impleme
 - ☑ B0.1 `rig_fit_pose` (op safety `io`: reads the target PNG, writes nothing, no undo entry; `targetFrame` is a frame index of the same animation; seeded xorshift32 coordinate descent with pair moves and 8 restarts; `maxRenders` default 3000; exact on 7 synthetic poses within 600 renders; found 99 of 100 random arm poses in a one-off run, so it is a heuristic: KNOWN_ISSUES FIT-01). The determinism hash was run on macOS only; confirm on Linux CI. `tools/list` limit is now **82,000** (list 81,159); must come down by G3 (TG.1 + trim).
 - ☑ B0.2: RIG-08 resolved (`dominant()` in core skips the outline colour = darkest colour touching transparent or the image edge; falls back to the old rule). MCP-06 resolved (one sentence in server INSTRUCTIONS; `tools/list` unchanged). Doubt: a tight crop with a dark inner shade touching the border may be read as the outline.
 - **Wave B0 is done** (all cards integrated). `tools/list` limit 82,000 (list 81,159) must come down by G3.
-- **In flight:** nothing.
+- **In flight:** E1.1 IK (Opus/high), agent id `a39fd9a207d10e774`, worktree: see its report (`.claude/reports/E1.1.md`). Started 2026-11-02. After it: `code-review` high on the staged diff, then E1.2 ∥ E2.1.
 - **Next:** reset the session, then plan wave B1 (`docs/03-plan-m1b.md`, E1.1 IK first). Confirm the Linux determinism hash of B0.1 on CI. The wave B0 PR to `main` and any tag need the user's sign-off.
 
 ## Open questions for the user
