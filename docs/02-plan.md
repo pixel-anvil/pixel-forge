@@ -873,6 +873,8 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 ## 4. Later milestones — epics (turned into cards at their gate)
 
 ### M1b — Breadth (≈ 25 cards, Opus ≈ 4)
+**Cards are in `docs/03-plan-m1b.md` (draft from G2, user approval pending). T5.10 and T5.12 to T5.17 move there; T5.11 stays unscheduled.**
+
 | Epic | Spec | Model guidance |
 |---|---|---|
 | E1 IK (two-bone, FABRIK) + end-effector targets in `rig.setPose` | FR-RIG-13, FR-AI-17 | opus (solver + bake to FK), sonnet (op) |
