@@ -191,7 +191,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T5.15 | Compact `rig.jointCheck` output, additive (MCP-05) | haiku | low | S | T5.8 | | ☐ |
 | T5.16 | Fit a template to art from landmarks | sonnet | medium | M | T5.8 | | ☐ |
 | T5.17 | Pose several frames in one call, one undo step | sonnet | medium | S | T5.8 | | ☐ |
-| T6.4 | Target-move rebuild from pack art (with the user) | opus orchestrating | high | session | T5.8, D1 | | ☐ |
+| T6.4 | Target-move rebuild from pack art (with the user) | opus orchestrating | high | session | T5.8, D1 | | ☑ |
 | T6.5 | Swap the rigged target move into the first consumer game (user approval) | sonnet | medium | S | T6.4 | | ☐ |
 | G2 | **Gate: M1a exit** + v0.1.0 + M1b breakdown | opus | high | — | all | | ☐ |
 
@@ -853,11 +853,12 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   5. Touch up with `pf override import`.
   6. Add the markers `ball` and `hand_r`, the `release` event, and the T6.0 channels.
 - **Acceptance** — the user approves a side-by-side contact sheet (original vs rig). Lint is clean.
-- **Notes (2026-11-01)** — Rig built, user approval pending. GO on splitting, with part variants cut from 3 key frames. Numbers and the work dir are in STATUS. Moves the plan did not name: hidden fill is painted on the flat layer between cuts (no tool paints a part's art, RIG-07), and poses came from a local search over the real renderer, which suggests a `rig.fitPose` card for M1b. Outline: none on the rig; the game derives it.
+- **Notes (2026-11-01)** — ☑ **Approved by the user** (contact sheet). Lint 0; render cache equals a fresh render (12/12). GO on splitting, with part variants cut from 3 key frames. Numbers and the work dir are in STATUS. Moves the plan did not name: hidden fill is painted on the flat layer between cuts (no tool paints a part's art, RIG-07), and poses came from a local search over the real renderer, which suggests a `rig.fitPose` card for M1b. Outline: none on the rig; the game derives it.
 
 #### T6.5 Swap in the rigged target move  [sonnet] [S]
 - **User approval required.** On the game branch from D1, replace the flat `.pxf` with the rigged one.
 - **Acceptance** — the game's test runner passes. The user approves the in-game capture. (W5)
+- **Notes (2026-11-01)** — Swap done by the orchestrator (no agent, the card is one file), capture approval pending. Two traps: a new or renamed `.pxf` gets the importer default `trim=true`, and the lit billboard needs `false` (contract §8.3; the game's driver test caught it); and a capture from `get_image()` inside `_process` shows the previous tick, so a capture named for log row N is file N+1.
 
 #### G2 Gate: M1a exit  [opus]
 - The `code-review` skill over M1a.
