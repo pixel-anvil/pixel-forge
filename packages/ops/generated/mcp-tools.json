@@ -1965,7 +1965,7 @@
   {
     "name": "lint",
     "title": "lint.run",
-    "description": "Check the document and list findings (palette, orphan pixels, joint gaps, stale overrides, empty frames).\n\nFindings come sorted by rule, then document order. Narrow the check with enable, disable, animations or skins. Severity \"error\" means an invariant is broken; fix warnings before a delivery. count 0 is not a visual pass: lint does not see holes inside rotated parts or art cut off at the canvas edge, and rig.jointGap only sweeps around rest. Look at render_contact_sheet too.\n\nRead-only. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Lint the hero, joint and palette rules only): {\"doc\":\"doc_g1ed5q\",\"enable\":[\"rig.jointGap\",\"palette.offPalette\"]}",
+    "description": "Lint the document: palette, orphan pixels, joint gaps, stale overrides, empty frames, clipping, holes.\n\nSorted by rule, then document order. Narrow with enable, disable, animations or skins. \"error\" means a broken invariant; fix warnings before delivery. pixels.clipped: part art cut off at the canvas edge. rig.partHole: 1 px holes in rotated parts. count 0 is not a visual pass (jointGap checks rest only): see render_contact_sheet.\n\nRead-only. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Lint the hero, joint and palette rules only): {\"doc\":\"doc_g1ed5q\",\"enable\":[\"rig.jointGap\",\"palette.offPalette\"]}",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1983,7 +1983,9 @@
               "palette.offPalette",
               "palette.opacityInLocked",
               "pixels.orphan",
+              "pixels.clipped",
               "rig.jointGap",
+              "rig.partHole",
               "rig.staleOverride",
               "rig.overrideError",
               "rig.rotationResidual",
@@ -2001,7 +2003,9 @@
               "palette.offPalette",
               "palette.opacityInLocked",
               "pixels.orphan",
+              "pixels.clipped",
               "rig.jointGap",
+              "rig.partHole",
               "rig.staleOverride",
               "rig.overrideError",
               "rig.rotationResidual",
@@ -2080,7 +2084,9 @@
                   "palette.offPalette",
                   "palette.opacityInLocked",
                   "pixels.orphan",
+                  "pixels.clipped",
                   "rig.jointGap",
+                  "rig.partHole",
                   "rig.staleOverride",
                   "rig.overrideError",
                   "rig.rotationResidual",

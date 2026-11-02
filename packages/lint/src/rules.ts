@@ -6,6 +6,7 @@
  */
 import { CoreError, checkOverrides } from '@pixel-forge/core';
 import { JointCheckError, RigError, jointCheck } from '@pixel-forge/rig';
+import type { PartRender } from '@pixel-forge/rig';
 import type { LintContext, SkinTarget } from './context.js';
 import { RULE_IDS } from './types.js';
 import type { LintFinding, LintSeverity, RuleId } from './types.js';
@@ -248,6 +249,137 @@ const jointGap: LintRule = {
   },
 };
 
+/** Opaque mask of a part or variant image: alpha > 0 (RGBA) or index != transparentIndex (indexed). */
+function opaqueMask(img: PartRender['image']): { w: number; h: number; on: Uint8Array } {
+  const w = img.width;
+  const h = img.height;
+  const on = new Uint8Array(w * h);
+  if ('transparentIndex' in img) {
+    const idx = img.toIndices();
+    for (let i = 0; i < on.length; i++) on[i] = idx[i] === img.transparentIndex ? 0 : 1;
+  } else {
+    const { data } = img.toRGBA();
+    for (let i = 0; i < on.length; i++) on[i] = (data[i * 4 + 3] ?? 0) > 0 ? 1 : 0;
+  }
+  return { w, h, on };
+}
+
+/** Transparent pixels (y, then x) whose four orthogonal neighbours are all opaque. */
+function holesOf(m: { w: number; h: number; on: Uint8Array }): [number, number][] {
+  const out: [number, number][] = [];
+  const at = (x: number, y: number): number => m.on[y * m.w + x] ?? 0;
+  for (let y = 1; y < m.h - 1; y++)
+    for (let x = 1; x < m.w - 1; x++)
+      if (at(x, y) === 0 && at(x - 1, y) + at(x + 1, y) + at(x, y - 1) + at(x, y + 1) === 4)
+        out.push([x, y]);
+  return out;
+}
+
+const clipped: LintRule = {
+  id: 'pixels.clipped',
+  severity: 'warning',
+  summary:
+    'A visible part has opaque pixels outside the canvas, so the render loses them (checked on the posed parts, before the canvas clips them).',
+  run(ctx) {
+    const { w, h } = ctx.doc.meta.canvas;
+    const ox = ctx.doc.meta.origin.x;
+    const out: LintFinding[] = [];
+    for (const f of ctx.frames()) {
+      if (ctx.render(f, BASE) === undefined) continue;
+      const anim = ctx.doc.animations[f.animIndex];
+      const mirrored = anim !== undefined && 'mirrorOf' in anim;
+      const sides = { left: 0, right: 0, top: 0, bottom: 0 };
+      const lost: [number, number][] = [];
+      const perBone = new Map<string, number>();
+      for (const p of ctx.parts(f)) {
+        const m = opaqueMask(p.image);
+        let n = 0;
+        for (let y = 0; y < m.h; y++)
+          for (let x = 0; x < m.w; x++) {
+            if (m.on[y * m.w + x] !== 1) continue;
+            const cx = mirrored ? 2 * ox - (p.offset.x + x) : p.offset.x + x;
+            const cy = p.offset.y + y;
+            if (cx >= 0 && cx < w && cy >= 0 && cy < h) continue;
+            n++;
+            lost.push([cx, cy]);
+            if (cx < 0) sides.left++;
+            else if (cx >= w) sides.right++;
+            if (cy < 0) sides.top++;
+            else if (cy >= h) sides.bottom++;
+          }
+        if (n > 0) {
+          const bone = ctx.doc.rig?.bones.find((b) => b.id === p.boneId)?.name ?? p.boneId;
+          perBone.set(bone, (perBone.get(bone) ?? 0) + n);
+        }
+      }
+      if (lost.length === 0) continue;
+      lost.sort((a, b) => a[1] - b[1] || a[0] - b[0]);
+      out.push({
+        rule: 'pixels.clipped',
+        severity: 'warning',
+        location: { ...ctx.at(f), pixel: { x: lost[0]?.[0] ?? 0, y: lost[0]?.[1] ?? 0 } },
+        message: `${String(lost.length)} part pixel(s) fall outside the ${String(w)}x${String(h)} canvas`,
+        data: {
+          count: lost.length,
+          sides,
+          bones: Object.fromEntries([...perBone].sort((a, b) => (a[0] < b[0] ? -1 : 1))),
+          pixels: ctx.cap(lost),
+        },
+      });
+    }
+    return out;
+  },
+};
+
+const partHole: LintRule = {
+  id: 'rig.partHole',
+  severity: 'warning',
+  summary:
+    'A rotated part shows more 1 px holes (transparent, all four neighbours opaque, not covered by another part) than its unrotated variant image has.',
+  run(ctx) {
+    const rig = ctx.doc.rig;
+    if (rig === undefined) return [];
+    const out: LintFinding[] = [];
+    for (const f of ctx.frames()) {
+      const anim = ctx.doc.animations[f.animIndex];
+      if (anim === undefined || 'mirrorOf' in anim) continue; // a mirror shows the same holes
+      const img = ctx.render(f, BASE);
+      if (img === undefined) continue;
+      const { data, width: w, height: h } = img.toRGBA();
+      const bones: Record<string, number> = {};
+      const found: [number, number][] = [];
+      for (const p of ctx.parts(f)) {
+        if (p.angle === 0) continue;
+        const variant = rig.parts
+          .find((x) => x.id === p.partId)
+          ?.variants.find((v) => v.id === p.variantId);
+        const src = variant === undefined ? undefined : ctx.view.image(variant.imageId);
+        const intended = src === undefined ? 0 : holesOf(opaqueMask(src)).length;
+        const holes = holesOf(opaqueMask(p.image))
+          .map(([x, y]): [number, number] => [p.offset.x + x, p.offset.y + y])
+          .filter(
+            ([x, y]) =>
+              x >= 0 && y >= 0 && x < w && y < h && (data[(y * w + x) * 4 + 3] ?? 0) === 0,
+          );
+        if (holes.length <= intended) continue;
+        const bone = rig.bones.find((b) => b.id === p.boneId)?.name ?? p.boneId;
+        bones[bone] = (bones[bone] ?? 0) + holes.length;
+        found.push(...holes);
+      }
+      if (found.length === 0) continue;
+      found.sort((a, b) => a[1] - b[1] || a[0] - b[0]);
+      out.push({
+        rule: 'rig.partHole',
+        severity: 'warning',
+        location: { ...ctx.at(f), pixel: { x: found[0]?.[0] ?? 0, y: found[0]?.[1] ?? 0 } },
+        message: `${String(found.length)} hole pixel(s) inside rotated parts`,
+        data: { count: found.length, bones, pixels: ctx.cap(found) },
+      });
+    }
+    return out;
+  },
+};
+
 function overrideFindings(ctx: LintContext, errors: boolean): LintFinding[] {
   const statuses = checkOverrides(ctx.view, {
     ...(ctx.opts.animations === undefined ? {} : { animations: ctx.opts.animations }),
@@ -342,7 +474,9 @@ const ALL: readonly LintRule[] = [
   offPalette,
   opacityInLocked,
   orphan,
+  clipped,
   jointGap,
+  partHole,
   staleOverride,
   overrideError,
   rotationResidual,

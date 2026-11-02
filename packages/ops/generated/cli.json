@@ -700,7 +700,7 @@
     {
       "op": "lint.run",
       "command": ["lint"],
-      "summary": "Check the document and list findings (palette, orphan pixels, joint gaps, stale overrides, empty frames).",
+      "summary": "Lint the document: palette, orphan pixels, joint gaps, stale overrides, empty frames, clipping, holes.",
       "safety": "read",
       "options": [
         {

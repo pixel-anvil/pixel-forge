@@ -63,7 +63,7 @@ Every failure is `{"code", "message", "details"}`, identical on every transport.
 | [`io.export`](#ioexport) | io | `export` | `pf export` | Export animations as a spritesheet PNG plus a JSON description (Aseprite hash format). |
 | [`io.import`](#ioimport) | io | `import_file` | `pf import` | Import a PNG spritesheet (cells per animation) or an .aseprite file into a document. |
 | [`layer.update`](#layerupdate) | mutate | `layer_update` | `pf layer update` | Rename a layer, or set its visible flag, opacity (0..255) or export flag. |
-| [`lint.run`](#lintrun) | read | `lint` | `pf lint` | Check the document and list findings (palette, orphan pixels, joint gaps, stale overrides, empty frames). |
+| [`lint.run`](#lintrun) | read | `lint` | `pf lint` | Lint the document: palette, orphan pixels, joint gaps, stale overrides, empty frames, clipping, holes. |
 | [`override.import`](#overrideimport) | io | `override_import` | `pf override import` | Import an edited PNG of a rig frame: the pixels that differ from the render become overrides. |
 | [`override.list`](#overridelist) | read | `override_list` | `pf override list` | List overrides: stale ones (art under them changed) and ones that fail to render, apart. |
 | [`override.resolve`](#overrideresolve) | mutate | `override_resolve` | `pf override resolve` | Resolve overrides: "keep" them, "rebase" onto the current art, or "discard" them. |
@@ -766,9 +766,9 @@ Hide the hero's head part from the editor render:
 
 ## lint.run
 
-Check the document and list findings (palette, orphan pixels, joint gaps, stale overrides, empty frames).
+Lint the document: palette, orphan pixels, joint gaps, stale overrides, empty frames, clipping, holes.
 
-Findings come sorted by rule, then document order. Narrow the check with enable, disable, animations or skins. Severity "error" means an invariant is broken; fix warnings before a delivery. count 0 is not a visual pass: lint does not see holes inside rotated parts or art cut off at the canvas edge, and rig.jointGap only sweeps around rest. Look at render_contact_sheet too.
+Sorted by rule, then document order. Narrow with enable, disable, animations or skins. "error" means a broken invariant; fix warnings before delivery. pixels.clipped: part art cut off at the canvas edge. rig.partHole: 1 px holes in rotated parts. count 0 is not a visual pass (jointGap checks rest only): see render_contact_sheet.
 
 - Safety: `read`
 - MCP tool: `lint`
@@ -779,8 +779,8 @@ Findings come sorted by rule, then document order. Narrow the check with enable,
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `doc` | string | yes | Document id from doc_open or doc_create. |
-| `enable` | "palette.offPalette" \| "palette.opacityInLocked" \| "pixels.orphan" \| "rig.jointGap" \| "rig.staleOverride" \| "rig.overrideError" \| "rig.rotationResidual" \| "anim.emptyFrame" \| "lint.renderError"[] | no | Run only these rule ids (default: all). |
-| `disable` | "palette.offPalette" \| "palette.opacityInLocked" \| "pixels.orphan" \| "rig.jointGap" \| "rig.staleOverride" \| "rig.overrideError" \| "rig.rotationResidual" \| "anim.emptyFrame" \| "lint.renderError"[] | no | Skip these rule ids (applied after enable). |
+| `enable` | "palette.offPalette" \| "palette.opacityInLocked" \| "pixels.orphan" \| "pixels.clipped" \| "rig.jointGap" \| "rig.partHole" \| "rig.staleOverride" \| "rig.overrideError" \| "rig.rotationResidual" \| "anim.emptyFrame" \| "lint.renderError"[] | no | Run only these rule ids (default: all). |
+| `disable` | "palette.offPalette" \| "palette.opacityInLocked" \| "pixels.orphan" \| "pixels.clipped" \| "rig.jointGap" \| "rig.partHole" \| "rig.staleOverride" \| "rig.overrideError" \| "rig.rotationResidual" \| "anim.emptyFrame" \| "lint.renderError"[] | no | Skip these rule ids (applied after enable). |
 | `animations` | {group, direction} \| {id}[] | no | Animations to render and check (default: all, in document order). |
 | `skins` | string[] | no | Skin names to render for palette checks; "base" is the base colours (default: base, then every skin). |
 | `maxPixels` | integer >= 1 | no | Most pixels listed per finding (default 16). |
