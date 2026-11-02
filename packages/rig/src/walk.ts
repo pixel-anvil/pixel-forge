@@ -107,13 +107,13 @@ export const WALK_PARAMS: PresetParamSpecs = {
 const REQUIRED = ['pelvis', 'thigh_l', 'shin_l', 'foot_l', 'thigh_r', 'shin_r', 'foot_r'] as const;
 
 /** Where a foot is in one frame. */
-interface FootStep {
+export interface FootStep {
   readonly x: number;
   readonly y: number;
   readonly stance: boolean;
 }
 
-interface FootPlanInput {
+export interface FootPlanInput {
   readonly frames: number;
   readonly stancePercent: number;
   /** Phase offset of this foot in units (`0 .. 100 · frames − 1`). */
@@ -131,7 +131,7 @@ interface FootPlanInput {
  * animation (`100 fe + offset` units, offset = the right foot's), so shifting `phase` shifts every
  * value with it. Periodic: one cycle always adds the same `cycle` px.
  */
-function travel(
+export function travel(
   frames: number,
   stride: number,
   stancePercent: number,
@@ -147,7 +147,7 @@ function travel(
 }
 
 /** The canvas targets of one ankle over a cycle. */
-function footPlan(a: FootPlanInput): FootStep[] {
+export function footPlan(a: FootPlanInput): FootStep[] {
   const { frames: n, stancePercent: pct, offset } = a;
   const cycleUnits = CYCLE_UNITS * n;
   const isStance = (fe: number): boolean => (CYCLE_UNITS * fe + offset) % cycleUnits < pct * n;
@@ -193,7 +193,7 @@ function footPlan(a: FootPlanInput): FootStep[] {
 }
 
 /** `v` limited to the range of a parameter spec. */
-function clampTo(spec: PresetParamSpecs[string] | undefined, v: number): number {
+export function clampTo(spec: PresetParamSpecs[string] | undefined, v: number): number {
   if (spec === undefined) return v;
   return Math.min(spec.max, Math.max(spec.min, v));
 }
@@ -203,7 +203,7 @@ function clampTo(spec: PresetParamSpecs[string] | undefined, v: number): number 
  * unrolled three times and the runs that touch its ends are skipped, so a run that wraps the cycle
  * boundary is measured whole. `B` is the body travel (the sum of the root motion).
  */
-function worstSlide(
+export function worstSlide(
   xs: readonly number[],
   plan: readonly FootStep[],
   body: (fe: number) => number,

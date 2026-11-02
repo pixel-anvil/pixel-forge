@@ -5,12 +5,16 @@
 import { RigError } from './errors.js';
 import { idleBreathe } from './idle-breathe.js';
 import type { Preset } from './preset.js';
+import { jump } from './jump.js';
+import { run } from './run.js';
 import { swing } from './swing.js';
 import { walk } from './walk.js';
 
 /** Every motion preset by name. */
 export const PRESETS: Readonly<Record<string, Preset>> = {
   walk,
+  run,
+  jump,
   'idle-breathe': idleBreathe,
   swing,
 };
