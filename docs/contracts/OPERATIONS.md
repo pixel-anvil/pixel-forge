@@ -68,6 +68,7 @@ Every failure is `{"code", "message", "details"}`, identical on every transport.
 | [`override.list`](#overridelist) | read | `override_list` | `pf override list` | List overrides: stale ones (art under them changed) and ones that fail to render, apart. |
 | [`override.resolve`](#overrideresolve) | mutate | `override_resolve` | `pf override resolve` | Resolve overrides: "keep" them, "rebase" onto the current art, or "discard" them. |
 | [`part.paintOverlap`](#partpaintoverlap) | mutate | `part_paint_overlap` | `pf part paint-overlap` | Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite stays the same. |
+| [`part.paintVariant`](#partpaintvariant) | mutate | `part_paint_variant` | `pf part paint-variant` | Paint a text grid into a part variant's own image. |
 | [`part.split`](#partsplit) | mutate | `part_split` | `pf part split` | Split a region (rect, lasso or flood) of a flat layer's cel into a new layer bound to a bone. |
 | [`pixels.readGrid`](#pixelsreadgrid) | read | `pixels_read_grid` | `pf pixels read-grid` | Read a region (at most 64x64 px) of a frame as a text grid: one symbol per pixel, "." transparent, with a legend of the colours present. |
 | [`pixels.writeGrid`](#pixelswritegrid) | mutate | `pixels_write_grid` | `pf pixels write-grid` | Paint a text grid (at most 32x32 px) at (x, y) of a frame; symbols come from "legend". |
@@ -84,7 +85,7 @@ Every failure is `{"code", "message", "details"}`, identical on every transport.
 | [`rig.readPose`](#rigreadpose) | read | `rig_read_pose` | `pf rig read-pose` | Read one frame: bone and part values, and which are real keys (the rest are interpolated or held). |
 | [`rig.setPartZ`](#rigsetpartz) | mutate | `rig_set_part_z` | `pf rig set-part-z` | Set a part's default z (draw order) after creation. |
 | [`rig.setPivot`](#rigsetpivot) | mutate | `rig_set_pivot` | `pf rig set-pivot` | Set a part variant's pivot: the pixel (int px, in the variant image) that sits on the bone pivot. |
-| [`rig.setPose`](#rigsetpose) | mutate | `rig_set_pose` | `pf rig set-pose` | Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z, visible) on one frame. |
+| [`rig.setPose`](#rigsetpose) | mutate | `rig_set_pose` | `pf rig set-pose` | Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z, visible) on one frame or many. |
 
 ## anim.create
 
@@ -946,6 +947,46 @@ Close the elbow gap of the hero:
 {"doc":"doc_g1ed5q","bones":["lower_arm_r"]}
 ```
 
+## part.paintVariant
+
+Paint a text grid into a part variant's own image.
+
+"." transparent, "_" keeps. x, y are in the variant image; negative grows it (the pivot moves, the part stays put). Fixes a cut for every pose. Frame overrides of the part go stale (override_list). Locked palettes: palette colours only.
+
+- Safety: `mutate`
+- MCP tool: `part_paint_variant`
+- CLI: `pf part paint-variant`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
+| `part` | string | yes | Part: its part-layer name (e.g. "head"), part id ("prt_...") or layer id. |
+| `variant` | string | no | Variant name (e.g. "default", "sleeve") or id ("var_..."). |
+| `x` | integer | no | Column of the grid in the variant image (default 0). |
+| `y` | integer | no | Row (default 0). |
+| `rows` | string[] | yes | Equal-length rows, at most 32x32 symbols. |
+| `legend` | map of string | yes | Symbol (0-9A-Za-z) to "#rrggbb[aa]". |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `part` | string | yes | Part layer name. |
+| `variant` | string | yes | Variant id. |
+| `changed` | integer | yes | Pixels whose colour changed (0: nothing was written). |
+| `grew` | {left, top, right, bottom} | yes | Pixels the image grew on each side. |
+| `pivot` | {x, y} | yes | Pivot afterwards. |
+
+### Examples
+
+Restore two forearm pixels:
+
+```json
+{"doc":"doc_g1ed5q","part":"lower_arm_r","x":0,"y":0,"rows":["11"],"legend":{"1":"#e8be96"}}
+```
+
 ## part.split
 
 Split a region (rect, lasso or flood) of a flat layer's cel into a new layer bound to a bone.
@@ -1578,9 +1619,9 @@ Move the forearm pivot two pixels right:
 
 ## rig.setPose
 
-Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z, visible) on one frame.
+Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z, visible) on one frame or many.
 
-Channels you pass replace the stored ones; null removes the whole key of that bone or part. Angles are from rest and compose down the hierarchy. A channel with no key here interpolates between its keys on other frames (wrapping in a loop), not back to rest: key offsets on every frame or on none. Part keys hold both ways: set z or visible once per animation. Art past the canvas edge is cut off. Next: render_contact_sheet.
+Channels you pass replace the stored ones; null removes a bone or part key. A channel with no key here interpolates between keys on other frames, not back to rest: key offsets on every frame or on none. Part keys hold both ways: set z or visible once. "frames" poses many frames as one undo step. Output keyed lists bones keyed; interpolated, bones keyed elsewhere but not on a posed frame (keyAll keys them at rest). Art past the canvas edge is cut off. Next: render_contact_sheet.
 
 - Safety: `mutate`
 - MCP tool: `rig_set_pose`
@@ -1592,18 +1633,23 @@ Channels you pass replace the stored ones; null removes the whole key of that bo
 | --- | --- | --- | --- |
 | `doc` | string | yes | Document id from doc_open or doc_create. |
 | `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
-| `frame` | integer >= 0 \| string | yes | Frame: 0-based index or frame id ("frm_..."). |
+| `frame` | integer >= 0 \| string | no | Frame: 0-based index or frame id ("frm_..."). |
 | `bones` | map of {angle, offset, flipX, interp} \| null | no | Bone keys by bone name (or id); null removes the key. |
 | `parts` | map of {variant, z, visible} \| null | no | Part keys by part-layer name (or part id); null removes the key. |
+| `frames` | {frame, bones, parts}[] | no | Many frames, instead of frame. |
+| `keyAll` | boolean | no | Also key all other bones at rest on posed frames. |
 
 ### Output
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `animation` | string | yes | "group/direction" of the posed animation. |
-| `frameIndex` | integer | yes |  |
+| `frameIndex` | integer | yes | The posed frame; the first with "frames". |
 | `frameId` | string | yes |  |
+| `frames` | integer[] | no | Posed frame indexes, with "frames". |
 | `changed` | string[] | yes | Keys that changed, as "bones.<name>" / "parts.<name>"; empty when nothing did. |
+| `keyed` | string[] | yes | Bones this call keys. |
+| `interpolated` | string[] | yes | Bones that interpolate on a posed frame. |
 
 ### Examples
 
@@ -1616,7 +1662,7 @@ Raise the right arm on frame 0:
 Output:
 
 ```json
-{"animation":"default","frameIndex":0,"frameId":"frm_j83g8j","changed":["bones.lower_arm_r","bones.upper_arm_r"]}
+{"animation":"default","frameIndex":0,"frameId":"frm_j83g8j","changed":["bones.lower_arm_r","bones.upper_arm_r"],"keyed":["lower_arm_r","upper_arm_r"],"interpolated":[]}
 ```
 
 Switch the forearm to its sleeve variant and drop the torso key:

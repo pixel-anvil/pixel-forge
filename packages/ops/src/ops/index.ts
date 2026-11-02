@@ -20,6 +20,7 @@ import { overrideList } from './override-list.js';
 import { pxfPack, pxfUnpack } from './pxf-pack.js';
 import { overrideResolve } from './override-resolve.js';
 import { partPaintOverlap } from './part-paint-overlap.js';
+import { partPaintVariant } from './part-paint-variant.js';
 import { partSplit } from './part-split.js';
 import { rigBake } from './rig-bake.js';
 import { rigBindParts } from './rig-bind-parts.js';
@@ -59,6 +60,7 @@ export { overrideList } from './override-list.js';
 export { pxfPack, pxfUnpack } from './pxf-pack.js';
 export { overrideResolve } from './override-resolve.js';
 export { partPaintOverlap } from './part-paint-overlap.js';
+export { partPaintVariant } from './part-paint-variant.js';
 export { SplitSelectionInput, partSplit } from './part-split.js';
 export { rigBake } from './rig-bake.js';
 export { rigBindParts } from './rig-bind-parts.js';
@@ -101,6 +103,7 @@ export const ALL_OPS: readonly AnyOp[] = [
   pxfPack,
   pxfUnpack,
   partPaintOverlap,
+  partPaintVariant,
   partSplit,
   rigBake,
   rigBindParts,

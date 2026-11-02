@@ -187,6 +187,16 @@ export const SCENARIOS: Record<string, Scenario> = {
     args: ({ doc }) => ({ doc, bones: ['lower_arm_r'] }),
     entry: 'one',
   },
+  part_paint_variant: {
+    base: 'hero',
+    args: ({ doc }) => ({
+      doc,
+      part: 'lower_arm_r',
+      rows: ['11'],
+      legend: { '1': '#ff00ff' },
+    }),
+    entry: 'one',
+  },
   part_split: {
     base: 'flatRig',
     args: ({ doc }) => ({

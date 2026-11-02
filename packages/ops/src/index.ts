@@ -132,6 +132,7 @@ export {
   overrideResolve,
   PartKeyInput,
   partPaintOverlap,
+  partPaintVariant,
   partSplit,
   registry,
   pixelsReadGrid,

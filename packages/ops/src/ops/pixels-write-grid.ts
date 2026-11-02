@@ -44,7 +44,7 @@ import {
 import type { ReadonlyDocument } from '../refs.js';
 
 /** What one grid cell asks for. */
-type Cell = 'keep' | Rgba;
+export type Cell = 'keep' | Rgba;
 
 const TRANSPARENT: Rgba = [0, 0, 0, 0];
 
@@ -56,7 +56,10 @@ function badGrid(message: string, issues: InputIssue[]): OpError {
  * Parses the legend and rows into a `height` x `width` array of cells.
  * @throws OpError `BAD_INPUT` (`details.issues`: `legend.<symbol>` / `rows.<n>`).
  */
-function parseGrid(rows: readonly string[], legend: Readonly<Record<string, string>>): Cell[][] {
+export function parseGrid(
+  rows: readonly string[],
+  legend: Readonly<Record<string, string>>,
+): Cell[][] {
   const issues: InputIssue[] = [];
   const colours = new Map<string, Rgba>();
   for (const [symbol, hex] of Object.entries(legend)) {
@@ -107,7 +110,7 @@ function parseGrid(rows: readonly string[], legend: Readonly<Record<string, stri
  * Refuses colours the document's palette does not hold, when it is palette-locked or indexed (FR-PAL-06).
  * An RGBA document compares RGB; an indexed one needs the exact RGBA (the index is the colour).
  */
-function checkPalette(doc: ReadonlyDocument, cells: readonly (readonly Cell[])[]): void {
+export function checkPalette(doc: ReadonlyDocument, cells: readonly (readonly Cell[])[]): void {
   const palette = activePalette(doc);
   const indexed = doc.meta.colorMode === 'indexed';
   if (!indexed && !doc.meta.paletteLocked) return;

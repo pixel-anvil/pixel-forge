@@ -2774,6 +2774,127 @@
     }
   },
   {
+    "name": "part_paint_variant",
+    "title": "part.paintVariant",
+    "description": "Paint a text grid into a part variant's own image.\n\n\".\" transparent, \"_\" keeps. x, y are in the variant image; negative grows it (the pivot moves, the part stays put). Fixes a cut for every pose. Frame overrides of the part go stale (override_list). Locked palettes: palette colours only.\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Restore two forearm pixels): {\"doc\":\"doc_g1ed5q\",\"part\":\"lower_arm_r\",\"x\":0,\"y\":0,\"rows\":[\"11\"],\"legend\":{\"1\":\"#e8be96\"}}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id from doc_open or doc_create."
+        },
+        "part": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Part: its part-layer name (e.g. \"head\"), part id (\"prt_...\") or layer id."
+        },
+        "variant": {
+          "default": "default",
+          "type": "string",
+          "minLength": 1,
+          "description": "Variant name (e.g. \"default\", \"sleeve\") or id (\"var_...\")."
+        },
+        "x": {
+          "description": "Column of the grid in the variant image (default 0).",
+          "type": "integer"
+        },
+        "y": {
+          "description": "Row (default 0).",
+          "type": "integer"
+        },
+        "rows": {
+          "minItems": 1,
+          "maxItems": 32,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "description": "Equal-length rows, at most 32x32 symbols."
+        },
+        "legend": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+          },
+          "description": "Symbol (0-9A-Za-z) to \"#rrggbb[aa]\"."
+        }
+      },
+      "required": ["doc", "part", "rows", "legend"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "part": {
+          "type": "string",
+          "description": "Part layer name."
+        },
+        "variant": {
+          "type": "string",
+          "description": "Variant id."
+        },
+        "changed": {
+          "type": "integer",
+          "description": "Pixels whose colour changed (0: nothing was written)."
+        },
+        "grew": {
+          "type": "object",
+          "properties": {
+            "left": {
+              "type": "integer"
+            },
+            "top": {
+              "type": "integer"
+            },
+            "right": {
+              "type": "integer"
+            },
+            "bottom": {
+              "type": "integer"
+            }
+          },
+          "required": ["left", "top", "right", "bottom"],
+          "additionalProperties": false,
+          "description": "Pixels the image grew on each side."
+        },
+        "pivot": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "integer"
+            },
+            "y": {
+              "type": "integer"
+            }
+          },
+          "required": ["x", "y"],
+          "additionalProperties": false,
+          "description": "Pivot afterwards."
+        }
+      },
+      "required": ["part", "variant", "changed", "grew", "pivot"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "part.paintVariant",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "part.paintVariant",
+      "pixel-forge/safety": "mutate"
+    }
+  },
+  {
     "name": "part_split",
     "title": "part.split",
     "description": "Split a region (rect, lasso or flood) of a flat layer's cel into a new layer bound to a bone.\n\nFit the bones first: the part keeps the bone pivot of this moment. partName (\"part:upper_arm_r\") binds it, else overlap, else it stays a pixel layer. The part draws in every frame of every animation: key visible false (rig_set_pose) where other art shows. Refused: rig-block-order (a pixel layer covers the part), duplicate-variant (a second cut into one part: undo, recut it whole).\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Cut the head rectangle of a flat run frame into the head part): {\"doc\":\"doc_g1ed5q\",\"layer\":\"body\",\"animation\":{\"group\":\"run\"},\"frame\":0,\"selection\":{\"kind\":\"rect\",\"x\":24,\"y\":16,\"w\":18,\"h\":12},\"partName\":\"part:head\"}",
@@ -5073,7 +5194,7 @@
   {
     "name": "rig_set_pose",
     "title": "rig.setPose",
-    "description": "Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z, visible) on one frame.\n\nChannels you pass replace the stored ones; null removes the whole key of that bone or part. Angles are from rest and compose down the hierarchy. A channel with no key here interpolates between its keys on other frames (wrapping in a loop), not back to rest: key offsets on every frame or on none. Part keys hold both ways: set z or visible once per animation. Art past the canvas edge is cut off. Next: render_contact_sheet.\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Raise the right arm on frame 0): {\"doc\":\"doc_g1ed5q\",\"animation\":{\"group\":\"default\"},\"frame\":0,\"bones\":{\"upper_arm_r\":{\"angle\":-45},\"lower_arm_r\":{\"angle\":-30}}}",
+    "description": "Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z, visible) on one frame or many.\n\nChannels you pass replace the stored ones; null removes a bone or part key. A channel with no key here interpolates between keys on other frames, not back to rest: key offsets on every frame or on none. Part keys hold both ways: set z or visible once. \"frames\" poses many frames as one undo step. Output keyed lists bones keyed; interpolated, bones keyed elsewhere but not on a posed frame (keyAll keys them at rest). Art past the canvas edge is cut off. Next: render_contact_sheet.\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Raise the right arm on frame 0): {\"doc\":\"doc_g1ed5q\",\"animation\":{\"group\":\"default\"},\"frame\":0,\"bones\":{\"upper_arm_r\":{\"angle\":-45},\"lower_arm_r\":{\"angle\":-30}}}",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -5139,11 +5260,11 @@
                 "type": "object",
                 "properties": {
                   "angle": {
-                    "description": "Rotation from the rest angle, degrees clockwise (child bones follow, FK).",
+                    "description": "Degrees clockwise from rest; child bones follow (FK).",
                     "type": "number"
                   },
                   "offset": {
-                    "description": "Pivot translation from its rest position, integer px.",
+                    "description": "Pivot shift from rest, integer px.",
                     "type": "object",
                     "properties": {
                       "x": {
@@ -5161,7 +5282,7 @@
                     "type": "boolean"
                   },
                   "interp": {
-                    "description": "Interpolation from this key to the next: \"linear\" (default), \"step\", \"ease-in-out\".",
+                    "description": "To the next key: \"linear\" (default), \"step\", \"ease-in-out\".",
                     "type": "string",
                     "enum": ["step", "linear", "ease-in-out"]
                   }
@@ -5192,7 +5313,7 @@
                     "minLength": 1
                   },
                   "z": {
-                    "description": "Draw order in this animation; holds until the next key; higher draws on top (default: the view's).",
+                    "description": "Draw order, held until the next key; higher on top (default: the view's).",
                     "type": "integer"
                   },
                   "visible": {
@@ -5207,9 +5328,51 @@
               }
             ]
           }
+        },
+        "frames": {
+          "description": "Many frames, instead of frame.",
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "frame": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^frm_[0-9a-z]{1,24}$"
+                  }
+                ]
+              },
+              "bones": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              },
+              "parts": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              }
+            },
+            "required": ["frame"],
+            "additionalProperties": false
+          }
+        },
+        "keyAll": {
+          "description": "Also key all other bones at rest on posed frames.",
+          "type": "boolean"
         }
       },
-      "required": ["doc", "animation", "frame"],
+      "required": ["doc", "animation"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -5220,10 +5383,18 @@
           "description": "\"group/direction\" of the posed animation."
         },
         "frameIndex": {
-          "type": "integer"
+          "type": "integer",
+          "description": "The posed frame; the first with \"frames\"."
         },
         "frameId": {
           "type": "string"
+        },
+        "frames": {
+          "description": "Posed frame indexes, with \"frames\".",
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
         },
         "changed": {
           "type": "array",
@@ -5231,9 +5402,23 @@
             "type": "string"
           },
           "description": "Keys that changed, as \"bones.<name>\" / \"parts.<name>\"; empty when nothing did."
+        },
+        "keyed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Bones this call keys."
+        },
+        "interpolated": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Bones that interpolate on a posed frame."
         }
       },
-      "required": ["animation", "frameIndex", "frameId", "changed"],
+      "required": ["animation", "frameIndex", "frameId", "changed", "keyed", "interpolated"],
       "additionalProperties": false
     },
     "annotations": {

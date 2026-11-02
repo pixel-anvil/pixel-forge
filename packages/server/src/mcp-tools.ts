@@ -33,6 +33,7 @@ export function opOfTool(tool: Pick<McpToolDefinition, '_meta'>): string {
 export function listedDescription(description: string): string {
   const paragraphs = description
     .replace(` ${CONVENTIONS}`, '')
+    .replace(/^Example \(.*?\): (?=\{")/m, 'Example: ')
     .split('\n\n')
     .filter((p) => p !== MUTATE_NOTE);
   return paragraphs.join('\n\n');

@@ -67,7 +67,7 @@ describe('mcpTools', () => {
       _meta: { 'pixel-forge/op': 'rig.setPose', 'pixel-forge/safety': 'mutate' },
       inputSchema: {
         type: 'object',
-        required: ['doc', 'animation', 'frame'],
+        required: ['doc', 'animation'],
         additionalProperties: false,
       },
       outputSchema: { type: 'object' },

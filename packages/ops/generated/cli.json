@@ -879,6 +879,63 @@
       ]
     },
     {
+      "op": "part.paintVariant",
+      "command": ["part", "paint-variant"],
+      "summary": "Paint a text grid into a part variant's own image.",
+      "safety": "mutate",
+      "options": [
+        {
+          "name": "doc",
+          "flag": "--doc",
+          "kind": "string",
+          "required": true,
+          "description": "Document id from doc_open or doc_create."
+        },
+        {
+          "name": "part",
+          "flag": "--part",
+          "kind": "string",
+          "required": true,
+          "description": "Part: its part-layer name (e.g. \"head\"), part id (\"prt_...\") or layer id."
+        },
+        {
+          "name": "variant",
+          "flag": "--variant",
+          "kind": "string",
+          "required": false,
+          "description": "Variant name (e.g. \"default\", \"sleeve\") or id (\"var_...\")."
+        },
+        {
+          "name": "x",
+          "flag": "--x",
+          "kind": "integer",
+          "required": false,
+          "description": "Column of the grid in the variant image (default 0)."
+        },
+        {
+          "name": "y",
+          "flag": "--y",
+          "kind": "integer",
+          "required": false,
+          "description": "Row (default 0)."
+        },
+        {
+          "name": "rows",
+          "flag": "--rows",
+          "kind": "json",
+          "required": true,
+          "description": "Equal-length rows, at most 32x32 symbols."
+        },
+        {
+          "name": "legend",
+          "flag": "--legend",
+          "kind": "json",
+          "required": true,
+          "description": "Symbol (0-9A-Za-z) to \"#rrggbb[aa]\"."
+        }
+      ]
+    },
+    {
       "op": "part.split",
       "command": ["part", "split"],
       "summary": "Split a region (rect, lasso or flood) of a flat layer's cel into a new layer bound to a bone.",
@@ -1606,7 +1663,7 @@
     {
       "op": "rig.setPose",
       "command": ["rig", "set-pose"],
-      "summary": "Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z, visible) on one frame.",
+      "summary": "Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z, visible) on one frame or many.",
       "safety": "mutate",
       "options": [
         {
@@ -1627,7 +1684,7 @@
           "name": "frame",
           "flag": "--frame",
           "kind": "json",
-          "required": true,
+          "required": false,
           "description": "Frame: 0-based index or frame id (\"frm_...\")."
         },
         {
@@ -1643,6 +1700,20 @@
           "kind": "json",
           "required": false,
           "description": "Part keys by part-layer name (or part id); null removes the key."
+        },
+        {
+          "name": "frames",
+          "flag": "--frames",
+          "kind": "json",
+          "required": false,
+          "description": "Many frames, instead of frame."
+        },
+        {
+          "name": "keyAll",
+          "flag": "--key-all",
+          "kind": "boolean",
+          "required": false,
+          "description": "Also key all other bones at rest on posed frames."
         }
       ]
     }
