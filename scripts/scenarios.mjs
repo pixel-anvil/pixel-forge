@@ -232,6 +232,28 @@ function w3Presets() {
   return `walk ${String(frames.walk)}, run ${String(frames.run)}, jump ${String(frames.jump)}, idle ${String(frames.idle)}, swing ${String(frames.swing)} frames, ${String(s.report.lint.reduce((n, l) => n + l.count, 0))} known lint warnings`;
 }
 
+// ---- ninja-presets (E7.4): the five presets on the rig cut from real art, jointCheck clean ------------
+
+function ninjaPresets() {
+  const dir = workspace('ninja-presets', ['ninja-presets.steps.json'], {
+    'ninja.pxf': join(FIXTURES, 'generated/ninja.pxf'),
+  });
+  const s = check(dir, 'ninja-presets.steps.json', { lintClean: false });
+  for (const id of ['walk', 'run', 'jump', 'idle', 'swing']) {
+    assert.equal(s[id].output.created, true);
+    assert.deepEqual(s[id].output.warnings, []);
+  }
+  // One drawn variant per part: rotationResidual is expected (docs/ai/KNOWN_ISSUES.md RIG-13); nothing else.
+  for (const l of s.report.lint)
+    for (const f of l.findings)
+      assert.equal(f.rule, 'rig.rotationResidual', `unexpected lint finding ${f.rule}`);
+  assert.ok(
+    existsSync(join(dir, 'out/ninja-presets', s.sheet_walk.image.file)),
+    'no contact sheet',
+  );
+  return `5 presets, jointCheck 0 gaps, ${String(s.report.lint.reduce((n, l) => n + l.count, 0))} rotationResidual warnings`;
+}
+
 // ---- W4-CLI: touch up with pf export + pf override import, then lean +5 deg --------------------------
 
 const MAGENTA = [255, 0, 255, 255];
@@ -325,6 +347,7 @@ const SCENARIOS_RUN = [
   ['W2b', w2b],
   ['W3-manual', w3],
   ['W3-presets', w3Presets],
+  ['ninja-presets', ninjaPresets],
   ['W4-CLI', w4],
 ];
 let failed = 0;

@@ -15,5 +15,6 @@ third-party game art. Prettier and ESLint ignore this folder.
   motion, trimmed and empty frames, a shared PNG), `skins.pxf` (indexed; a palette skin and a remap skin) and
   `expected.json` (facts computed from the generator's rectangle lists, used as the GUT oracle). `pnpm fixtures:check`
   covers them.
+- `generated/ninja.pxf`: the second test rig (E7.4), cut from one frame of `cc0/male_base_ninja/ninja_full.png` by `src/ninja.ts` (16 parts; far limbs are darker copies). Presets script: `../scenarios/ninja-presets.steps.json`.
 - `generated/hero.pxf`: the synthetic 48x48 humanoid (T3.9) from `src/hero.ts`. Its Aseprite twin is
   `aseprite/hero_parts.aseprite` (`src/aseprite/hero_parts.lua`).
