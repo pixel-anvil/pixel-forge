@@ -20,6 +20,8 @@
  * - `RIG_REQUIRED`: the render cache needs the part renderer (the document has exported part layers)
  *   and no `rig` option was given.
  * - `FS_FAILED`: a `FileSystem` call failed; `cause` is the original error.
+ * - `SYMLINK`: `pack` found a symbolic link inside the `.pxfd` folder where it would read a file;
+ *   following it could pack a file from outside the folder (NFR-06).
  * - `EXISTS`: `unpack` was asked to write into a folder that already exists.
  */
 export type IoErrorCode =
@@ -35,6 +37,7 @@ export type IoErrorCode =
   | 'MIGRATION_FAILED'
   | 'RIG_REQUIRED'
   | 'FS_FAILED'
+  | 'SYMLINK'
   | 'EXISTS';
 
 /** The error type thrown by `@pixel-forge/io`. Branch on `code`. */

@@ -193,7 +193,12 @@ export function buildRenderCache(
         image,
         markers,
         events: [...frame.events],
-        rootMotion: { dx: frame.rootMotion.dx, dy: frame.rootMotion.dy },
+        // A mirror with overrides is written as plain frames (no `mirrorOf`), so the importer cannot
+        // flip them: root motion is mirrored here with the markers. `0 - dx` never gives -0.
+        rootMotion: {
+          dx: mirrorMarkers ? 0 - frame.rootMotion.dx : frame.rootMotion.dx,
+          dy: frame.rootMotion.dy,
+        },
       };
     });
   };

@@ -4,6 +4,7 @@ import { DocumentStore, renderFrame } from '@pixel-forge/core';
 import { decodePng } from '@pixel-forge/png';
 import { IndexedImage, TiledImage } from '@pixel-forge/raster';
 import { Document, RenderIndex } from '@pixel-forge/schema';
+import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
 import {
   IoError,
@@ -76,6 +77,42 @@ describe('read -> write is byte-identical (NFR-03)', () => {
       expect(a instanceof IndexedImage && b instanceof IndexedImage && a.toIndices()).toEqual(
         b instanceof IndexedImage && b.toIndices(),
       );
+    }
+  });
+
+  it('erase masks read back with transparent index 0 whatever the palette says; palette images keep the palette index (IO-01)', () => {
+    for (const first of [3, 255]) {
+      const store = frozenStore();
+      store.transact('Palette', (tx) => {
+        tx.update((d) => {
+          const pal = d.palettes.find((p) => p.id === d.activePaletteId);
+          if (pal === undefined) throw new Error('no palette');
+          // Entry 0 is opaque, `first` is the first transparent entry.
+          while (pal.colors.length <= first) pal.colors.push([9, 9, 9, 255]);
+          pal.colors[0] = [1, 2, 3, 255];
+          pal.colors[first] = [0, 0, 0, 0];
+          for (let i = 1; i < first; i++) {
+            if ((pal.colors[i]?.[3] ?? 0) === 0) pal.colors[i] = [9, 9, 9, 255];
+          }
+        });
+      });
+      const masks = new Set<string>();
+      for (const a of store.doc.animations)
+        for (const o of a.overrides) if (o.erase) masks.add(o.erase);
+      expect(masks.size).toBeGreaterThan(0);
+      const file = readPxf(writePxf(store, opts({ renderCache: false })));
+      for (const id of store.imageIds()) {
+        const a = file.images.get(id);
+        const b = store.image(id);
+        if (!(a instanceof IndexedImage && b instanceof IndexedImage)) throw new Error('indexed');
+        if (masks.has(id)) {
+          expect(a.transparentIndex, `${id} (first transparent ${String(first)})`).toBe(0);
+          expect(a.bounds()).toEqual(b.bounds());
+          expect(a.bounds()).toBeDefined();
+        } else {
+          expect(a.transparentIndex).toBe(first);
+        }
+      }
     }
   });
 
@@ -181,6 +218,66 @@ describe('manifest: created / modified', () => {
     expect(b.file.renderIndex).toBeDefined();
   });
 
+  it('derivedChanged: false for a file that is what the save would write; true for a missing, partial or stale cache', () => {
+    const clock = steppedClock('2026-01-01T00:00:00Z', 60_000);
+    const store = frozenStore();
+    const first = buildPxf(store, opts({ clock }));
+    expect(first.derivedChanged).toBe(true); // nothing before it
+    const disk = readPxf(first.bytes);
+    const same = buildPxf(pxfStore(disk), opts({ clock, previous: disk }));
+    expect(same.changed).toBe(false);
+    expect(same.derivedChanged).toBe(false);
+    expect(bytesEqual(same.bytes, first.bytes)).toBe(true);
+
+    // No cache on disk (written with renderCache: false), then a save that wants one.
+    const bare = readPxf(buildPxf(store, opts({ clock, renderCache: false })).bytes);
+    const rebuilt = buildPxf(pxfStore(bare), opts({ clock, previous: bare }));
+    expect(rebuilt.changed).toBe(false);
+    expect(rebuilt.derivedChanged).toBe(true);
+    expect(rebuilt.file.manifest.modified).toBe(bare.manifest.modified); // derived data is no edit
+    expect(rebuilt.file.renderIndex).toBeDefined();
+    // ... but not when the save does not write a cache either.
+    const none = buildPxf(pxfStore(bare), opts({ clock, previous: bare, renderCache: false }));
+    expect(none.derivedChanged).toBe(false);
+
+    // A stale index entry (a frame hash that no longer matches) and a missing PNG.
+    const staleIndex = JSON.parse(JSON.stringify(disk.renderIndex)) as NonNullable<
+      typeof disk.renderIndex
+    >;
+    const right = staleIndex.animations.run?.right;
+    if (right === undefined || !('frames' in right)) throw new Error('run/right missing');
+    need(right.frames[0]).hash = 'f'.repeat(64);
+    const stale = { ...disk, renderIndex: staleIndex };
+    expect(buildPxf(pxfStore(disk), opts({ clock, previous: stale })).derivedChanged).toBe(true);
+    const pngs = new Map(disk.renderPngs);
+    pngs.delete([...pngs.keys()].sort()[0] ?? '');
+    const partial = { ...disk, renderPngs: pngs };
+    expect(buildPxf(pxfStore(disk), opts({ clock, previous: partial })).derivedChanged).toBe(true);
+  });
+
+  it('derivedChanged: true for a file migrated on read, false once it was saved', () => {
+    const clock = steppedClock('2026-01-01T00:00:00Z', 60_000);
+    const store = frozenStore();
+    const v1 = unzipSync(buildPxf(store, opts({ clock })).bytes);
+    const manifest = JSON.parse(strFromU8(need(v1['manifest.json']))) as Record<string, unknown>;
+    const doc = JSON.parse(strFromU8(need(v1['document.json']))) as {
+      meta: Record<string, unknown>;
+    };
+    manifest.schemaVersion = 0;
+    doc.meta.schemaVersion = 0;
+    v1['manifest.json'] = strToU8(JSON.stringify(manifest));
+    v1['document.json'] = strToU8(JSON.stringify(doc));
+    const migrated = readPxf(zipSync(v1), { migrations: { 0: (j) => j } });
+    expect(migrated.migratedFrom).toBe(0);
+    const built = buildPxf(pxfStore(migrated), opts({ clock, previous: migrated }));
+    expect(built.changed).toBe(false);
+    expect(built.derivedChanged).toBe(true);
+    expect(built.file.migratedFrom).toBeUndefined();
+    expect(readPxf(built.bytes).manifest.schemaVersion).toBe(1);
+    const again = buildPxf(pxfStore(built.file), opts({ clock, previous: built.file }));
+    expect(again.derivedChanged).toBe(false);
+  });
+
   it('rejects a clock that returns an invalid date', () => {
     expect(() =>
       writePxf(heroDocument(), { clock: { now: () => new Date(NaN) }, renderCache: false }),
@@ -275,6 +372,16 @@ describe('render cache', () => {
     expect(left.frames[0]?.hash).not.toBe(
       (index.animations.run?.right as { frames: { hash: string }[] }).frames[0]?.hash,
     );
+
+    // Root motion is mirrored with the markers: the written frames carry no mirror flag.
+    const rightFrames = (
+      index.animations.run?.right as { frames: { rootMotion: { dx: number } }[] }
+    ).frames;
+    left.frames.forEach((f, i) => {
+      expect(Object.is(f.rootMotion.dx, -0)).toBe(false);
+      expect(f.rootMotion.dx).toBe(-need(rightFrames[i]).rootMotion.dx + 0);
+    });
+    expect(left.frames[0]?.rootMotion).toEqual({ dx: -2, dy: 0 });
 
     const mirror = need(store.doc.animations.find((a) => 'mirrorOf' in a));
     store.transact('Drop mirror overrides', (tx) => {

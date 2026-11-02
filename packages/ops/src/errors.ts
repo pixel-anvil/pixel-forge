@@ -139,6 +139,7 @@ const IO_CODES: Readonly<Record<IoErrorCode, OpErrorCode>> = {
   MIGRATION_FAILED: 'BAD_FILE',
   RIG_REQUIRED: 'INTERNAL',
   FS_FAILED: 'IO_FAILED',
+  SYMLINK: 'NOT_ALLOWED',
   EXISTS: 'CONFLICT',
 };
 

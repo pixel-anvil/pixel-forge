@@ -10,6 +10,8 @@ import {
 } from 'node:fs';
 import { hostname } from 'node:os';
 import { join } from 'node:path';
+import { nodeFileSystem } from '@pixel-forge/io/node';
+import type { FileSystem } from '@pixel-forge/io';
 import { registry } from '@pixel-forge/ops';
 import type { HostedDocument } from '@pixel-forge/ops';
 import { describe, expect, it } from 'vitest';
@@ -74,6 +76,43 @@ describe('DocumentHost ownership', () => {
       details: { pid: process.pid, host: hostname() },
     });
     expect(other.list()).toEqual([]);
+  });
+
+  it('takes the lock before it reads the file, and gives it back when the read or parse fails', async () => {
+    const w = workspace();
+    const real = nodeFileSystem();
+    const heldAtRead: boolean[] = [];
+    const fs: FileSystem = {
+      ...real,
+      readFile: (path) => {
+        heldAtRead.push(existsSync(lockFilePath(w.base, path)));
+        return real.readFile(path);
+      },
+    };
+    const host = createDocumentHost({ baseDir: w.base, roots: [w.root], releaseOnExit: false, fs });
+    later(() => host.dispose());
+    await registry.execute('doc.open', { path: w.hero }, { host });
+    expect(heldAtRead).toEqual([true]); // another process cannot save in between
+
+    // Not a .pxf: the open fails and leaves no lock behind.
+    const junk = join(w.root, 'junk.pxf');
+    writeFileSync(junk, 'not a zip');
+    expect((await rejection(registry.execute('doc.open', { path: junk }, { host }))).code).toBe(
+      'BAD_FILE',
+    );
+    expect(locks(w.base)).toEqual([lockFilePath(w.base, w.hero).split('/').pop()]);
+    // A file that cannot be read at all: the same.
+    const missing = join(w.root, 'missing.pxf');
+    expect((await rejection(registry.execute('doc.open', { path: missing }, { host }))).code).toBe(
+      'IO_FAILED',
+    );
+    expect(locks(w.base)).toHaveLength(1);
+    expect(host.list()).toHaveLength(1);
+    // The lock of the failed open really is free: another host can take it.
+    const source = host.byPath(w.hero);
+    if (source === undefined) throw new Error('hero not open');
+    const other = hostFor(w);
+    expect((await other.adopt({ store: source.store, path: junk })).path).toBe(junk);
   });
 
   it('reports a clash inside one host as CONFLICT and keeps the lock', async () => {
@@ -226,6 +265,51 @@ describe('DocumentHost workspace roots', () => {
     await registry.execute('doc.open', { path: join(alias, 'hero.pxf') }, { host });
     const again = await registry.execute('doc.open', { path: w.hero }, { host });
     expect(again).toMatchObject({ alreadyOpen: true });
+  });
+
+  // The temp volume decides: macOS volumes are usually case-insensitive, Linux CI is not.
+  const caseInsensitive = ((): boolean => {
+    const dir = tempDir();
+    writeFileSync(join(dir, 'Probe'), 'x');
+    return existsSync(join(dir, 'pROBE'));
+  })();
+
+  it.skipIf(!caseInsensitive)(
+    'names one file once however its letter case is typed (true case of the existing part)',
+    async () => {
+      const w = workspace();
+      const host = hostFor(w);
+      const typed = join(w.root.replace(/work$/, 'WORK'), 'HERO.pxf');
+      expect(typed).not.toBe(w.hero);
+      expect(host.resolvePath(typed)).toBe(w.hero);
+      // A file about to be created keeps the case it is given; the folder part takes the true case.
+      expect(host.resolvePath(join(w.root.replace(/work$/, 'Work'), 'New.pxf'))).toBe(
+        join(w.root, 'New.pxf'),
+      );
+      // One document and one lock for both spellings.
+      await registry.execute('doc.open', { path: typed }, { host });
+      const again = await registry.execute('doc.open', { path: w.hero }, { host });
+      expect(again).toMatchObject({ alreadyOpen: true });
+      expect(locks(w.base)).toHaveLength(1);
+      expect(lockFilePath(w.base, host.resolvePath(typed))).toBe(lockFilePath(w.base, w.hero));
+      // A second host (another process) sees the lock whichever spelling it uses.
+      const other = hostFor(w);
+      const clash = await rejection(registry.execute('doc.open', { path: typed }, { host: other }));
+      expect(clash.code).toBe('DOC_LOCKED');
+    },
+  );
+
+  it.skipIf(!caseInsensitive)('accepts a root typed in another letter case', () => {
+    const w = workspace();
+    const host = createDocumentHost({
+      baseDir: w.base,
+      roots: [w.root.replace(/work$/, 'WORK')],
+      releaseOnExit: false,
+    });
+    later(() => host.dispose());
+    expect(host.roots).toEqual([w.root]);
+    expect(host.resolvePath(w.hero)).toBe(w.hero);
+    expect(host.resolvePath(join(w.root.replace(/work$/, 'WORK'), 'hero.pxf'))).toBe(w.hero);
   });
 
   it('rejects relative roots and detects symlink loops', () => {

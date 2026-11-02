@@ -6,6 +6,8 @@ import type { DecodedRgba, PngImage } from './types.js';
 const SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] as const;
 /** Upper bound on width*height, to refuse decompression bombs (about 268 megapixels). */
 const MAX_PIXELS = 1 << 28;
+/** DEFLATE expands a stream by at most ~1032:1. */
+const MAX_DEFLATE_RATIO = 1032;
 
 interface Ihdr {
   width: number;
@@ -261,7 +263,14 @@ export function decodePngRaw(bytes: Uint8Array): PngImage {
 
   let inflated: Uint8Array;
   try {
-    inflated = unzlibSync(idat);
+    // Bounded output: a few MB of IDAT can inflate to gigabytes (DEFLATE gives up to ~1032:1) and
+    // MAX_PIXELS only limits `expected`. With a given `out`, fflate silently drops what does not
+    // fit, and a truncated stream comes back zero-padded to the full buffer. Either way the data
+    // no longer matches its Adler-32 (or `expected`) below, so over-long and short streams still
+    // end in DECOMPRESS_FAILED or BAD_DATA_SIZE. DEFLATE cannot expand beyond the ratio, so the
+    // buffer never truncates a stream that is no longer than `expected`.
+    const room = Math.min(expected, idat.length * MAX_DEFLATE_RATIO + 1024) + 1;
+    inflated = unzlibSync(idat, { out: new Uint8Array(room) });
   } catch (e) {
     throw new PngError('DECOMPRESS_FAILED', e instanceof Error ? e.message : 'corrupt zlib stream');
   }

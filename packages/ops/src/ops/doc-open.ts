@@ -3,12 +3,13 @@
  * @packageDocumentation
  */
 import { pxfStore, readPxf } from '@pixel-forge/io';
+import type { PxfFile } from '@pixel-forge/io';
 import { DocId } from '@pixel-forge/schema';
 import { z } from 'zod';
 import { defineOp } from '../define.js';
 import type { OpContext } from '../context.js';
 import { OpError } from '../errors.js';
-import type { OpHost } from '../host.js';
+import type { LoadedDocument, OpHost } from '../host.js';
 
 const Output = z.strictObject({
   doc: DocId.describe('Document id for the other ops.'),
@@ -86,27 +87,42 @@ type Opened = z.infer<typeof Output>;
 /** `doc.open` calls in flight, per host and normalised path. */
 const pending = new WeakMap<OpHost, Map<string, Promise<Opened>>>();
 
-/** Reads `path` and hands the store to the host. */
+/**
+ * Reads `path` and hands the store to the host. A host with `adoptFile` reads after it owns the
+ * path (the server host: after the lock), so the bytes cannot be stale; without it the read comes
+ * first (a lock-less host has no other owner to race with).
+ */
 async function openFile(ctx: OpContext, path: string): Promise<Opened> {
-  let bytes: Uint8Array;
-  try {
-    bytes = await ctx.host.fs.readFile(path);
-  } catch (e) {
-    throw new OpError(
-      'IO_FAILED',
-      `cannot read ${path}: ${e instanceof Error ? e.message : String(e)}`,
-      { path },
-      { cause: e },
-    );
-  }
-  const file = readPxf(bytes);
-  const hosted = await ctx.host.adopt({ store: pxfStore(file), path, file });
+  let file: PxfFile | undefined;
+  const read = async (): Promise<LoadedDocument> => {
+    let bytes: Uint8Array;
+    try {
+      bytes = await ctx.host.fs.readFile(path);
+    } catch (e) {
+      throw new OpError(
+        'IO_FAILED',
+        `cannot read ${path}: ${e instanceof Error ? e.message : String(e)}`,
+        { path },
+        { cause: e },
+      );
+    }
+    file = readPxf(bytes);
+    return { store: pxfStore(file), file };
+  };
+  const { host } = ctx;
+  const hosted =
+    host.adoptFile !== undefined
+      ? await host.adoptFile(path, read)
+      : await (async () => {
+          const loaded = await read();
+          return host.adopt({ store: loaded.store, path, file: loaded.file });
+        })();
   ctx.log.info('opened', { doc: hosted.id, path });
   return {
     doc: hosted.id,
     path,
-    name: file.doc.meta.name,
+    name: hosted.store.doc.meta.name,
     alreadyOpen: false,
-    warnings: [...file.warnings],
+    warnings: [...(file?.warnings ?? [])],
   };
 }

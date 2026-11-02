@@ -11,7 +11,7 @@ import type { StoredImage } from '@pixel-forge/core';
 import { IoError } from '../errors.js';
 import type { PxfFile } from './file.js';
 import { parseJsonBytes } from './json.js';
-import { MIGRATIONS, migrate } from './migrations.js';
+import { MIGRATIONS, fileVersion, migrate } from './migrations.js';
 import type { JsonRecord, MigrationRegistry } from './migrations.js';
 import { readZip } from './zip.js';
 
@@ -57,13 +57,43 @@ function parseWith<T>(
 }
 
 /**
- * The index an indexed image reads back with. A grayscale PNG stores no transparent index, so it is
- * derived from the document: the first entry with alpha 0 in the active palette, else 0.
+ * The index a palette-index image reads back with. A grayscale PNG stores no transparent index, so
+ * it is derived from the document: the first entry with alpha 0 in the active palette, else 0.
+ * Erase masks are not palette images and do not use it (see {@link maskIds}).
  */
 function transparentIndexOf(doc: DocumentT): number {
   const pal = doc.palettes.find((p) => p.id === doc.activePaletteId);
   const i = pal?.colors.findIndex((c) => c[3] === 0) ?? -1;
   return i < 0 ? 0 : i;
+}
+
+/**
+ * The images the document uses as override `erase` masks. A mask is 8-bit data in every colour
+ * mode: 255 clears, 0 leaves (spec 3.4 clarification 8), and `attributeEdit` writes it with
+ * transparent index 0. It must read back that way, or a palette whose first alpha-0 entry is not 0
+ * would make the mask's 0 pixels "non-empty" (a wider `overrideBox`, so a valid override reads as
+ * stale) and, at 255, an all-255 mask "empty" (it would erase nothing).
+ */
+function maskIds(doc: DocumentT): Set<string> {
+  const out = new Set<string>();
+  for (const a of doc.animations)
+    for (const o of a.overrides) if (o.erase !== undefined) out.add(o.erase);
+  return out;
+}
+
+/**
+ * The image id of a `.pxf` entry path `images/<id>.png`, or `undefined` for any other path (the
+ * single rule of what counts as an image entry; `readPxf` and `pack` both use it).
+ */
+export function imageEntryId(path: string): ImageId | undefined {
+  const m = /^images\/([^/]+)\.png$/.exec(path);
+  const id = ImageId.safeParse(m?.[1]);
+  return id.success ? id.data : undefined;
+}
+
+/** True for the render-cache entries the writer produces: `render/index.json` and `render/**.png`. */
+export function isRenderEntry(path: string): boolean {
+  return path === 'render/index.json' || (path.startsWith('render/') && path.endsWith('.png'));
 }
 
 function decodeImage(id: string, bytes: Uint8Array, transparentIndex: number): StoredImage {
@@ -85,7 +115,7 @@ function decodeImage(id: string, bytes: Uint8Array, transparentIndex: number): S
  *
  * The render cache is read when present: `render/index.json` is validated, but a cache that fails
  * validation is dropped with a warning instead of failing the open (it is derived data).
- * A migrated file has no render cache.
+ * A migrated file has no render cache and records `migratedFrom`.
  *
  * @throws IoError `BAD_PXF` (not a ZIP, missing manifest/document, unsafe or malformed entry, missing
  *   image), `INVALID_DOCUMENT` (schema errors), `UNSUPPORTED_VERSION` (written by a newer build),
@@ -103,8 +133,9 @@ export function readPxf(bytes: Uint8Array, options: ReadPxfOptions = {}): PxfFil
   if (!isRecord(rawManifest) || !isRecord(rawDocument)) {
     throw new IoError('BAD_PXF', 'manifest.json and document.json must be JSON objects');
   }
+  const original = { manifest: rawManifest, document: rawDocument };
   const { json, migrated } = migrate(
-    { manifest: rawManifest, document: rawDocument },
+    original,
     options.migrations ?? MIGRATIONS,
     options.targetVersion,
   );
@@ -112,6 +143,7 @@ export function readPxf(bytes: Uint8Array, options: ReadPxfOptions = {}): PxfFil
   const doc = parseWith(Document, json.document, 'document.json');
 
   const transparent = transparentIndexOf(doc);
+  const masks = maskIds(doc);
   const images = new Map<ImageId, StoredImage>();
   const imagePngs = new Map<ImageId, Uint8Array>();
   const renderPngs = new Map<string, Uint8Array>();
@@ -120,11 +152,10 @@ export function readPxf(bytes: Uint8Array, options: ReadPxfOptions = {}): PxfFil
   for (const path of [...entries.keys()].sort()) {
     const data = need(path);
     if (path.startsWith('images/')) {
-      const m = /^images\/([^/]+)\.png$/.exec(path);
-      const id = ImageId.safeParse(m?.[1]);
-      if (!id.success) throw new IoError('BAD_PXF', `unexpected entry '${path}'`);
-      images.set(id.data, decodeImage(id.data, data, transparent));
-      imagePngs.set(id.data, data);
+      const id = imageEntryId(path);
+      if (id === undefined) throw new IoError('BAD_PXF', `unexpected entry '${path}'`);
+      images.set(id, decodeImage(id, data, masks.has(id) ? 0 : transparent));
+      imagePngs.set(id, data);
     } else if (path === 'render/index.json') {
       indexBytes = data;
     } else if (path.startsWith('render/')) {
@@ -159,5 +190,6 @@ export function readPxf(bytes: Uint8Array, options: ReadPxfOptions = {}): PxfFil
     ...(renderIndex === undefined ? {} : { renderIndex }),
     renderPngs,
     warnings,
+    ...(migrated ? { migratedFrom: fileVersion(original) } : {}),
   };
 }

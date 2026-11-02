@@ -14,7 +14,7 @@ export const docSave = defineOp({
   safety: 'io',
   summary: 'Save the document to its .pxf file, or to a new path (first save, save as).',
   description:
-    "Nothing reaches disk before this call. With doc alone it saves to the file the document came from; a document from doc_create needs path (absolute, inside the workspace roots). Writes a temp file and renames it over the target, so a crash never leaves a torn file. A new path takes the document's lock first (DOC_LOCKED if another process owns it). An existing file at a new path is refused unless overwrite is true. An unchanged saved document writes nothing.",
+    "Nothing reaches disk before this call. With doc alone it saves to the file the document came from; a document from doc_create needs path (absolute, inside the workspace roots). Writes a temp file and renames it over the target, so a crash never leaves a torn file. A new path takes the document's lock first (DOC_LOCKED if another process owns it). An existing file at a new path is refused unless overwrite is true. An unchanged document writes nothing, unless its file lacks a current render cache or has an older schema version.",
   input: z.strictObject({
     doc: DocRef,
     path: z
@@ -31,7 +31,11 @@ export const docSave = defineOp({
   }),
   output: z.strictObject({
     path: z.string().describe('Normalised path saved to.'),
-    wrote: z.boolean().describe('False when the document was unchanged and nothing was written.'),
+    wrote: z
+      .boolean()
+      .describe(
+        'False when the file was already what this save would write and nothing was written.',
+      ),
     bytes: z.int().describe('Size of the file written, bytes (0 when nothing was written).'),
     version: z.int().describe('Store version that was saved.'),
   }),
@@ -66,7 +70,7 @@ export const docSave = defineOp({
       rig: host.renderer,
       ...(hosted.file === undefined ? {} : { previous: hosted.file }),
     });
-    if (!moved && !built.changed && hosted.file !== undefined) {
+    if (!moved && !built.changed && !built.derivedChanged && hosted.file !== undefined) {
       hosted.savedVersion = version;
       return { path: target, wrote: false, bytes: 0, version };
     }

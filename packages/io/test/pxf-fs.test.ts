@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -260,6 +260,46 @@ describe('pack / unpack (.pxfd)', () => {
     expect(bytesEqual(need(fs.peek('b.pxf')), bytes)).toBe(true);
   });
 
+  it('pack leaves out files readPxf would refuse or never reads (.DS_Store, nested folders under images/, junk in render/)', async () => {
+    const bytes = writePxf(frozenStore(), opts());
+    const fs = new MemoryFileSystem();
+    fs.seed('a.pxf', bytes);
+    await unpack(fs, 'a.pxf', 'a.pxfd');
+    fs.seed('a.pxfd/images/.DS_Store', enc('junk'));
+    fs.seed('a.pxfd/images/old/x.png', enc('junk'));
+    fs.seed('a.pxfd/images/readme.txt', enc('junk'));
+    fs.seed('a.pxfd/render/.DS_Store', enc('junk'));
+    fs.seed('a.pxfd/render/base/run/notes.txt', enc('junk'));
+    await pack(fs, 'b.pxf', 'a.pxfd');
+    expect(bytesEqual(need(fs.peek('b.pxf')), bytes)).toBe(true);
+    expect(readPxf(need(fs.peek('b.pxf'))).warnings).toEqual([]);
+  });
+
+  it('pack refuses a symlink where it would read a file, and ignores one it does not read', async () => {
+    const bytes = writePxf(frozenStore(), opts({ renderCache: false }));
+    class LinkFs extends MemoryFileSystem {
+      links = new Set<string>();
+      override async readdir(path: string) {
+        const items = await super.readdir(path);
+        return items.map((e) => ({ ...e, isSymlink: this.links.has(`${path}/${e.name}`) }));
+      }
+    }
+    const fs = new LinkFs();
+    fs.seed('a.pxf', bytes);
+    await unpack(fs, 'a.pxf', 'a.pxfd');
+    fs.links.add('a.pxfd/.gdignore'); // not read by pack
+    await pack(fs, 'ok.pxf', 'a.pxfd');
+    const image = need(fs.files().find((f) => f.startsWith('a.pxfd/images/')));
+    for (const link of [image, 'a.pxfd/manifest.json', 'a.pxfd/images']) {
+      fs.links.clear();
+      fs.links.add(link);
+      const e = (await rejects(pack(fs, 'o.pxf', 'a.pxfd'))) as IoError;
+      expect(e.code, link).toBe('SYMLINK');
+      expect(e.message).toContain(link.replace('a.pxfd/', ''));
+    }
+    expect(await fs.exists('o.pxf')).toBe(false);
+  });
+
   it('unpack refuses an existing folder unless overwrite is set', async () => {
     const bytes = writePxf(frozenStore(), opts({ renderCache: false }));
     const fs = new MemoryFileSystem();
@@ -298,6 +338,40 @@ describe('pack / unpack (.pxfd)', () => {
 });
 
 describe('@pixel-forge/io/node adapter', () => {
+  it('pack refuses a real symlink in the folder; unpack over a link replaces the link, not its target', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'pxf-link-'));
+    try {
+      const fs = nodeFileSystem();
+      const file = join(dir, 'hero.pxf');
+      await saveAtomic(fs, file, writePxf(frozenStore(), opts({ renderCache: false })));
+      const folder = join(dir, 'hero.pxfd');
+      await unpack(fs, file, folder);
+      const secret = join(dir, 'secret.txt');
+      writeFileSync(secret, 'top secret');
+      const image = need((await fs.readdir(join(folder, 'images')))[0]).name;
+      const target = join(folder, 'images', image);
+      rmSync(target);
+      symlinkSync(secret, target);
+      const e = (await rejects(pack(fs, join(dir, 'out.pxf'), folder))) as IoError;
+      expect(e.code).toBe('SYMLINK');
+      expect(e.message).toContain(`images/${image}`);
+      expect(await fs.exists(join(dir, 'out.pxf'))).toBe(false);
+
+      // The target folder is a link to a folder with files in it: overwrite removes the link only.
+      const elsewhere = join(dir, 'elsewhere');
+      mkdirSync(elsewhere);
+      writeFileSync(join(elsewhere, 'keep.txt'), 'keep');
+      const linked = join(dir, 'linked.pxfd');
+      symlinkSync(elsewhere, linked);
+      await unpack(fs, file, linked, { overwrite: true });
+      expect(readFileSync(join(elsewhere, 'keep.txt'), 'utf8')).toBe('keep');
+      expect((await fs.readdir(elsewhere)).map((x) => x.name)).toEqual(['keep.txt']);
+      expect(await fs.exists(join(linked, 'manifest.json'))).toBe(true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('works on a real folder: atomic save, pack, unpack', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'pxf-node-'));
     try {

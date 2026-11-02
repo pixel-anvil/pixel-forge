@@ -38,6 +38,12 @@ export interface AdoptInit {
   readonly file?: PxfFile;
 }
 
+/** What the deferred read of {@link OpHost.adoptFile} returns: the store and the file it came from. */
+export interface LoadedDocument {
+  readonly store: DocumentStore;
+  readonly file: PxfFile;
+}
+
 /**
  * The host interface the registry and op handlers see. Handlers do no direct I/O (spec 6.3): file
  * access goes through `fs`, time through `clock`, rendering through `renderer`.
@@ -66,6 +72,16 @@ export interface OpHost {
    * @throws OpError `CONFLICT` when a document with the same id or path is already open.
    */
   adopt(init: AdoptInit): Promise<HostedDocument>;
+  /**
+   * Opens the document of an existing file: like `adopt` with a path, but the file is read by
+   * `read` only after the host owns the path (the server host takes the lock first). Reading before
+   * locking could adopt bytes that another process saves and releases in between, and the next
+   * save would then silently drop that save. When `read` throws, nothing stays registered or
+   * locked and the error is passed on. Optional: a host without it gets `read` then `adopt` from
+   * `doc.open`.
+   * @throws OpError `DOC_LOCKED` (before `read` runs), `CONFLICT` as for `adopt`; whatever `read` throws.
+   */
+  adoptFile?(path: string, read: () => Promise<LoadedDocument>): Promise<HostedDocument>;
   /**
    * Moves an open document to a new normalised path (first save, save-as). The server host locks
    * `path` first (`DOC_LOCKED`) and only then releases the old path's lock. Rebinding to the
@@ -131,6 +147,37 @@ export function createMemoryHost(options: MemoryHostOptions): OpHost {
   const renderer = options.renderer ?? createRigRenderer();
   const byPath = (path: string): HostedDocument | undefined =>
     [...docs.values()].find((d) => d.path === path);
+  const adoptDoc = (init: AdoptInit): Promise<HostedDocument> => {
+    const id = init.store.doc.meta.id;
+    const clash = docs.get(id);
+    if (clash !== undefined) {
+      return Promise.reject(
+        new OpError('CONFLICT', `a document with id ${id} is already open`, {
+          doc: id,
+          path: init.path ?? null,
+          openPath: clash.path ?? null,
+        }),
+      );
+    }
+    const samePath = init.path === undefined ? undefined : byPath(init.path);
+    if (samePath !== undefined) {
+      return Promise.reject(
+        new OpError('CONFLICT', `${String(init.path)} is already open as ${samePath.id}`, {
+          doc: samePath.id,
+          path: init.path ?? null,
+        }),
+      );
+    }
+    const hosted: HostedDocument = {
+      id,
+      store: init.store,
+      path: init.path,
+      file: init.file,
+      savedVersion: init.file === undefined ? undefined : init.store.version,
+    };
+    docs.set(id, hosted);
+    return Promise.resolve(hosted);
+  };
   return {
     fs: options.fs,
     clock: options.clock,
@@ -153,36 +200,10 @@ export function createMemoryHost(options: MemoryHostOptions): OpHost {
     get: (id) => docs.get(id),
     byPath,
     list: () => [...docs.values()],
-    adopt(init) {
-      const id = init.store.doc.meta.id;
-      const clash = docs.get(id);
-      if (clash !== undefined) {
-        return Promise.reject(
-          new OpError('CONFLICT', `a document with id ${id} is already open`, {
-            doc: id,
-            path: init.path ?? null,
-            openPath: clash.path ?? null,
-          }),
-        );
-      }
-      const samePath = init.path === undefined ? undefined : byPath(init.path);
-      if (samePath !== undefined) {
-        return Promise.reject(
-          new OpError('CONFLICT', `${String(init.path)} is already open as ${samePath.id}`, {
-            doc: samePath.id,
-            path: init.path ?? null,
-          }),
-        );
-      }
-      const hosted: HostedDocument = {
-        id,
-        store: init.store,
-        path: init.path,
-        file: init.file,
-        savedVersion: init.file === undefined ? undefined : init.store.version,
-      };
-      docs.set(id, hosted);
-      return Promise.resolve(hosted);
+    adopt: adoptDoc,
+    async adoptFile(path, read) {
+      const loaded = await read();
+      return adoptDoc({ store: loaded.store, path, file: loaded.file });
     },
     rebind(id, path) {
       const hosted = docs.get(id);

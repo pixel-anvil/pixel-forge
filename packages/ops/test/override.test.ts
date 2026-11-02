@@ -206,6 +206,45 @@ describe('override.resolve', () => {
     expect(direct.code).not.toBe('INTERNAL');
   });
 
+  it('allStale also leaves overrides without a target out of a rebase, and still rebases the others', async () => {
+    const { hero, run, id } = await withOverride();
+    // A second override whose frame is gone has no target (stale, reason no-target).
+    const dead = hero.store.transact('dead override', (tx) => {
+      let copy = '';
+      tx.update((d) => {
+        const a = need(d.animations[0]);
+        const o = need(a.overrides[0]);
+        copy = 'ovr_dead00';
+        a.overrides.push({
+          ...(JSON.parse(JSON.stringify(o)) as typeof o),
+          id: copy as typeof o.id,
+          frameId: 'frm_gone00' as typeof o.frameId,
+        });
+      });
+      return copy;
+    });
+    await makeStale(run);
+    const listed = (await registry.execute('override.list', { doc: HERO_ID }, run)) as {
+      stale: { id: string; reason: string }[];
+    };
+    expect(listed.stale.find((s) => s.id === dead)?.reason).toBe('no-target');
+    const out = await registry.execute(
+      'override.resolve',
+      { doc: HERO_ID, action: 'rebase', allStale: true },
+      run,
+    );
+    expect(out).toEqual({ action: 'rebase', resolved: [id], skipped: [dead] });
+    // Naming it explicitly is still refused.
+    const direct = await rejection(
+      registry.execute(
+        'override.resolve',
+        { doc: HERO_ID, action: 'rebase', overrides: [dead] },
+        run,
+      ),
+    );
+    expect(direct).toMatchObject({ code: 'REFUSED', details: { reason: 'no-target' } });
+  });
+
   it('reports unknown override ids with kind override', async () => {
     const { run } = await withOverride();
     for (const action of ['keep', 'rebase', 'discard']) {

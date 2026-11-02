@@ -323,7 +323,7 @@ Output:
 
 Save the document to its .pxf file, or to a new path (first save, save as).
 
-Nothing reaches disk before this call. With doc alone it saves to the file the document came from; a document from doc_create needs path (absolute, inside the workspace roots). Writes a temp file and renames it over the target, so a crash never leaves a torn file. A new path takes the document's lock first (DOC_LOCKED if another process owns it). An existing file at a new path is refused unless overwrite is true. An unchanged saved document writes nothing.
+Nothing reaches disk before this call. With doc alone it saves to the file the document came from; a document from doc_create needs path (absolute, inside the workspace roots). Writes a temp file and renames it over the target, so a crash never leaves a torn file. A new path takes the document's lock first (DOC_LOCKED if another process owns it). An existing file at a new path is refused unless overwrite is true. An unchanged document writes nothing, unless its file lacks a current render cache or has an older schema version.
 
 - Safety: `io`
 - MCP tool: `doc_save`
@@ -342,7 +342,7 @@ Nothing reaches disk before this call. With doc alone it saves to the file the d
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `path` | string | yes | Normalised path saved to. |
-| `wrote` | boolean | yes | False when the document was unchanged and nothing was written. |
+| `wrote` | boolean | yes | False when the file was already what this save would write and nothing was written. |
 | `bytes` | integer | yes | Size of the file written, bytes (0 when nothing was written). |
 | `version` | integer | yes | Store version that was saved. |
 
@@ -872,7 +872,7 @@ List the hero overrides:
 
 Resolve overrides: "keep" them, "rebase" onto the current art, or "discard" them.
 
-Name overrides by id (from override_list) or pass allStale: true. "keep" changes nothing (a stale override is still applied) and just confirms the ids exist. "rebase" accepts the art under the override as the new base, so it stops being stale; the frame must render. "discard" deletes the override and its pixels. With allStale, overrides that fail to render are left out of a rebase and listed in skipped. Check the frame with render_frame after a discard.
+Name overrides by id (from override_list) or pass allStale: true. "keep" changes nothing (a stale override is still applied) and just confirms the ids exist. "rebase" accepts the art under the override as the new base, so it stops being stale; the frame must render. "discard" deletes the override and its pixels. With allStale, overrides that fail to render or have no target are left out of a rebase and listed in skipped. Check the frame with render_frame after a discard.
 
 - Safety: `mutate`
 - MCP tool: `override_resolve`
@@ -893,7 +893,7 @@ Name overrides by id (from override_list) or pass allStale: true. "keep" changes
 | --- | --- | --- | --- |
 | `action` | "keep" \| "rebase" \| "discard" | yes |  |
 | `resolved` | string[] | yes | Override ids the action applied to. |
-| `skipped` | string[] | yes | allStale rebase: ids left out because they fail to render. |
+| `skipped` | string[] | yes | allStale rebase: ids left out because they fail to render or have no target. |
 
 ### Examples
 

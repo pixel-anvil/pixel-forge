@@ -1,9 +1,9 @@
 // doc.save: first save, save, save-as through host.rebind, atomic write, dirty tracking.
 import { documentHash } from '@pixel-forge/core';
-import { pxfStore, readPxf } from '@pixel-forge/io';
+import { buildPxf, fixedClock, pxfStore, readPxf } from '@pixel-forge/io';
 import { describe, expect, it, vi } from 'vitest';
 import { docSave, registry } from '../src/index.js';
-import { HERO_ID, HERO_PATH, need, openHero, rejection } from './helpers.js';
+import { HERO_BYTES, HERO_ID, HERO_PATH, heroHost, need, openHero, rejection } from './helpers.js';
 
 const setPose = {
   doc: HERO_ID,
@@ -67,6 +67,27 @@ describe('doc.save', () => {
       wrote: false,
       bytes: 0,
       version: hero.store.version,
+    });
+  });
+
+  it('writes an unchanged document whose file has no render cache, keeping modified', async () => {
+    const { host, fs } = heroHost();
+    const clock = fixedClock('2026-01-01T00:00:00Z');
+    const old = readPxf(HERO_BYTES);
+    fs.seed(HERO_PATH, buildPxf(pxfStore(old), { clock, renderCache: false, previous: old }).bytes);
+    const run = { host };
+    await registry.execute('doc.open', { path: HERO_PATH }, run);
+    const before = readPxf(await fs.readFile(HERO_PATH));
+    expect(before.renderIndex).toBeUndefined();
+    const out = await registry.execute('doc.save', { doc: HERO_ID }, run);
+    expect(out).toMatchObject({ wrote: true });
+    const after = readPxf(await fs.readFile(HERO_PATH));
+    expect(after.renderIndex).toBeDefined();
+    expect(after.manifest.modified).toBe(before.manifest.modified);
+    expect(documentHash(pxfStore(after))).toBe(documentHash(pxfStore(before)));
+    // Now the file is what a save writes: nothing more to do.
+    expect(await registry.execute('doc.save', { doc: HERO_ID }, run)).toMatchObject({
+      wrote: false,
     });
   });
 

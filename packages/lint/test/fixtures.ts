@@ -38,6 +38,8 @@ export interface PixelSpec {
   /** `'remap'`: red to blue; `'short'`: a palette skin whose palette lacks the red entry. */
   skin?: 'remap' | 'short';
   removeOrphans?: boolean;
+  /** The layer's `export` flag; default true. `false` keeps its art out of export, so out of lint. */
+  exportLayer?: boolean;
 }
 
 /** A 6x4 document with one pixel layer `a`; palette: transparent, red, blue. */
@@ -80,7 +82,7 @@ export function pixelStore(spec: PixelSpec): DocumentStore {
     name: 'a',
     visible: true,
     opacity: spec.layerOpacity ?? 255,
-    export: true,
+    export: spec.exportLayer ?? true,
     cels,
   };
   const doc: Document = {

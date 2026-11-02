@@ -47,10 +47,41 @@ export interface BuiltPxf {
   readonly file: PxfFile;
   /** Whether the document or images differ from `previous` (always true without `previous`). */
   readonly changed: boolean;
+  /**
+   * Whether the bytes on disk (`previous`) differ from these bytes in derived data only: the file
+   * was migrated from an older schema version, or its render cache is missing, dropped, stale or
+   * incomplete (only compared when the render cache is written). Always true without `previous`.
+   * `modified` ignores it (derived data is not an edit), so a save that only fixes this changes the
+   * render entries and the schema version but keeps `modified`. A caller may skip the write only
+   * when both `changed` and `derivedChanged` are false.
+   */
+  readonly derivedChanged: boolean;
   /** Frames rendered in this save (render cache only). */
   readonly renderedFrames: number;
   /** Frames whose PNGs were reused from `previous`. */
   readonly reusedFrames: number;
+}
+
+/** Same cache: equal index JSON and, for every PNG path, equal bytes. */
+function sameRenderCache(
+  prevIndex: PxfFile['renderIndex'],
+  prevPngs: ReadonlyMap<string, Uint8Array>,
+  index: NonNullable<PxfFile['renderIndex']>,
+  pngs: ReadonlyMap<string, Uint8Array>,
+): boolean {
+  if (prevIndex === undefined || prevPngs.size !== pngs.size) return false;
+  if (!bytesEqual(canonicalBytes(prevIndex), canonicalBytes(index))) return false;
+  for (const [path, data] of pngs) {
+    const old = prevPngs.get(path);
+    if (old === undefined || (old !== data && !bytesEqual(old, data))) return false;
+  }
+  return true;
+}
+
+function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
 }
 
 /** UTC ISO 8601 with `Z`, whole seconds (clarification 10; the ZIP stores 2 s anyway). */
@@ -143,6 +174,7 @@ export function buildPxf(view: DocumentView, options: WritePxfOptions): BuiltPxf
   let renderPngs = new Map<string, Uint8Array>();
   let renderedFrames = 0;
   let reusedFrames = 0;
+  let derivedChanged = previous === undefined || previous.migratedFrom !== undefined;
   if (options.renderCache !== false) {
     const cache = buildRenderCache(view, {
       ...(options.skins === undefined ? {} : { skins: options.skins }),
@@ -153,6 +185,12 @@ export function buildPxf(view: DocumentView, options: WritePxfOptions): BuiltPxf
     renderPngs = cache.pngs;
     renderedFrames = cache.rendered;
     reusedFrames = cache.reused;
+    if (
+      previous !== undefined &&
+      !sameRenderCache(previous.renderIndex, previous.renderPngs, cache.index, cache.pngs)
+    ) {
+      derivedChanged = true;
+    }
     entries.push({ path: 'render/index.json', data: canonicalBytes(cache.index) });
     for (const [path, data] of renderPngs) entries.push({ path: `render/${path}`, data });
   }
@@ -170,6 +208,7 @@ export function buildPxf(view: DocumentView, options: WritePxfOptions): BuiltPxf
     bytes: buildZip(entries, modified),
     file,
     changed,
+    derivedChanged,
     renderedFrames,
     reusedFrames,
   };

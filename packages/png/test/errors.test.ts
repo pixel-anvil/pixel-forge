@@ -1,4 +1,4 @@
-import { zlibSync } from 'fflate';
+import { unzlibSync, zlibSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
 import { PngError, decodePng, encodePng } from '../src/index.js';
 import type { PngErrorCode } from '../src/index.js';
@@ -133,6 +133,35 @@ describe('decodePng errors', () => {
     expect(codeOf(() => decodePng(mutate(good, 'IDAT', () => zlibSync(new Uint8Array(10)))))).toBe(
       'BAD_DATA_SIZE',
     );
+  });
+
+  it('an IDAT that inflates far beyond the IHDR size is cut at expected + 1 bytes, not inflated whole', () => {
+    // 30 MB of zeros deflate to ~30 KB. The file claims 6x4 (expected 100 bytes).
+    const bomb = zlibSync(new Uint8Array(30_000_000));
+    expect(bomb.length).toBeLessThan(100_000);
+    let error: unknown;
+    try {
+      decodePng(mutate(good, 'IDAT', () => bomb));
+    } catch (e) {
+      error = e;
+    }
+    expect(error).toBeInstanceOf(PngError);
+    const { code, message } = error as PngError;
+    expect(['BAD_DATA_SIZE', 'DECOMPRESS_FAILED']).toContain(code);
+    // The message of the old code named the full inflated size.
+    expect(message).not.toContain('30000000');
+    // Short data keeps its code.
+    expect(codeOf(() => decodePng(mutate(good, 'IDAT', () => zlibSync(new Uint8Array(99)))))).toBe(
+      'BAD_DATA_SIZE',
+    );
+  });
+
+  it('fflate truncates silently into a too-small out buffer (why decode still checks Adler-32 and length)', () => {
+    const z = zlibSync(new Uint8Array(100).fill(7));
+    const out = unzlibSync(z, { out: new Uint8Array(11) });
+    expect(out.length).toBe(11);
+    // ... and hands a truncated stream back zero-padded to the whole buffer, without throwing.
+    expect(unzlibSync(z.subarray(0, 4), { out: new Uint8Array(11) }).length).toBe(11);
   });
 
   it('BAD_FILTER', () => {

@@ -33,6 +33,12 @@ export interface PxfFile {
   readonly renderPngs: ReadonlyMap<string, Uint8Array>;
   /** Non-fatal problems found while reading (for example an unreadable render cache). */
   readonly warnings: readonly string[];
+  /**
+   * The schema version of the bytes this file was read from, when `readPxf` migrated them forward
+   * (the in-memory `manifest` and `doc` are already current). Absent for a current file and for a
+   * file this build wrote. A save of a migrated file must write it even if nothing else changed.
+   */
+  readonly migratedFrom?: number;
 }
 
 /** A read-only {@link DocumentView} (doc + images) of a file, for `renderFrame`, `documentHash`, … */

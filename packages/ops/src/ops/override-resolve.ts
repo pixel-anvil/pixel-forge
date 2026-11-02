@@ -16,7 +16,7 @@ export const overrideResolve = defineOp({
   safety: 'mutate',
   summary: 'Resolve overrides: "keep" them, "rebase" onto the current art, or "discard" them.',
   description:
-    'Name overrides by id (from override_list) or pass allStale: true. "keep" changes nothing (a stale override is still applied) and just confirms the ids exist. "rebase" accepts the art under the override as the new base, so it stops being stale; the frame must render. "discard" deletes the override and its pixels. With allStale, overrides that fail to render are left out of a rebase and listed in skipped. Check the frame with render_frame after a discard.',
+    'Name overrides by id (from override_list) or pass allStale: true. "keep" changes nothing (a stale override is still applied) and just confirms the ids exist. "rebase" accepts the art under the override as the new base, so it stops being stale; the frame must render. "discard" deletes the override and its pixels. With allStale, overrides that fail to render or have no target are left out of a rebase and listed in skipped. Check the frame with render_frame after a discard.',
   input: z.strictObject({
     doc: DocRef,
     action: z.enum(['keep', 'rebase', 'discard']).describe('What to do with them.'),
@@ -31,7 +31,7 @@ export const overrideResolve = defineOp({
     resolved: z.array(z.string()).describe('Override ids the action applied to.'),
     skipped: z
       .array(z.string())
-      .describe('allStale rebase: ids left out because they fail to render.'),
+      .describe('allStale rebase: ids left out because they fail to render or have no target.'),
   }),
   examples: [
     {
@@ -53,8 +53,10 @@ export const overrideResolve = defineOp({
     if (input.allStale) {
       for (const s of checkOverrides(ctx.view, opts)) {
         if (!s.stale || ids.includes(s.overrideId)) continue;
-        if (input.action === 'rebase' && s.reason === 'error') skipped.push(s.overrideId);
-        else ids.push(s.overrideId);
+        // A rebase needs a rendered target: one that fails to render, or has none, is left out.
+        if (input.action === 'rebase' && (s.reason === 'error' || s.reason === 'no-target')) {
+          skipped.push(s.overrideId);
+        } else ids.push(s.overrideId);
       }
     }
     if (input.action === 'rebase') rebaseOverrides(ctx.tx, ids, opts);

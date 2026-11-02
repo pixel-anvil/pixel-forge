@@ -5,7 +5,7 @@
  * Paths are POSIX style (as in the `FileSystem` port); Windows is not supported yet.
  * @packageDocumentation
  */
-import { lstatSync, readlinkSync } from 'node:fs';
+import { lstatSync, readlinkSync, realpathSync } from 'node:fs';
 import { delimiter, resolve } from 'node:path';
 import { normalizePath } from '@pixel-forge/ops';
 
@@ -19,9 +19,36 @@ const errCode = (e: unknown): string | undefined =>
     ? e.code
     : undefined;
 
+const isMissing = (e: unknown): boolean => {
+  const code = errCode(e);
+  return code === 'ENOENT' || code === 'ENOTDIR';
+};
+
+/**
+ * Gives the existing part of a link-free path the letter case the file system stores. On a
+ * case-insensitive volume (the macOS default) `/p/Hero.pxf` and `/p/hero.pxf` are one file, so the
+ * lock identity, `byPath` and the roots check must see one spelling. Only `realpathSync.native`
+ * returns the true name (plain `realpathSync` keeps the caller's case). The longest existing prefix
+ * is looked up; the components after it do not exist yet and stay as given.
+ */
+function withTrueCase(parts: readonly string[]): string[] {
+  for (let n = parts.length; n > 0; n--) {
+    let real: string;
+    try {
+      real = realpathSync.native(`/${parts.slice(0, n).join('/')}`);
+    } catch (e) {
+      if (isMissing(e)) continue;
+      throw e;
+    }
+    return [...real.split('/').filter((s) => s !== ''), ...parts.slice(n)];
+  }
+  return [...parts];
+}
+
 /**
  * The physical form of an absolute path: every symbolic link along it is followed (including links
- * whose target does not exist yet and links after `..`), so the result contains no link. Components
+ * whose target does not exist yet and links after `..`), so the result contains no link, and the
+ * existing part has the letter case the file system stores (see {@link withTrueCase}). Components
  * that do not exist are kept as they are (a file about to be created). Synchronous, so it fits
  * `OpHost.resolvePath`.
  * @throws Error `ELOOP` after 40 links; any other file system error except "does not exist".
@@ -43,8 +70,7 @@ export function canonicalPath(path: string): string {
     try {
       isLink = lstatSync(candidate).isSymbolicLink();
     } catch (e) {
-      const code = errCode(e);
-      if (code !== 'ENOENT' && code !== 'ENOTDIR') throw e;
+      if (!isMissing(e)) throw e;
     }
     if (!isLink) {
       resolved = [...resolved, seg];
@@ -58,7 +84,7 @@ export function canonicalPath(path: string): string {
     if (target.startsWith('/')) resolved = [];
     pending = [...target.split('/').filter((s) => s !== '' && s !== '.'), ...pending];
   }
-  return `/${resolved.join('/')}`;
+  return `/${withTrueCase(resolved).join('/')}`;
 }
 
 /** Options of {@link resolveWorkspaceRoots}. */

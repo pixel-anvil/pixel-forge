@@ -152,6 +152,28 @@ export function createDocumentHost(options: DocumentHostOptions = {}): DocumentH
           throw e;
         }
       }),
+    adoptFile: (path, read) =>
+      serial(async () => {
+        const samePath = inner.byPath(path);
+        if (samePath !== undefined) {
+          throw new OpError('CONFLICT', `${path} is already open as ${samePath.id}`, {
+            doc: samePath.id,
+            path,
+          });
+        }
+        // Lock first, read second: with the lock held no other process can save in between, so
+        // the bytes read are the ones the next save replaces.
+        const handle = await lock(path);
+        try {
+          const loaded = await read();
+          const hosted = await inner.adopt({ store: loaded.store, path, file: loaded.file });
+          locks.set(path, handle);
+          return hosted;
+        } catch (e) {
+          await handle.release();
+          throw e;
+        }
+      }),
     rebind: (id, path) =>
       serial(async () => {
         const hosted: HostedDocument | undefined = inner.get(id);

@@ -631,7 +631,7 @@
   {
     "name": "doc_save",
     "title": "doc.save",
-    "description": "Save the document to its .pxf file, or to a new path (first save, save as).\n\nNothing reaches disk before this call. With doc alone it saves to the file the document came from; a document from doc_create needs path (absolute, inside the workspace roots). Writes a temp file and renames it over the target, so a crash never leaves a torn file. A new path takes the document's lock first (DOC_LOCKED if another process owns it). An existing file at a new path is refused unless overwrite is true. An unchanged saved document writes nothing.\n\nFile I/O. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Save the hero under a new name): {\"doc\":\"doc_g1ed5q\",\"path\":\"/work/hero-v2.pxf\"}",
+    "description": "Save the document to its .pxf file, or to a new path (first save, save as).\n\nNothing reaches disk before this call. With doc alone it saves to the file the document came from; a document from doc_create needs path (absolute, inside the workspace roots). Writes a temp file and renames it over the target, so a crash never leaves a torn file. A new path takes the document's lock first (DOC_LOCKED if another process owns it). An existing file at a new path is refused unless overwrite is true. An unchanged document writes nothing, unless its file lacks a current render cache or has an older schema version.\n\nFile I/O. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Save the hero under a new name): {\"doc\":\"doc_g1ed5q\",\"path\":\"/work/hero-v2.pxf\"}",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -663,7 +663,7 @@
         },
         "wrote": {
           "type": "boolean",
-          "description": "False when the document was unchanged and nothing was written."
+          "description": "False when the file was already what this save would write and nothing was written."
         },
         "bytes": {
           "type": "integer",
@@ -2518,7 +2518,7 @@
   {
     "name": "override_resolve",
     "title": "override.resolve",
-    "description": "Resolve overrides: \"keep\" them, \"rebase\" onto the current art, or \"discard\" them.\n\nName overrides by id (from override_list) or pass allStale: true. \"keep\" changes nothing (a stale override is still applied) and just confirms the ids exist. \"rebase\" accepts the art under the override as the new base, so it stops being stale; the frame must render. \"discard\" deletes the override and its pixels. With allStale, overrides that fail to render are left out of a rebase and listed in skipped. Check the frame with render_frame after a discard.\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Re-base every stale override after reviewing the render): {\"doc\":\"doc_g1ed5q\",\"action\":\"rebase\",\"allStale\":true}",
+    "description": "Resolve overrides: \"keep\" them, \"rebase\" onto the current art, or \"discard\" them.\n\nName overrides by id (from override_list) or pass allStale: true. \"keep\" changes nothing (a stale override is still applied) and just confirms the ids exist. \"rebase\" accepts the art under the override as the new base, so it stops being stale; the frame must render. \"discard\" deletes the override and its pixels. With allStale, overrides that fail to render or have no target are left out of a rebase and listed in skipped. Check the frame with render_frame after a discard.\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Re-base every stale override after reviewing the render): {\"doc\":\"doc_g1ed5q\",\"action\":\"rebase\",\"allStale\":true}",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -2568,7 +2568,7 @@
           "items": {
             "type": "string"
           },
-          "description": "allStale rebase: ids left out because they fail to render."
+          "description": "allStale rebase: ids left out because they fail to render or have no target."
         }
       },
       "required": ["action", "resolved", "skipped"],

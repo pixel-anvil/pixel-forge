@@ -50,7 +50,11 @@ export function nodeFileSystem(): FileSystem {
     async readdir(path: string): Promise<DirEntry[]> {
       const entries = await readdir(path, { withFileTypes: true });
       return entries
-        .map((e) => ({ name: e.name, isDirectory: e.isDirectory() }))
+        .map((e) => ({
+          name: e.name,
+          isDirectory: e.isDirectory(),
+          ...(e.isSymbolicLink() ? { isSymlink: true } : {}),
+        }))
         .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
     },
   };

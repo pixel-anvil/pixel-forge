@@ -8,11 +8,14 @@ import { dirnameOf, joinPath } from '../fs.js';
 import type { FileSystem } from '../fs.js';
 import { saveAtomic } from './atomic.js';
 import { parseJsonBytes } from './json.js';
+import { imageEntryId, isRenderEntry } from './read.js';
 import { buildZip, orderEntries, readZip } from './zip.js';
 import type { ZipEntry } from './zip.js';
 
 /** Name of the file at the root of a `.pxfd/` folder that stops Godot importing its PNGs. */
 export const GDIGNORE = '.gdignore';
+
+const ROOT_FILES: ReadonlySet<string> = new Set(['manifest.json', 'document.json']);
 
 /** Options of {@link unpack}. */
 export interface UnpackOptions {
@@ -59,11 +62,12 @@ export async function unpack(
 
 /**
  * Builds `pxfPath` from the folder `dirPath` (the inverse of {@link unpack}), atomically. Only
- * `manifest.json`, `document.json`, `images/**` and `render/**` are packed; `.gdignore` and any other
- * file are ignored. The archive is built by the same deterministic writer as `writePxf` (fixed
+ * `manifest.json`, `document.json`, `images/<id>.png` and the render cache (`render/index.json`,
+ * `render/**.png`) are packed; `.gdignore`, `.DS_Store` and any other file are ignored. A symbolic
+ * link in any of those places is refused, not followed and not skipped. The archive is built by the same deterministic writer as `writePxf` (fixed
  * order, compression and timestamp from `manifest.json`), so `pack(unpack(x))` is byte-identical to
  * any `x` that this build wrote.
- * @throws IoError `BAD_PXF` (missing or invalid manifest / document), `FS_FAILED`.
+ * @throws IoError `BAD_PXF` (missing or invalid manifest / document), `SYMLINK`, `FS_FAILED`.
  */
 export async function pack(fs: FileSystem, pxfPath: string, dirPath: string): Promise<void> {
   const entries: ZipEntry[] = [];
@@ -73,20 +77,23 @@ export async function pack(fs: FileSystem, pxfPath: string, dirPath: string): Pr
     );
     for (const item of items) {
       const path = rel === '' ? item.name : `${rel}/${item.name}`;
+      const inImages = path === 'images' || path.startsWith('images/');
+      const inRender = path === 'render' || path.startsWith('render/');
+      // A link where pack reads would be followed by readFile: it could pull a file from outside
+      // the folder into the archive (NFR-06). Skipping it would hide a missing image, so refuse.
+      if (item.isSymlink === true && (inImages || inRender || ROOT_FILES.has(path))) {
+        throw new IoError(
+          'SYMLINK',
+          `'${path}' in '${dirPath}' is a symbolic link; pack does not follow links (replace it with the file)`,
+        );
+      }
       if (item.isDirectory) {
-        if (
-          path === 'images' ||
-          path === 'render' ||
-          path.startsWith('images/') ||
-          path.startsWith('render/')
-        ) {
-          await walk(path);
-        }
+        // `images/` is flat (readPxf accepts `images/<id>.png` only); `render/` nests by skin.
+        if (path === 'images' || path === 'render' || path.startsWith('render/')) await walk(path);
       } else if (
-        path === 'manifest.json' ||
-        path === 'document.json' ||
-        path.startsWith('images/') ||
-        path.startsWith('render/')
+        ROOT_FILES.has(path) ||
+        (inImages && imageEntryId(path) !== undefined) ||
+        isRenderEntry(path)
       ) {
         entries.push({
           path,

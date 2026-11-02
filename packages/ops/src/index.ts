@@ -35,7 +35,13 @@ export { silentLogger } from './context.js';
 export type { OpContext, OpLogger, RenderedFrame } from './context.js';
 export { partRenderer } from './part-renderer.js';
 export { createMemoryHost, normalizePath } from './host.js';
-export type { AdoptInit, HostedDocument, MemoryHostOptions, OpHost } from './host.js';
+export type {
+  AdoptInit,
+  HostedDocument,
+  LoadedDocument,
+  MemoryHostOptions,
+  OpHost,
+} from './host.js';
 export {
   AnimRef,
   BoneRef,

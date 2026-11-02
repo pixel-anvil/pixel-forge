@@ -12,8 +12,13 @@
 export interface DirEntry {
   /** File or folder name, without the parent path. */
   readonly name: string;
-  /** True for a folder. Anything else (files, links) reads as a file. */
+  /** True for a folder. Anything else (files, links) reads as a file; see `isSymlink`. */
   readonly isDirectory: boolean;
+  /**
+   * True when the entry is a symbolic link (then `isDirectory` is false whatever it points to).
+   * Optional: a port without links (the in-memory fake) leaves it out, which reads as false.
+   */
+  readonly isSymlink?: boolean;
 }
 
 /**

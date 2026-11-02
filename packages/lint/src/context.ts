@@ -107,7 +107,7 @@ export class LintContext {
     };
   }
 
-  /** The (memoised) render of a frame; `undefined` when it fails (the error is recorded once). */
+  /** The (memoised) export render of a frame; `undefined` when it fails (the error is recorded once). */
   render(f: FrameTarget, skin: SkinTarget): Rendered | undefined {
     const key = `${f.animId}|${String(f.frameIndex)}|${skin.key}`;
     if (this.memo.has(key)) return this.memo.get(key);
@@ -118,6 +118,9 @@ export class LintContext {
         { id: this.doc.animations[f.animIndex]?.id ?? ('' as never) },
         f.frameIndex,
         {
+          // The export render: lint checks the image export writes (hidden and non-exported layers
+          // are skipped), like `checkOverrides` and the render cache.
+          exportOnly: true,
           skin: skin.ref,
           rig: this.rig,
         },

@@ -158,6 +158,26 @@ describe('anim.emptyFrame', () => {
   });
 });
 
+describe('render-based rules see the export render (layer_update: non-exported layers are skipped by lint)', () => {
+  const pic = (extra: Parameters<typeof pixelStore>[0]) => lint(pixelStore(extra));
+
+  it('anim.emptyFrame reports a frame whose only art is on a non-export layer', () => {
+    const f = only('anim.emptyFrame', pic({ frames: [PIC, PIC], exportLayer: false }));
+    expect(f.map((x) => x.location.frameIndex)).toEqual([0, 1]);
+    expect(only('anim.emptyFrame', pic({ frames: [PIC, PIC] }))).toEqual([]);
+  });
+
+  it('palette.offPalette and pixels.orphan ignore pixels of a non-export layer', () => {
+    const art = 'G.....\n......\n......\n..G...';
+    expect(only('palette.offPalette', pic({ frames: [art], locked: true }))).toHaveLength(1);
+    expect(
+      only('palette.offPalette', pic({ frames: [art], locked: true, exportLayer: false })),
+    ).toEqual([]);
+    expect(only('pixels.orphan', pic({ frames: [art] }))).toHaveLength(1);
+    expect(only('pixels.orphan', pic({ frames: [art], exportLayer: false }))).toEqual([]);
+  });
+});
+
 describe('rig.jointGap', () => {
   it('reports the gaps of an uncapped elbow (fixtures/joint/gappy_elbow)', () => {
     const f = only('rig.jointGap', lint(rigStore({ elbow: 'gappy' })));
