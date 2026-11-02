@@ -15,7 +15,7 @@ Written at gate G2 (rolling wave, `docs/02-plan.md` §4). The execution rules ar
 
 ```
 B0  T5.10 → T5.17 ∥ T5.13 ∥ T5.15 → T5.14 ∥ T5.12 → T5.16 ∥ B0.1 → B0.2
-B1  E1.1 → E1.2 ∥ E2.1 → E2.2 ∥ E7.1 → E3.1 → E3.2 → E3.3 → G2b
+B1  E1.1 → E1.2 ∥ E2.1 → E2.2 → E3.1 → E3.2 → E3.3 → G2b
 B2  TG.1 → E5.1 ∥ E5.2 → E5.3 ∥ E5.4 → E5.5
 B3  E4.0 → E4.1 → E4.2 ∥ E4.3 → E4.4 → E4.5
 B4  E6.1 → E6.2 ∥ E8.1 → E8.2
@@ -42,7 +42,7 @@ Limits stay the same: two agents at a time, at most one on Opus.
 | E1.2 | End-effector targets in `rig_set_pose`, `rig_ik_target` | sonnet | medium | S | E1.1, T5.17 | ☐ |
 | E2.1 | Variant auto-select with hysteresis | sonnet | high | M | — | ☐ |
 | E2.2 | Lint rule for a large variant residual | sonnet | medium | S | E2.1 | ☐ |
-| E7.1 | Quadruped template | haiku | low | S | — | ☐ |
+| E7.1 | Quadruped template (STRETCH: moved out of M1b on 2026-11-02 at the user's request) | haiku | low | S | — | ☐ |
 | E3.1 | Motion preset generator API + walk | opus | high | M | E1.1 | ☐ |
 | E3.2 | Presets: idle-breathe, run, jump, swing | sonnet | medium | M | E3.1 | ☐ |
 | E3.3 | `rig_apply_preset` + W3-presets scenario | sonnet | medium | S | E3.2 | ☐ |
