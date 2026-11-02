@@ -31,12 +31,20 @@ describe('rig.editBones', () => {
     expect(kind.code).toBe('BAD_INPUT');
   });
 
-  it('runs its example as one undo step', async () => {
+  it('runs its first example (fit a bone) as one undo step', async () => {
+    const { hero, run } = await openHero();
+    await registry.execute('rig.editBones', need(rigEditBones.examples[0]).input, run);
+    expect(hero.store.doc.rig?.bones.find((b) => b.name === 'thigh_l')?.length).toBe(8);
+    expect(stepLabels(hero)).toEqual(['AI: rig.editBones']);
+    expect(errors(hero.store)).toEqual([]);
+  });
+
+  it('runs its second example as one undo step', async () => {
     const { hero, run } = await openHero();
     const before = documentHash(hero.store);
     const out = (await registry.execute(
       'rig.editBones',
-      need(rigEditBones.examples[0]).input,
+      need(rigEditBones.examples[1]).input,
       run,
     )) as {
       results: { action: string; id?: string }[];

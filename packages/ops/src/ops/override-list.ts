@@ -33,7 +33,7 @@ export const overrideList = defineOp({
   summary:
     'List overrides: stale ones (art under them changed) and ones that fail to render, apart.',
   description:
-    'Read-only; renders the frames that have overrides. "stale" overrides are still applied; decide with override_resolve (keep, rebase = accept the current art, discard). "errors" cannot be judged because their frame does not render (missing image, no view for the direction...): fix the rig first, they cannot be rebased until it renders. Part overrides of mirror animations are never rendered and not listed.',
+    'Renders the frames that have overrides. "stale" overrides are still applied; decide with override_resolve (keep, rebase = accept the current art, discard). "errors" cannot be judged because their frame does not render (missing image, no view for the direction...): fix the rig first, they cannot be rebased until it renders. Part overrides of mirror animations are never rendered and not listed.',
   input: z.strictObject({
     doc: DocRef,
     animations: z.array(AnimRef).optional().describe('Only these animations (default: all).'),

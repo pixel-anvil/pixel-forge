@@ -34,9 +34,7 @@ export type ReadonlyDocument = DeepReadonly<Document>;
 export const MAX_AVAILABLE = 50;
 
 /** The `doc` input field: the id `doc.open` / `doc.create` returned. */
-export const DocRef = DocId.describe(
-  'Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q".',
-);
+export const DocRef = DocId.describe('Document id from doc_open or doc_create.');
 
 /** An animation: `{group, direction?}` (a missing direction means the undirected one) or `{id}`. */
 export const AnimRef = SchemaAnimRef.describe(

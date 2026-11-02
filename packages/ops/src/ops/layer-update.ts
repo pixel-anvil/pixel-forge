@@ -29,7 +29,7 @@ export const layerUpdate = defineOp({
   safety: 'mutate',
   summary: 'Rename a layer, or set its visible flag, opacity (0..255) or export flag.',
   description:
-    "Only the fields you give change. Names are lower-case a-z 0-9 _ - up to 48 characters and unique among siblings; a part layer's name is the part's name and must be unique in the whole document. A reference layer is never exported. Hidden or non-exported layers are skipped by the export render (io_export, lint, bake).",
+    "Only the fields you give change. Names are lower-case a-z 0-9 _ - up to 48 characters and unique among siblings; a part layer's name is the part's name and must be unique in the document. A reference layer is never exported. Hidden or non-exported layers are skipped by export, lint and rig_bake. To hide a part on some frames only, key visible with rig_set_pose.",
   input: z.strictObject({
     doc: DocRef,
     layer: LayerRef,

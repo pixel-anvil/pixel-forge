@@ -27,8 +27,7 @@ export const pxfUnpack = defineOp({
   safety: 'io',
   cli: { command: ['unpack'] },
   summary: 'Expand a .pxf into a .pxfd folder (manifest, document, images, render cache).',
-  description:
-    'Writes one file per archive entry (bytes verbatim) plus an empty .gdignore so Godot ignores the PNGs; the folder diffs well in git. dir defaults to the file name with .pxfd. An existing folder is refused unless overwrite is true (only a folder named *.pxfd is ever replaced). Does not open the document; pxf_pack is the inverse.',
+  description: `Writes one file per archive entry (bytes verbatim) plus an empty ${GDIGNORE} so Godot ignores the PNGs; the folder diffs well in git. dir defaults to the file name with .pxfd. An existing folder is refused unless overwrite is true (only a folder named *.pxfd is ever replaced). Works on the file, not on an open document: doc_save first. pxf_pack is the inverse.`,
   input: z.strictObject({
     file: z.string().min(1).describe('The .pxf to expand (absolute, inside the workspace roots).'),
     dir: z
@@ -65,7 +64,7 @@ export const pxfPack = defineOp({
   safety: 'io',
   cli: { command: ['pack'] },
   summary: 'Build a .pxf from a .pxfd folder (the inverse of pxf_unpack).',
-  description: `Packs manifest.json, document.json, images/ and render/ of the folder; ${GDIGNORE} and other files are ignored. The archive is built by the same deterministic writer as a save, atomically, replacing an existing file. file defaults to the folder name with .pxf. Does not open the document: open the result to validate it.`,
+  description: `Packs manifest.json, document.json, images/ and render/ of the folder; ${GDIGNORE} and other files are ignored. The archive is built by the same deterministic writer as a save, atomically, replacing an existing file. file defaults to the folder name with .pxf. Works on files, not on open documents: doc_open the result to validate it.`,
   input: z.strictObject({
     dir: z.string().min(1).describe('The .pxfd folder (absolute, inside the workspace roots).'),
     file: z

@@ -13,7 +13,7 @@ export const docRedo = defineOp({
   transaction: false,
   summary: 'Redo the newest undone change of the document (one history entry).',
   description:
-    'Re-applies the entry that the last doc.undo reverted. A new change clears the redo entries. Nothing to redo is not an error: redone is false.',
+    'Re-applies the entry that the last undo reverted. A new change clears the redo entries. Nothing to redo is not an error: redone is false.',
   mcp: { name: 'redo' },
   input: z.strictObject({
     doc: DocRef,

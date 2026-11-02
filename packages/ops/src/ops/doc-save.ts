@@ -14,7 +14,7 @@ export const docSave = defineOp({
   safety: 'io',
   summary: 'Save the document to its .pxf file, or to a new path (first save, save as).',
   description:
-    "The path must be inside the workspace roots. Writes a temp file in the same folder and renames it over the target, so a crash never leaves a torn file. A new path takes the document's lock first (DOC_LOCKED if another process owns it) and releases the old one. An existing file at a new path is refused unless overwrite is true. Saving an unchanged, already saved document writes nothing.",
+    "Nothing reaches disk before this call. With doc alone it saves to the file the document came from; a document from doc_create needs path (absolute, inside the workspace roots). Writes a temp file and renames it over the target, so a crash never leaves a torn file. A new path takes the document's lock first (DOC_LOCKED if another process owns it). An existing file at a new path is refused unless overwrite is true. An unchanged saved document writes nothing.",
   input: z.strictObject({
     doc: DocRef,
     path: z

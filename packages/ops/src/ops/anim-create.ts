@@ -28,7 +28,7 @@ export const animCreate = defineOp({
   safety: 'mutate',
   summary: 'Create an animation (group + optional direction) with empty frames of equal duration.',
   description:
-    '(group, direction) must be unique (I6). Names are lower-case a-z 0-9 _ - up to 48 characters; leave direction out for an undirected animation. Frames have no keys or cels: pose them with rig_set_pose, draw into them, or add more with frame_add. For a flipped copy of a side animation use rig_mirror_animation.',
+    '(group, direction) must be unique. Names: lower-case a-z 0-9 _ - up to 48 characters; omit direction for an undirected animation. Frames start empty: pose them with rig_set_pose, draw into them, or add more with frame_add. Use loop "once" for a one-shot such as a jump: in a "loop" the keys interpolate across the wrap, from the last frame to the first. For a flipped copy of a side animation use rig_mirror_animation.',
   input: z.strictObject({
     doc: DocRef,
     group: Name.describe('Animation group, e.g. "run".'),

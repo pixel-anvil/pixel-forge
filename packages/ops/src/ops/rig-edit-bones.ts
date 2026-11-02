@@ -21,11 +21,13 @@ import { BoneRef, DocRef, ViewRef, resolveBone, resolveView } from '../refs.js';
 
 const Rest = z.strictObject({
   view: ViewRef.describe('View of the rest pose.'),
-  x: z.int().describe('Root: canvas pivot x. Child: offset x from the parent pivot, int px.'),
-  y: z.int().describe('Root: canvas pivot y. Child: offset y from the parent pivot, int px.'),
+  x: z.int().describe('Root: canvas pivot x. Child: canvas offset x from the parent pivot, px.'),
+  y: z.int().describe('Root: canvas pivot y. Child: canvas offset y from the parent pivot, px.'),
   angle: z
     .number()
-    .describe('Bone direction relative to its parent, deg clockwise (0 = +x, 90 = down).'),
+    .describe(
+      "Added to the parent's world angle, deg clockwise; world 0 = +x, 90 = down, -90 = up.",
+    ),
 });
 
 /** One edit of {@link rigEditBones}. */
@@ -91,7 +93,7 @@ export const rigEditBones = defineOp({
   summary:
     'Edit the skeleton: add/delete/reparent/rename bones, set length and rest pose per view, add/rename/delete views.',
   description:
-    'Edits run in order in one undo step; one failure undoes all. Deleting never destroys art: a bone with parts or (without cascade) children is refused. Reparenting keeps the art in place. Rest x/y: root = canvas pivot, child = offset from the parent pivot; angle in deg clockwise relative to the parent. For a standard skeleton use rig_apply_template.',
+    "Edits run in order; one failure undoes all. A bone with parts or (without cascade) children cannot be deleted. Rest x/y: root = canvas pivot, child = canvas offset from the parent pivot. Rest angle adds to the parent's: world 0 = +x, 90 = down, so a thigh pointing down under a pelvis at -90 is 180. Returns no geometry: check with render_frame (bones).",
   input: z.strictObject({
     doc: DocRef,
     edits: z.array(BoneEdit).min(1).max(100).describe('Edits, applied in order.'),
@@ -108,6 +110,16 @@ export const rigEditBones = defineOp({
     bones: z.int().describe('Bone count afterwards.'),
   }),
   examples: [
+    {
+      title: 'Fit a thigh: 2 px left of the pelvis pivot, pointing down',
+      input: {
+        doc: 'doc_g1ed5q',
+        edits: [
+          { action: 'setRest', bone: 'thigh_l', view: 'side', x: -2, y: 0, angle: 180 },
+          { action: 'setLength', bone: 'thigh_l', length: 8 },
+        ],
+      },
+    },
     {
       title: 'Add a tail bone under the torso, then lengthen the head',
       input: {

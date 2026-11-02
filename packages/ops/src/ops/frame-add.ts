@@ -14,7 +14,7 @@ export const frameAdd = defineOp({
   summary:
     'Insert an empty frame before or after a frame; the new frame gets no bone or part keys.',
   description:
-    'The new frame has no keys, so bones and parts interpolate into it from the neighbouring keys. Cels and overrides are not copied (use frame.duplicate to copy them). Set its keys with rig.setPose.',
+    'The new frame has no keys, so bones and parts interpolate into it from the neighbouring keys. Cels and overrides are not copied (frame_duplicate copies them). Set its keys with rig_set_pose.',
   input: z.strictObject({
     doc: DocRef,
     animation: AnimRef,

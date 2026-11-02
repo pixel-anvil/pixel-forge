@@ -28,7 +28,7 @@ export const overrideImport = defineOp({
   summary:
     'Import an edited PNG of a rig frame: the pixels that differ from the render become overrides.',
   description:
-    'Touch-up path: export the frame (export, scale 1, one animation), edit the PNG, import it. The PNG must be canvas-sized; it is compared with the exported render. Each changed stroke becomes a part override when one part owns it, else a final one, and survives re-posing (see override_list, `newlyStale`). Needs a rig; palette-locked and indexed documents only take palette colours.',
+    'Touch-up path: export the frame (export, scale 1, one animation), edit the PNG, import it. The PNG must be canvas-sized; it is compared with the exported render. Each changed stroke becomes a part override when one part owns it, else a final one, and survives re-posing. `newlyStale` lists earlier overrides it made stale: see override_list. Needs a rig; palette-locked and indexed documents only take palette colours.',
   input: z.strictObject({
     doc: DocRef,
     animation: AnimRef,

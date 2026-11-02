@@ -4,7 +4,7 @@
 
 The operation API (spec 6.3, ADR-003): every mutation and query of a document goes through these ops, over MCP, the CLI, `pf check` and (M2) `__pf.run`. Contract: additive changes only.
 
-Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels. References: animations by `{"group", "direction"}` or `{"id"}`, frames by 0-based index or id, layers, bones, parts, views and variants by name or id (an id match wins; an ambiguous name is `AMBIGUOUS`).
+Conventions: origin top-left, y down, angles deg clockwise, integer px. References: animations by `{"group", "direction"}` or `{"id"}`, frames by 0-based index or id, layers, bones, parts, views and variants by name or id (an id match wins; an ambiguous name is `AMBIGUOUS`).
 
 ## Results
 
@@ -67,7 +67,7 @@ Every failure is `{"code", "message", "details"}`, identical on every transport.
 | [`override.import`](#overrideimport) | io | `override_import` | `pf override import` | Import an edited PNG of a rig frame: the pixels that differ from the render become overrides. |
 | [`override.list`](#overridelist) | read | `override_list` | `pf override list` | List overrides: stale ones (art under them changed) and ones that fail to render, apart. |
 | [`override.resolve`](#overrideresolve) | mutate | `override_resolve` | `pf override resolve` | Resolve overrides: "keep" them, "rebase" onto the current art, or "discard" them. |
-| [`part.paintOverlap`](#partpaintoverlap) | mutate | `part_paint_overlap` | `pf part paint-overlap` | Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite does not change. |
+| [`part.paintOverlap`](#partpaintoverlap) | mutate | `part_paint_overlap` | `pf part paint-overlap` | Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite stays only when the child is drawn below its parent. |
 | [`part.split`](#partsplit) | mutate | `part_split` | `pf part split` | Split a region (rect, lasso or flood) of a flat layer's cel into a new layer bound to a bone. |
 | [`pixels.readGrid`](#pixelsreadgrid) | read | `pixels_read_grid` | `pf pixels read-grid` | Read a region (at most 64x64 px) of a frame as a text grid: one symbol per pixel, "." transparent, with a legend of the colours present. |
 | [`pixels.writeGrid`](#pixelswritegrid) | mutate | `pixels_write_grid` | `pf pixels write-grid` | Paint a text grid (at most 32x32 px) at (x, y) of a frame; symbols come from "legend". |
@@ -88,7 +88,7 @@ Every failure is `{"code", "message", "details"}`, identical on every transport.
 
 Create an animation (group + optional direction) with empty frames of equal duration.
 
-(group, direction) must be unique (I6). Names are lower-case a-z 0-9 _ - up to 48 characters; leave direction out for an undirected animation. Frames have no keys or cels: pose them with rig_set_pose, draw into them, or add more with frame_add. For a flipped copy of a side animation use rig_mirror_animation.
+(group, direction) must be unique. Names: lower-case a-z 0-9 _ - up to 48 characters; omit direction for an undirected animation. Frames start empty: pose them with rig_set_pose, draw into them, or add more with frame_add. Use loop "once" for a one-shot such as a jump: in a "loop" the keys interpolate across the wrap, from the last frame to the first. For a flipped copy of a side animation use rig_mirror_animation.
 
 - Safety: `mutate`
 - MCP tool: `anim_create`
@@ -98,7 +98,7 @@ Create an animation (group + optional direction) with empty frames of equal dura
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 | `group` | string | yes | Animation group, e.g. "run". |
 | `direction` | string | no | Direction, e.g. "side" (omit for undirected). |
 | `loop` | "loop" \| "once" \| "pingpong" | no | "loop" (default), "once" or "pingpong". |
@@ -126,7 +126,7 @@ A 4-frame side run loop at 100 ms:
 
 Rename an animation (group, direction), set its loop mode, angle quantum or post-passes.
 
-(group, direction) must stay unique (I6). Renaming the group of a source animation renames its mirrors too (a mirror shares its source's group); a mirror's group cannot be changed on its own. Loop, angleQuantum and postPasses belong to the source: a mirror has none. null clears direction, angleQuantum or postPasses. Frame durations, markers and events: frame_set_meta.
+(group, direction) must stay unique. Renaming the group of a source animation renames its mirrors too; a mirror's group cannot change on its own. Loop, angleQuantum and postPasses belong to the source: a mirror has none. null clears direction, angleQuantum or postPasses. The loop mode changes how keys interpolate at the ends: "loop" wraps from the last frame to the first, "once" and "pingpong" hold. Frame durations, markers, events: frame_set_meta.
 
 - Safety: `mutate`
 - MCP tool: `anim_update`
@@ -136,7 +136,7 @@ Rename an animation (group, direction), set its loop mode, angle quantum or post
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 | `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
 | `group` | string | no | New group name. |
 | `direction` | string \| null | no | New direction; null makes it undirected. |
@@ -171,7 +171,7 @@ Output:
 
 Link a layer's cel to another frame's cel (mode "link"), make a linked cel independent ("unlink"), or link all identical cels ("linkIdentical").
 
-A linked cel shows the same pixels as its target; links cross animations, one hop (linking to a link links to its target). "link": animation, frame (the cel that becomes the link), source.frame (source.animation defaults to animation). "unlink" copies the pixels into the cel. "linkIdentical" links, per layer, every cel with identical pixels, offset and opacity to the first in document order.
+A linked cel shows the same pixels as its target; links cross animations, one hop (a link to a link goes to its target). "link": animation, frame (the cel that becomes the link), source.frame (source.animation defaults to animation). "unlink" copies the pixels into the cel. "linkIdentical" links, per layer, every cel with identical pixels, offset and opacity to the first in document order. Pixel layers only: part layers have no cels.
 
 - Safety: `mutate`
 - MCP tool: `cel_link`
@@ -181,7 +181,7 @@ A linked cel shows the same pixels as its target; links cross animations, one ho
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 | `layer` | string | yes | Layer id ("lay_...") or layer name. |
 | `mode` | "link" \| "unlink" \| "linkIdentical" | yes | What to do. |
 | `animation` | {group, direction} \| {id} | no | link/unlink: animation of the cel. linkIdentical: limits the scan (default: all). |
@@ -208,7 +208,7 @@ Link the hero layer cels that have identical pixels:
 
 Create a new empty RGBA document (no layers, no animations) and open it. Save it with doc_save.
 
-The origin defaults to the bottom-centre pixel of the canvas (where the feet go). Import art with import_file, add animations with anim_create, or apply a skeleton with rig_apply_template. Use doc_set_color_mode for indexed colour.
+The origin defaults to the bottom-centre pixel of the canvas (where the feet go). For a sprite sheet make the canvas the size of one cell. Import art with import_file, apply a skeleton with rig_apply_template, add animations with anim_create. Use doc_set_color_mode for indexed colour. Nothing is on disk until doc_save with a path.
 
 - Safety: `io`
 - MCP tool: `doc_create`
@@ -246,7 +246,7 @@ A 48x48 canvas:
 
 Open a .pxf file and return its document id, which every other op takes as "doc".
 
-Opening a file that is already open returns the same id (alreadyOpen: true) without re-reading it. Follow with doc_summary to see layers, rig and animations.
+Opening a file that is already open returns the same id (alreadyOpen: true) without re-reading it. Returns the id only: read layers, rig and animations with doc_summary next.
 
 - Safety: `io`
 - MCP tool: `doc_open`
@@ -286,7 +286,7 @@ Output:
 
 Redo the newest undone change of the document (one history entry).
 
-Re-applies the entry that the last doc.undo reverted. A new change clears the redo entries. Nothing to redo is not an error: redone is false.
+Re-applies the entry that the last undo reverted. A new change clears the redo entries. Nothing to redo is not an error: redone is false.
 
 - Safety: `mutate` (manages the history itself, no transaction)
 - MCP tool: `redo`
@@ -296,7 +296,7 @@ Re-applies the entry that the last doc.undo reverted. A new change clears the re
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 
 ### Output
 
@@ -323,7 +323,7 @@ Output:
 
 Save the document to its .pxf file, or to a new path (first save, save as).
 
-The path must be inside the workspace roots. Writes a temp file in the same folder and renames it over the target, so a crash never leaves a torn file. A new path takes the document's lock first (DOC_LOCKED if another process owns it) and releases the old one. An existing file at a new path is refused unless overwrite is true. Saving an unchanged, already saved document writes nothing.
+Nothing reaches disk before this call. With doc alone it saves to the file the document came from; a document from doc_create needs path (absolute, inside the workspace roots). Writes a temp file and renames it over the target, so a crash never leaves a torn file. A new path takes the document's lock first (DOC_LOCKED if another process owns it). An existing file at a new path is refused unless overwrite is true. An unchanged saved document writes nothing.
 
 - Safety: `io`
 - MCP tool: `doc_save`
@@ -333,7 +333,7 @@ The path must be inside the workspace roots. Writes a temp file in the same fold
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 | `path` | string | no | Target .pxf path (absolute, inside the workspace roots). Default: the current path. |
 | `overwrite` | boolean | no | Replace an existing file at a new path (default false). |
 
@@ -358,7 +358,7 @@ Save the hero under a new name:
 
 Switch the document between "rgba" and "indexed" pixels, and/or lock it to its palette.
 
-Converting is exact: to "indexed" every colour must be an entry of the active palette (the first alpha-0 entry is the transparent index), else the call is refused and nothing changes; to "rgba" indices resolve through the palette. Both need an active palette. The lock does not recolour: lint (palette.offPalette) judges the render.
+Converting is exact: to "indexed" every colour must be an entry of the active palette (the first alpha-0 entry is the transparent index), else the call is refused and nothing changes; to "rgba" indices resolve through the palette. Both need an active palette. The lock does not recolour: run lint next (palette.offPalette judges the render).
 
 - Safety: `mutate`
 - MCP tool: `doc_set_color_mode`
@@ -368,7 +368,7 @@ Converting is exact: to "indexed" every colour must be an entry of the active pa
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 | `colorMode` | "rgba" \| "indexed" | no | "rgba" or "indexed" (default: unchanged). |
 | `paletteLocked` | boolean | no | Lock colours to the active palette (default: unchanged). |
 
@@ -392,7 +392,7 @@ Lock a document that has a palette to it:
 
 Summarise an open document: canvas, palette, layers, rig (bones, parts, views) and animations.
 
-Names in the result (bones, parts, layers, animation group/direction) are what the other ops take as references.
+Names in the result (bones, parts, layers, animation group/direction) are what the other tools take as references. It shows no rest angles and no pose keys: for pivots and tips as numbers use render_frame with bones: true.
 
 - Safety: `read`
 - MCP tool: `doc_summary`
@@ -402,7 +402,7 @@ Names in the result (bones, parts, layers, animation group/direction) are what t
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 
 ### Output
 
@@ -438,7 +438,7 @@ Summarise the hero:
 
 Undo the newest applied change of the document (one history entry).
 
-Reverts the last applied history entry, whatever op made it. Nothing to undo is not an error: undone is false. Re-apply with doc.redo.
+Reverts the last applied history entry, whatever tool made it. Nothing to undo is not an error: undone is false. Re-apply with redo.
 
 - Safety: `mutate` (manages the history itself, no transaction)
 - MCP tool: `undo`
@@ -448,7 +448,7 @@ Reverts the last applied history entry, whatever op made it. Nothing to undo is 
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 
 ### Output
 
@@ -475,7 +475,7 @@ Output:
 
 Insert an empty frame before or after a frame; the new frame gets no bone or part keys.
 
-The new frame has no keys, so bones and parts interpolate into it from the neighbouring keys. Cels and overrides are not copied (use frame.duplicate to copy them). Set its keys with rig.setPose.
+The new frame has no keys, so bones and parts interpolate into it from the neighbouring keys. Cels and overrides are not copied (frame_duplicate copies them). Set its keys with rig_set_pose.
 
 - Safety: `mutate`
 - MCP tool: `frame_add`
@@ -485,7 +485,7 @@ The new frame has no keys, so bones and parts interpolate into it from the neigh
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 | `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
 | `frame` | integer >= 0 \| string | yes | Reference frame: the new frame goes next to it. |
 | `position` | "before" \| "after" | no | "after" (default) inserts behind the reference frame, "before" in front of it. |
@@ -517,7 +517,7 @@ Output:
 
 Delete one frame with its bone and part keys, cels and overrides; the last frame cannot go.
 
-Links to the frame cels are materialised first: the other linked frames keep their picture as their own copy. Images nothing references any more are removed. An animation keeps at least one frame.
+Links to the frame's cels are materialised first: the other linked frames keep their picture as their own copy. Images nothing references any more are removed. Later frames move down one index. An animation keeps at least one frame.
 
 - Safety: `mutate`
 - MCP tool: `frame_delete`
@@ -527,7 +527,7 @@ Links to the frame cels are materialised first: the other linked frames keep the
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 | `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
 | `frame` | integer >= 0 \| string | yes | Frame: 0-based index or frame id ("frm_..."). |
 
@@ -556,7 +556,7 @@ Output:
 
 Duplicate one frame; the copy goes right after it, with linked cels and copied keys.
 
-Cels of the copy link to the source frame (edit one, both change). Bone keys, part keys, markers, events, root motion, duration and overrides are copied.
+Cels of the copy link to the source frame (edit one, both change). Bone keys, part keys, markers, events, root motion, duration and overrides are copied, so the copy starts from the same pose: change it with rig_set_pose.
 
 - Safety: `mutate`
 - MCP tool: `frame_duplicate`
@@ -566,7 +566,7 @@ Cels of the copy link to the source frame (edit one, both change). Bone keys, pa
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 | `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
 | `frame` | integer >= 0 \| string | yes | Frame: 0-based index or frame id ("frm_..."). |
 
@@ -596,7 +596,7 @@ Output:
 
 Set one frame's duration (ms), markers (name -> int px), events (names) and root motion (int px).
 
-Only the fields you give change. markers merge by name (null removes one); events replace the whole list; rootMotion is the move the game applies when this frame is played (int px, y down). New marker and event names are added to the document's markerDefs / eventDefs. Mirror animations have no frames: edit the source.
+Only the fields you give change, on this one frame. markers merge by name (null removes one); events replace the whole list; rootMotion is the move the game applies when this frame plays (int px, y down). New marker and event names join the document's markerDefs / eventDefs. Mirror animations have no frames: edit the source.
 
 - Safety: `mutate`
 - MCP tool: `frame_set_meta`
@@ -606,7 +606,7 @@ Only the fields you give change. markers merge by name (null removes one); event
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 | `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
 | `frame` | integer >= 0 \| string | yes | Frame: 0-based index or frame id ("frm_..."). |
 | `durationMs` | integer >= 1 | no | Frame duration, ms. |
@@ -635,7 +635,7 @@ Hold the hero frame 200 ms and fire a footstep event:
 
 Export animations as a spritesheet PNG plus a JSON description (Aseprite hash format).
 
-Renders every frame like the game would see it (export layers only; rig, overrides and post-passes applied; mirrors flipped) and writes <name>.png and <name>.json next to each other, atomically. layout "rows" puts one animation per row; "packed" fills a near-square grid. scale is an integer 1..16. The JSON lists a frame per cell with its duration, and one tag per animation ("group" or "group/direction").
+Renders every frame like the game would see it (export layers only; rig, overrides and post-passes applied; mirrors flipped) and writes <name>.png and <name>.json side by side, atomically. layout "rows" puts one animation per row; "packed" fills a near-square grid. scale is an integer 1..16. The JSON lists a frame per cell with its duration, and one tag per animation. To look at art use render_contact_sheet instead; a scale 1 export of one animation is the base for override_import.
 
 - Safety: `io`
 - MCP tool: `export`
@@ -645,7 +645,7 @@ Renders every frame like the game would see it (export layers only; rig, overrid
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 | `path` | string | yes | Output PNG path (absolute, inside the workspace roots); the JSON goes beside it. |
 | `animations` | {group, direction} \| {id}[] | no | Animations to export, in order (default: all). |
 | `layout` | "rows" \| "packed" | no | "rows" (default) or "packed". |
@@ -681,7 +681,7 @@ Output:
 
 Import a PNG spritesheet (cells per animation) or an .aseprite file into a document.
 
-Format is guessed from the extension. Spritesheet: animations maps cells to animations; repeated cells become linked cels; the cell's bottom-centre lands on the document origin. Aseprite: adds layers, tags (as animations) and the palette; the canvas must equal the document's. A failed import changes nothing.
+Spritesheet: animations maps cells to animations; repeated cells become linked cels; the cell's bottom-centre lands on the document origin. To keep the sheet as a reference, import the frame to cut again as its own animation and layer. Aseprite: run rig_apply_template first or part layers stay unbound; adds layers, tags (as animations) and the palette; the canvas must equal the document's.
 
 - Safety: `io`
 - MCP tool: `import_file`
@@ -691,7 +691,7 @@ Format is guessed from the extension. Spritesheet: animations maps cells to anim
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 | `file` | string | yes | Path of the file (absolute, inside the workspace roots). |
 | `format` | "spritesheet" \| "aseprite" | no | Default: from the file extension. |
 | `cell` | array | no | spritesheet: cell size [w, h] px (default: the whole image is one cell). |
@@ -728,7 +728,7 @@ Cut row 0, columns 0 to 2 of a 64x64 sheet into move_gather at 12 fps:
 
 Rename a layer, or set its visible flag, opacity (0..255) or export flag.
 
-Only the fields you give change. Names are lower-case a-z 0-9 _ - up to 48 characters and unique among siblings; a part layer's name is the part's name and must be unique in the whole document. A reference layer is never exported. Hidden or non-exported layers are skipped by the export render (io_export, lint, bake).
+Only the fields you give change. Names are lower-case a-z 0-9 _ - up to 48 characters and unique among siblings; a part layer's name is the part's name and must be unique in the document. A reference layer is never exported. Hidden or non-exported layers are skipped by export, lint and rig_bake. To hide a part on some frames only, key visible with rig_set_pose.
 
 - Safety: `mutate`
 - MCP tool: `layer_update`
@@ -738,7 +738,7 @@ Only the fields you give change. Names are lower-case a-z 0-9 _ - up to 48 chara
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 | `layer` | string | yes | Layer id ("lay_...") or layer name. |
 | `name` | string | no | New layer name. |
 | `visible` | boolean | no | Show or hide the layer in the editor render. |
@@ -765,7 +765,7 @@ Hide the hero's head part from the editor render:
 
 Check the document and list findings (palette, orphan pixels, joint gaps, stale overrides, empty frames).
 
-Read-only. Frames are rendered and checked; findings come sorted by rule, then document order. Narrow the check with enable, disable, animations or skins. Severity "error" means an invariant is broken; fix warnings before a delivery.
+Findings come sorted by rule, then document order. Narrow the check with enable, disable, animations or skins. Severity "error" means an invariant is broken; fix warnings before a delivery. count 0 is not a visual pass: lint does not see holes inside rotated parts or art cut off at the canvas edge, and rig.jointGap only sweeps around rest. Look at render_contact_sheet too.
 
 - Safety: `read`
 - MCP tool: `lint`
@@ -775,7 +775,7 @@ Read-only. Frames are rendered and checked; findings come sorted by rule, then d
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 | `enable` | "palette.offPalette" \| "palette.opacityInLocked" \| "pixels.orphan" \| "rig.jointGap" \| "rig.staleOverride" \| "rig.overrideError" \| "rig.rotationResidual" \| "anim.emptyFrame" \| "lint.renderError"[] | no | Run only these rule ids (default: all). |
 | `disable` | "palette.offPalette" \| "palette.opacityInLocked" \| "pixels.orphan" \| "rig.jointGap" \| "rig.staleOverride" \| "rig.overrideError" \| "rig.rotationResidual" \| "anim.emptyFrame" \| "lint.renderError"[] | no | Skip these rule ids (applied after enable). |
 | `animations` | {group, direction} \| {id}[] | no | Animations to render and check (default: all, in document order). |
@@ -801,7 +801,7 @@ Lint the hero, joint and palette rules only:
 
 Import an edited PNG of a rig frame: the pixels that differ from the render become overrides.
 
-Touch-up path: export the frame (export, scale 1, one animation), edit the PNG, import it. The PNG must be canvas-sized; it is compared with the exported render. Each changed stroke becomes a part override when one part owns it, else a final one, and survives re-posing (see override_list, `newlyStale`). Needs a rig; palette-locked and indexed documents only take palette colours.
+Touch-up path: export the frame (export, scale 1, one animation), edit the PNG, import it. The PNG must be canvas-sized; it is compared with the exported render. Each changed stroke becomes a part override when one part owns it, else a final one, and survives re-posing. `newlyStale` lists earlier overrides it made stale: see override_list. Needs a rig; palette-locked and indexed documents only take palette colours.
 
 - Safety: `io`
 - MCP tool: `override_import`
@@ -811,7 +811,7 @@ Touch-up path: export the frame (export, scale 1, one animation), edit the PNG, 
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 | `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
 | `frame` | integer >= 0 \| string | yes | Frame: 0-based index or frame id ("frm_..."). |
 | `file` | string | yes | The edited PNG (absolute, inside the workspace roots), canvas size, scale 1. |
@@ -838,7 +838,7 @@ Import the touched-up frame 2 of the run animation:
 
 List overrides: stale ones (art under them changed) and ones that fail to render, apart.
 
-Read-only; renders the frames that have overrides. "stale" overrides are still applied; decide with override_resolve (keep, rebase = accept the current art, discard). "errors" cannot be judged because their frame does not render (missing image, no view for the direction...): fix the rig first, they cannot be rebased until it renders. Part overrides of mirror animations are never rendered and not listed.
+Renders the frames that have overrides. "stale" overrides are still applied; decide with override_resolve (keep, rebase = accept the current art, discard). "errors" cannot be judged because their frame does not render (missing image, no view for the direction...): fix the rig first, they cannot be rebased until it renders. Part overrides of mirror animations are never rendered and not listed.
 
 - Safety: `read`
 - MCP tool: `override_list`
@@ -848,7 +848,7 @@ Read-only; renders the frames that have overrides. "stale" overrides are still a
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 | `animations` | {group, direction} \| {id}[] | no | Only these animations (default: all). |
 
 ### Output
@@ -872,7 +872,7 @@ List the hero overrides:
 
 Resolve overrides: "keep" them, "rebase" onto the current art, or "discard" them.
 
-Name overrides by id (from override_list) or pass allStale: true for every stale one. "keep" changes nothing (a stale override is still applied) and just confirms the ids exist. "rebase" accepts the art under the override as the new base, so it stops being stale; it needs the frame to render. "discard" deletes the override and its pixels. With allStale, overrides that fail to render are left out of a rebase and reported in skipped.
+Name overrides by id (from override_list) or pass allStale: true. "keep" changes nothing (a stale override is still applied) and just confirms the ids exist. "rebase" accepts the art under the override as the new base, so it stops being stale; the frame must render. "discard" deletes the override and its pixels. With allStale, overrides that fail to render are left out of a rebase and listed in skipped. Check the frame with render_frame after a discard.
 
 - Safety: `mutate`
 - MCP tool: `override_resolve`
@@ -882,7 +882,7 @@ Name overrides by id (from override_list) or pass allStale: true for every stale
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 | `action` | "keep" \| "rebase" \| "discard" | yes | What to do with them. |
 | `overrides` | string[] | no | Override ids ("ovr_..."). |
 | `allStale` | boolean | no | Also include every stale override of the document (default false). |
@@ -911,9 +911,9 @@ Output:
 
 ## part.paintOverlap
 
-Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite does not change.
+Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite stays only when the child is drawn below its parent.
 
-For each joint with gaps (rig_joint_check), paints only pixels the upper part covers at rest, growing the variant image and shifting its pivot to keep the part in place. The colour is the variant's most frequent opaque one unless you pass color ([r,g,b,a], or a palette index when indexed). "uncovered" lists joints no hidden paint can close (they need a visible art change); "skipped" joints with several parts per bone or a part rotated at rest. Re-run rig_joint_check.
+For each joint with gaps (rig_joint_check), paints only pixels the upper part covers at rest, growing the variant image and shifting its pivot to keep the part in place. One flat colour: the variant's most frequent opaque one, or color. At big bends it shows as a patch with no outline, so check the pose. "uncovered" lists joints no hidden paint can close; "skipped" joints with several parts per bone or a part rotated at rest. Run rig_joint_check next.
 
 - Safety: `mutate`
 - MCP tool: `part_paint_overlap`
@@ -923,7 +923,7 @@ For each joint with gaps (rig_joint_check), paints only pixels the upper part co
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 | `view` | string | no | Rig view to check (default: the first view). |
 | `bones` | string[] | no | Only joints whose child bone is one of these (default: all joints with gaps). |
 | `color` | array \| integer >= 0 | no | Paint colour: [r,g,b,a], or a palette index in an indexed document. |
@@ -948,7 +948,7 @@ Close the elbow gap of the hero:
 
 Split a region (rect, lasso or flood) of a flat layer's cel into a new layer bound to a bone.
 
-The pixels move into a new layer; remainder plus parts recomposite the frame. partName ("part:upper_arm_r", "part:hand_r@open#side") binds it, else overlap binds it on a clear winner, else it stays a pixel layer. The part draws in every frame: hide it elsewhere (rig_set_pose). Refused: rig-block-order (a covering pixel layer between rig block and part).
+Fit the bones first: the part keeps the bone pivot of this moment. partName ("part:upper_arm_r") binds it, else overlap, else it stays a pixel layer. The part draws in every frame of every animation: key visible false (rig_set_pose) where other art shows. Refused: rig-block-order (a pixel layer covers the part), duplicate-variant (a second cut into one part: undo, recut it whole).
 
 - Safety: `mutate`
 - MCP tool: `part_split`
@@ -958,7 +958,7 @@ The pixels move into a new layer; remainder plus parts recomposite the frame. pa
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 | `layer` | string | yes | The flat pixel layer to cut from (id or name). |
 | `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
 | `frame` | integer >= 0 \| string | yes | The frame whose cel is cut. |
@@ -967,7 +967,7 @@ The pixels move into a new layer; remainder plus parts recomposite the frame. pa
 | `name` | string | no | Name of the new layer while it is not a part (default "split"). |
 | `bind` | boolean | no | Without partName: try to bind by overlap (default true). |
 | `view` | string | no | View for names without #view and for overlap (default: the first). |
-| `zByBone` | map of integer | no | Default z of the new part by part-layer name, then bone name; higher draws on top. |
+| `zByBone` | map of integer | no | Default z of the new part by part-layer name, then bone name; higher draws on top. Set once, at creation: plan the draw order before the first split. |
 
 ### Output
 
@@ -994,7 +994,7 @@ Cut the head rectangle of a flat run frame into the head part:
 
 Read a region (at most 64x64 px) of a frame as a text grid: one symbol per pixel, "." transparent, with a legend of the colours present.
 
-Without "layer" the region is the rendered frame (what pixels.writeGrid edits on a rig frame); with "layer" it is that pixel layer's own cel. Symbols 0-9A-Za-z are assigned in order of first appearance and valid for this call only; at most 62 colours (else read a smaller region). "rulers" adds column and row numbers. Feed `rows` and `legend` back to pixels.writeGrid. Use render_frame to judge looks.
+Without "layer" the region is the rendered frame (what pixels_write_grid edits on a rig frame); with a pixel "layer" it is that cel. Symbols 0-9A-Za-z are assigned by first appearance and valid for this call only; at most 62 colours (else read less). "rulers" adds column and row numbers, about 2 characters per pixel in all: read only the area you need. Feed `rows` and `legend` to pixels_write_grid.
 
 - Safety: `read`
 - MCP tool: `pixels_read_grid`
@@ -1004,7 +1004,7 @@ Without "layer" the region is the rendered frame (what pixels.writeGrid edits on
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 | `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
 | `frame` | integer >= 0 \| string | yes | Frame: 0-based index or frame id ("frm_..."). |
 | `layer` | string | no | Read this pixel layer's cel instead of the rendered frame (mirror animations: not allowed). |
@@ -1047,7 +1047,7 @@ Output:
 
 Paint a text grid (at most 32x32 px) at (x, y) of a frame; symbols come from "legend".
 
-"." writes transparent, "_" keeps the pixel. On a rig (part layers) the differences from the rendered frame become overrides (a part override inside one part, else a final one) that survive re-posing (see override.list, `newlyStale`). Otherwise name the pixel `layer` (optional if only one): its cel is rewritten. Palette-locked and indexed documents only take palette colours.
+"." writes transparent, "_" keeps the pixel. On a rig omit layer: differences from the rendered frame become overrides of this frame only. They are for touch-ups of a few pixels: art pasted over a pose is not rig animation and goes stale when the pose changes. If the rig cannot show something, say so instead. A part layer is refused. On flat art name the pixel `layer`. Locked palettes only take palette colours.
 
 - Safety: `mutate`
 - MCP tool: `pixels_write_grid`
@@ -1057,7 +1057,7 @@ Paint a text grid (at most 32x32 px) at (x, y) of a frame; symbols come from "le
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 | `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
 | `frame` | integer >= 0 \| string | yes | Frame: 0-based index or frame id ("frm_..."). |
 | `layer` | string | no | Pixel layer whose cel to write. Omit on a rig frame (the rendered frame is edited into overrides), or when the document has exactly one pixel layer. |
@@ -1090,7 +1090,7 @@ Move the hero's eye one pixel left (an override on the head):
 
 Build a .pxf from a .pxfd folder (the inverse of pxf_unpack).
 
-Packs manifest.json, document.json, images/ and render/ of the folder; .gdignore and other files are ignored. The archive is built by the same deterministic writer as a save, atomically, replacing an existing file. file defaults to the folder name with .pxf. Does not open the document: open the result to validate it.
+Packs manifest.json, document.json, images/ and render/ of the folder; .gdignore and other files are ignored. The archive is built by the same deterministic writer as a save, atomically, replacing an existing file. file defaults to the folder name with .pxf. Works on files, not on open documents: doc_open the result to validate it.
 
 - Safety: `io`
 - MCP tool: `pxf_pack`
@@ -1128,7 +1128,7 @@ Output:
 
 Expand a .pxf into a .pxfd folder (manifest, document, images, render cache).
 
-Writes one file per archive entry (bytes verbatim) plus an empty .gdignore so Godot ignores the PNGs; the folder diffs well in git. dir defaults to the file name with .pxfd. An existing folder is refused unless overwrite is true (only a folder named *.pxfd is ever replaced). Does not open the document; pxf_pack is the inverse.
+Writes one file per archive entry (bytes verbatim) plus an empty .gdignore so Godot ignores the PNGs; the folder diffs well in git. dir defaults to the file name with .pxfd. An existing folder is refused unless overwrite is true (only a folder named *.pxfd is ever replaced). Works on the file, not on an open document: doc_save first. pxf_pack is the inverse.
 
 - Safety: `io`
 - MCP tool: `pxf_unpack`
@@ -1167,7 +1167,7 @@ Output:
 
 Render the frames of some or all animations as one labelled PNG contact sheet (long edge at most 1568 px), optionally with bone lines and pivot markers.
 
-Judge motion across frames (before/after a re-pose, a walk cycle): vision judges gesture and readability, lint owns precision (1 px gaps, off-palette pixels). Tiles are labelled "GROUP/DIRECTION #n" (n = 0-based frame index). The scale is the largest that fits 1568 px, or lower than `scale`. The image is `output.image` (PNG, base64). `bones` draws yellow bone lines and `pivots` red pivot squares (need a rig).
+Judge motion across frames (before/after a re-pose, a walk cycle): vision judges gesture and readability, lint owns precision (1 px gaps, off-palette pixels). Check the tile edges: art past the canvas is cut off and lint does not report it. Tiles are labelled "GROUP/DIRECTION #n" (n = frame index). The scale is the largest that fits 1568 px, or lower than `scale`. `bones` draws yellow bone lines and `pivots` red pivot squares (need a rig).
 
 - Safety: `read`
 - MCP tool: `render_contact_sheet`
@@ -1177,7 +1177,7 @@ Judge motion across frames (before/after a re-pose, a walk cycle): vision judges
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 | `animations` | {group, direction} \| {id}[] | no | Animations to show, in order (default: all). |
 | `scale` | integer >= 1 | no | Integer upscale to start from, 1..16 (default: the largest that fits 1568 px; reduced until it fits). |
 | `labels` | boolean | no | Write "GROUP/DIRECTION #n" under each frame (default true). |
@@ -1207,7 +1207,7 @@ Show every frame of the hero with the skeleton drawn:
 
 Render one frame to an upscaled PNG on a checkerboard (long edge at most 1568 px), optionally with bone lines and pivot markers.
 
-Look at the result of an edit: vision judges gesture, proportions and readability, lint.run owns precision (1 px gaps, off-palette pixels). The image is `output.image` (PNG, base64). `bones` draws a yellow line from each bone pivot to its tip, `pivots` a red square on each snapped pivot pixel (both need a rig; `output.bones` lists the points as numbers). Transparent pixels show a grey checkerboard.
+Look at the result of an edit: vision judges gesture, proportions and readability, lint owns precision (1 px gaps, off-palette pixels). `bones` draws a yellow line from each bone pivot to its tip, `pivots` a red square on each pivot pixel (both need a rig). With either, `output.bones` lists pivots and tips as canvas numbers: how to read a posed skeleton. Transparent pixels show a grey checkerboard.
 
 - Safety: `read`
 - MCP tool: `render_frame`
@@ -1217,7 +1217,7 @@ Look at the result of an edit: vision judges gesture, proportions and readabilit
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 | `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
 | `frame` | integer >= 0 \| string | yes | Frame: 0-based index or frame id ("frm_..."). |
 | `scale` | integer >= 1 | no | Integer upscale 1..16 (default and maximum: the largest that keeps the long edge within 1568 px). |
@@ -1247,7 +1247,7 @@ Look at frame 0 of the hero with the skeleton drawn:
 
 Apply a humanoid skeleton template: bones matched by name are reused, missing ones are created.
 
-Templates: humanoid-side (view "side"), humanoid-front ("front"), humanoid-back ("back"). With no view a new view is created (named after the template, or viewName); with view the rest pose is set in that view. Creates the rig when the document has none. The template origin is the document origin. Bones that exist with another parent are refused.
+Templates: humanoid-side (view "side"), humanoid-front ("front"), humanoid-back ("back"). Without view a new view is created (named after the template, or viewName); with view the rest pose is set there. The template origin is the document origin. Rest: pelvis -90 (up), limbs 180 relative to it (down). Proportions are generic: compare with render_frame (bones) and refit with rig_edit_bones before any part_split. Bones that exist with another parent are refused.
 
 - Safety: `mutate`
 - MCP tool: `rig_apply_template`
@@ -1257,7 +1257,7 @@ Templates: humanoid-side (view "side"), humanoid-front ("front"), humanoid-back 
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 | `template` | "humanoid-side" \| "humanoid-front" \| "humanoid-back" | yes | Skeleton template: humanoid-side, humanoid-front or humanoid-back. |
 | `height` | integer >= 8 | no | Character height in px, feet row to top of head (default 48). |
 | `view` | string | no | Existing view to set the rest pose in (default: a new view). |
@@ -1283,7 +1283,7 @@ Set the rest pose of the hero in its existing side view:
 
 Bake a rig animation into one plain pixel layer: as a new animation, or in place.
 
-Renders every frame (parts, overrides, post-passes, exported layers) into a pixel layer "baked" and hides the parts. mode "new" adds animation <group>_baked; "replace" bakes in place. A mirror cannot be baked: bake its source. Pixels no longer follow the rig.
+Renders every frame (parts, overrides, post-passes, exported layers) into a pixel layer "baked" and hides the parts. mode "new" adds animation <group>_baked; "replace" bakes in place. A mirror cannot be baked: bake its source. Baked pixels no longer follow the rig.
 
 - Safety: `destructive`
 - MCP tool: `rig_bake`
@@ -1293,7 +1293,7 @@ Renders every frame (parts, overrides, post-passes, exported layers) into a pixe
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 | `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
 | `mode` | "new" \| "replace" | yes | "new" keeps the source; "replace" bakes it in place. |
 | `name` | string | no | mode "new": group of the baked animation (default <group>_baked). |
@@ -1320,7 +1320,7 @@ Bake the hero idle as a new animation:
 
 Bind pixel layers to bones as parts, by layer name ("part:<bone>[.<part>][@variant][#view]") or by overlap.
 
-By name: a layer called part:upper_arm_r (or just a bone name) becomes that bone's part; @variant adds another variant of the same part, #view another view. By overlap: remaining layers bind to the bone their opaque pixels cover, only with a clear winner (ties are listed as ambiguous). Layers with several drawings (animated) or a translucent layer and cel are skipped. Running it again changes nothing. Cut flat art into layers first with part_split.
+By name: a layer called part:upper_arm_r (or just a bone name) becomes that bone's part; @variant adds a variant of the same part, #view another view. By overlap: remaining layers bind to the bone their opaque pixels cover, only with a clear winner (ties are listed as ambiguous). The part keeps the bone pivot of this moment: fit the bones first. Animated and translucent layers are skipped. Running it again changes nothing. Cut flat art with part_split.
 
 - Safety: `mutate`
 - MCP tool: `rig_bind_parts`
@@ -1330,13 +1330,13 @@ By name: a layer called part:upper_arm_r (or just a bone name) becomes that bone
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 | `layers` | string[] | no | Only these layers (default: every pixel layer). |
 | `byName` | boolean | no | Bind by layer name (default true). |
 | `byOverlap` | boolean | no | Bind the rest by overlap with the bones (default true). |
 | `rawNames` | map of string | no | Source names to parse instead of layer names, by layer: {"arm": "part:upper_arm_r@open#side"}. |
 | `view` | string | no | View for names without #view and for overlap (default: the first). |
-| `zByBone` | map of integer | no | Default z of new parts by part-layer name, then bone name; higher draws on top. |
+| `zByBone` | map of integer | no | Default z of new parts by part-layer name, then bone name; higher draws on top. Set once, at creation. |
 
 ### Output
 
@@ -1358,7 +1358,7 @@ Bind every layer named after a bone, no overlap guessing:
 
 Edit the skeleton: add/delete/reparent/rename bones, set length and rest pose per view, add/rename/delete views.
 
-Edits run in order in one undo step; one failure undoes all. Deleting never destroys art: a bone with parts or (without cascade) children is refused. Reparenting keeps the art in place. Rest x/y: root = canvas pivot, child = offset from the parent pivot; angle in deg clockwise relative to the parent. For a standard skeleton use rig_apply_template.
+Edits run in order; one failure undoes all. A bone with parts or (without cascade) children cannot be deleted. Rest x/y: root = canvas pivot, child = canvas offset from the parent pivot. Rest angle adds to the parent's: world 0 = +x, 90 = down, so a thigh pointing down under a pelvis at -90 is 180. Returns no geometry: check with render_frame (bones).
 
 - Safety: `mutate`
 - MCP tool: `rig_edit_bones`
@@ -1368,7 +1368,7 @@ Edits run in order in one undo step; one failure undoes all. Deleting never dest
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 | `edits` | any[] | yes | Edits, applied in order. |
 
 ### Output
@@ -1380,6 +1380,12 @@ Edits run in order in one undo step; one failure undoes all. Deleting never dest
 
 ### Examples
 
+Fit a thigh: 2 px left of the pelvis pivot, pointing down:
+
+```json
+{"doc":"doc_g1ed5q","edits":[{"action":"setRest","bone":"thigh_l","view":"side","x":-2,"y":0,"angle":180},{"action":"setLength","bone":"thigh_l","length":8}]}
+```
+
 Add a tail bone under the torso, then lengthen the head:
 
 ```json
@@ -1390,7 +1396,7 @@ Add a tail bone under the torso, then lengthen the head:
 
 Sweep each joint of one rig view and report the pixel gaps that open on the outer side of a bend.
 
-Read-only. A rig passes when summary.gapCount is 0. The sweep defaults to the params in the output; set them only to narrow a check. Fix gaps by adjusting the part pivots or overrides, then check again. Checks the view that draws the first direction of the given view (default: the first view).
+A rig passes when summary.gapCount is 0. The output is long, about 400 characters per joint even when clean: for pass or fail alone use lint with enable ["rig.jointGap"]. The sweep moves one joint at a time, rangeDeg around rest (default 30): a pose beyond that is not checked, so look at the render. Fix gaps with part_paint_overlap, or by moving part pivots, then check again. Checks the view that draws the first direction of the given view (default: the first view).
 
 - Safety: `read`
 - MCP tool: `rig_joint_check`
@@ -1400,7 +1406,7 @@ Read-only. A rig passes when summary.gapCount is 0. The sweep defaults to the pa
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 | `view` | string | no | Rig view to check (default: the first view). |
 | `rangeDeg` | number | no | Sweep range, degrees either side of rest. |
 | `stepDeg` | number | no | Sweep step, degrees. |
@@ -1427,7 +1433,7 @@ Check the first view of the hero:
 
 Add a mirror of an animation under a new direction: same group, flipped around the origin.
 
-The mirror stores no frames or pixels: it plays the source flipped horizontally about the document origin (markers flip too, names stay), so editing the source updates it. Asymmetric art needs a separate animation. The mirror takes the source's group and loop; the direction must be new for that group (I6). A source cannot be a mirror itself. Final overrides of the mirror can be added later with pixels_write_grid on the mirror.
+The mirror stores no frames or pixels: it plays the source flipped horizontally about the document origin (markers flip too, names stay), so later edits of the source carry over: pose the source, not the mirror. Asymmetric art needs a separate animation. The mirror takes the source's group and loop; the direction must be new for that group. A source cannot be a mirror itself. Final overrides of the mirror can be added with pixels_write_grid on it.
 
 - Safety: `mutate`
 - MCP tool: `rig_mirror_animation`
@@ -1437,7 +1443,7 @@ The mirror stores no frames or pixels: it plays the source flipped horizontally 
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 | `source` | {group, direction} \| {id} | yes | The animation to mirror (an authored one, not itself a mirror). |
 | `direction` | string | yes | Direction of the mirror, e.g. "left" for a "right" source. |
 
@@ -1461,7 +1467,7 @@ Mirror the hero idle as its left-facing twin:
 
 Set a part variant's pivot: the pixel (int px, in the variant image) that sits on the bone pivot.
 
-Coordinates are in the variant image, origin top-left, pixel centre; the pivot may lie outside the image (a floating hand). Moving the pivot moves the part's art relative to the bone, so run rig_joint_check afterwards. Variant names repeat across views: pass view when the name is ambiguous.
+Binding already puts the pivot on the bone: use this to shift a part against its bone. Coordinates are in the variant image, origin top-left, pixel centre; the pivot may lie outside the image (a floating hand). It moves the part's art relative to the bone, so do not nudge it to clear joint gaps: use part_paint_overlap. Run rig_joint_check next. Variant names repeat across views: pass view when the name is ambiguous.
 
 - Safety: `mutate`
 - MCP tool: `rig_set_pivot`
@@ -1471,7 +1477,7 @@ Coordinates are in the variant image, origin top-left, pixel centre; the pivot m
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 | `part` | string | yes | Part: its part-layer name (e.g. "head"), part id ("prt_...") or layer id. |
 | `variant` | string | no | Variant name or id (default "default"). |
 | `view` | string | no | Resolve the variant name among this view's variants. |
@@ -1498,7 +1504,7 @@ Move the forearm pivot two pixels right:
 
 Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z, visible) on one frame.
 
-Keys are sparse and merge: the channels you pass replace the stored ones, the others stay; null removes the whole key of that bone or part on this frame. Angles are relative to the rest pose and compose down the hierarchy. Mirror animations have no frames: pose their source. Check the result with render_frame and rig_joint_check.
+Channels you pass replace the stored ones; null removes the whole key of that bone or part. Angles are from rest and compose down the hierarchy. A channel with no key here interpolates between its keys on other frames (wrapping in a loop), not back to rest: key offsets on every frame or on none. Part keys hold both ways: set z or visible once per animation. Art past the canvas edge is cut off. Next: render_contact_sheet.
 
 - Safety: `mutate`
 - MCP tool: `rig_set_pose`
@@ -1508,7 +1514,7 @@ Keys are sparse and merge: the channels you pass replace the stored ones, the ot
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `doc` | string | yes | Document id returned by doc_open or doc_create, e.g. "doc_g1ed5q". |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
 | `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
 | `frame` | integer >= 0 \| string | yes | Frame: 0-based index or frame id ("frm_..."). |
 | `bones` | map of {angle, offset, flipX, interp} \| null | no | Bone keys by bone name (or id); null removes the key. |
@@ -1525,7 +1531,7 @@ Keys are sparse and merge: the channels you pass replace the stored ones, the ot
 
 ### Examples
 
-Raise the right arm and bend the elbow on frame 0:
+Raise the right arm on frame 0:
 
 ```json
 {"doc":"doc_g1ed5q","animation":{"group":"default"},"frame":0,"bones":{"upper_arm_r":{"angle":-45},"lower_arm_r":{"angle":-30}}}

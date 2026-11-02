@@ -26,7 +26,7 @@ export const docOpen = defineOp({
   safety: 'io',
   summary: 'Open a .pxf file and return its document id, which every other op takes as "doc".',
   description:
-    'Opening a file that is already open returns the same id (alreadyOpen: true) without re-reading it. Follow with doc_summary to see layers, rig and animations.',
+    'Opening a file that is already open returns the same id (alreadyOpen: true) without re-reading it. Returns the id only: read layers, rig and animations with doc_summary next.',
   input: z.strictObject({
     path: z
       .string()

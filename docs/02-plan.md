@@ -182,7 +182,15 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T5.6b | CLI subcommands from registry metadata (+ override import/list/resolve, `pf godot install`) | sonnet | medium | S | T5.6a | ∥ | ☑ |
 | T5.7 | Claude Code setup guide + `.mcp.json` | haiku | low | S | T5.6a | ∥ | ☑ |
 | T5.9 | W-scenario suite (`pf check` scripts for W2, W2b, W3-manual, W4-CLI) in CI | sonnet | medium | M | T5.6b, T3.9 | | ☑ |
-| T5.8 | **MCP dogfood evaluation** (CC0 character + synthetic hero) | opus | high | M | T5.9, T0.5 | | ☐ |
+| T5.8 | **MCP dogfood evaluation** (CC0 character + synthetic hero) | opus | high | M | T5.9, T0.5 | | ☑ |
+| T5.10 | `rig.readPose` read op, moved up from M1b (MCP-03) | sonnet | medium | S | T5.8 | | ☐ |
+| T5.11 | `lint` rule for overrides that replace the rig (MCP-07) | sonnet | medium | S | T5.8 | | ☐ |
+| T5.12 | `lint` rules for canvas clipping and holes in rotated parts (LINT-01, LINT-02) | sonnet | medium | M | T5.8 | | ☐ |
+| T5.13 | Set a part's default z after creation (RIG-07) | sonnet | medium | S | T5.8 | | ☐ |
+| T5.14 | Paint a part variant's own art (RIG-07) | sonnet | medium | M | T5.8 | | ☐ |
+| T5.15 | Compact `rig.jointCheck` output, additive (MCP-05) | haiku | low | S | T5.8 | | ☐ |
+| T5.16 | Fit a template to art from landmarks | sonnet | medium | M | T5.8 | | ☐ |
+| T5.17 | Pose several frames in one call, one undo step | sonnet | medium | S | T5.8 | | ☐ |
 | T6.4 | Target-move rebuild from pack art (with the user) | opus orchestrating | high | session | T5.8, D1 | | ☐ |
 | T6.5 | Swap the rigged target move into the first consumer game (user approval) | sonnet | medium | S | T6.4 | | ☐ |
 | G2 | **Gate: M1a exit** + v0.1.0 + M1b breakdown | opus | high | — | all | | ☐ |
@@ -828,6 +836,10 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - revise the descriptions and examples;
   - file new cards for missing tools.
 - **Acceptance** — W3-manual is done by the LLM on both characters. `docs/ai/MCP_EVAL_M1a.md` has the evidence. Every tool description has been revised at least once based on it.
+- **Notes (2026-11-01)** — ☑ Opus/high; about 385k tokens plus 7 `claude -p` Sonnet runs (about $6.60 of API-equivalent cost), stopped once by the usage limit. Both characters pass W3 on the final text (hero r7, CC0 r6); 37/37 descriptions revised. Evidence: `docs/ai/MCP_EVAL_M1a.md`.
+  - Run r5 met all of W3's conditions with 47% of a frame pasted from the sheet, so W3 cannot tell a rig animation from pasted art. The evaluation added a 5% override check, which is not in the spec (open question in STATUS).
+  - The revisions improved the process, not the art: the final CC0 jump has speckle and poor arms in frame 3, and lint finds none of it.
+  - Cards T5.10 to T5.17 are proposals from the evaluation, added to the board, not yet scheduled. RIG-08 and MCP-06 were left unrevised so the tested text is what ships.
 
 ### Wave 5 — Target move + exit
 

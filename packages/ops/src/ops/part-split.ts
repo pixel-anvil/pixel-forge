@@ -69,7 +69,7 @@ export const partSplit = defineOp({
   summary:
     "Split a region (rect, lasso or flood) of a flat layer's cel into a new layer bound to a bone.",
   description:
-    'The pixels move into a new layer; remainder plus parts recomposite the frame. partName ("part:upper_arm_r", "part:hand_r@open#side") binds it, else overlap binds it on a clear winner, else it stays a pixel layer. The part draws in every frame: hide it elsewhere (rig_set_pose). Refused: rig-block-order (a covering pixel layer between rig block and part).',
+    'Fit the bones first: the part keeps the bone pivot of this moment. partName ("part:upper_arm_r") binds it, else overlap, else it stays a pixel layer. The part draws in every frame of every animation: key visible false (rig_set_pose) where other art shows. Refused: rig-block-order (a pixel layer covers the part), duplicate-variant (a second cut into one part: undo, recut it whole).',
   input: z.strictObject({
     doc: DocRef,
     layer: LayerRef.describe('The flat pixel layer to cut from (id or name).'),
@@ -97,7 +97,7 @@ export const partSplit = defineOp({
       .record(z.string(), z.int())
       .optional()
       .describe(
-        'Default z of the new part by part-layer name, then bone name; higher draws on top.',
+        'Default z of the new part by part-layer name, then bone name; higher draws on top. Set once, at creation: plan the draw order before the first split.',
       ),
   }),
   output: z.strictObject({

@@ -14,7 +14,7 @@ export const rigBake = defineOp({
   safety: 'destructive',
   summary: 'Bake a rig animation into one plain pixel layer: as a new animation, or in place.',
   description:
-    'Renders every frame (parts, overrides, post-passes, exported layers) into a pixel layer "baked" and hides the parts. mode "new" adds animation <group>_baked; "replace" bakes in place. A mirror cannot be baked: bake its source. Pixels no longer follow the rig.',
+    'Renders every frame (parts, overrides, post-passes, exported layers) into a pixel layer "baked" and hides the parts. mode "new" adds animation <group>_baked; "replace" bakes in place. A mirror cannot be baked: bake its source. Baked pixels no longer follow the rig.',
   confirmText:
     'mode "replace" drops the animation\'s keys, overrides and post-passes and merges other exported layers (undo restores it); "new" only adds an animation and a layer.',
   input: z.strictObject({

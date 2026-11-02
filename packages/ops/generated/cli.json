@@ -12,7 +12,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         },
         {
           "name": "group",
@@ -70,7 +70,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         },
         {
           "name": "animation",
@@ -128,7 +128,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         },
         {
           "name": "layer",
@@ -244,7 +244,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         }
       ]
     },
@@ -259,7 +259,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         },
         {
           "name": "path",
@@ -288,7 +288,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         },
         {
           "name": "colorMode",
@@ -318,7 +318,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         }
       ]
     },
@@ -333,7 +333,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         }
       ]
     },
@@ -348,7 +348,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         },
         {
           "name": "animation",
@@ -392,7 +392,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         },
         {
           "name": "animation",
@@ -421,7 +421,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         },
         {
           "name": "animation",
@@ -450,7 +450,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         },
         {
           "name": "animation",
@@ -507,7 +507,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         },
         {
           "name": "path",
@@ -565,7 +565,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         },
         {
           "name": "file",
@@ -658,7 +658,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         },
         {
           "name": "layer",
@@ -708,7 +708,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         },
         {
           "name": "enable",
@@ -758,7 +758,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         },
         {
           "name": "animation",
@@ -794,7 +794,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         },
         {
           "name": "animations",
@@ -816,7 +816,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         },
         {
           "name": "action",
@@ -845,7 +845,7 @@
     {
       "op": "part.paintOverlap",
       "command": ["part", "paint-overlap"],
-      "summary": "Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite does not change.",
+      "summary": "Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite stays only when the child is drawn below its parent.",
       "safety": "mutate",
       "options": [
         {
@@ -853,7 +853,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         },
         {
           "name": "view",
@@ -889,7 +889,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         },
         {
           "name": "layer",
@@ -952,7 +952,7 @@
           "flag": "--z-by-bone",
           "kind": "json",
           "required": false,
-          "description": "Default z of the new part by part-layer name, then bone name; higher draws on top."
+          "description": "Default z of the new part by part-layer name, then bone name; higher draws on top. Set once, at creation: plan the draw order before the first split."
         }
       ]
     },
@@ -967,7 +967,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         },
         {
           "name": "animation",
@@ -1038,7 +1038,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         },
         {
           "name": "animation",
@@ -1153,7 +1153,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         },
         {
           "name": "animations",
@@ -1210,7 +1210,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         },
         {
           "name": "animation",
@@ -1267,7 +1267,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         },
         {
           "name": "template",
@@ -1311,7 +1311,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         },
         {
           "name": "animation",
@@ -1355,7 +1355,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         },
         {
           "name": "layers",
@@ -1397,7 +1397,7 @@
           "flag": "--z-by-bone",
           "kind": "json",
           "required": false,
-          "description": "Default z of new parts by part-layer name, then bone name; higher draws on top."
+          "description": "Default z of new parts by part-layer name, then bone name; higher draws on top. Set once, at creation."
         }
       ]
     },
@@ -1412,7 +1412,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         },
         {
           "name": "edits",
@@ -1434,7 +1434,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         },
         {
           "name": "view",
@@ -1477,7 +1477,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         },
         {
           "name": "source",
@@ -1506,7 +1506,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         },
         {
           "name": "part",
@@ -1549,7 +1549,7 @@
           "flag": "--doc",
           "kind": "string",
           "required": true,
-          "description": "Document id returned by doc_open or doc_create, e.g. \"doc_g1ed5q\"."
+          "description": "Document id from doc_open or doc_create."
         },
         {
           "name": "animation",

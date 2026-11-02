@@ -22,7 +22,7 @@ export const rigApplyTemplate = defineOp({
   summary:
     'Apply a humanoid skeleton template: bones matched by name are reused, missing ones are created.',
   description:
-    'Templates: humanoid-side (view "side"), humanoid-front ("front"), humanoid-back ("back"). With no view a new view is created (named after the template, or viewName); with view the rest pose is set in that view. Creates the rig when the document has none. The template origin is the document origin. Bones that exist with another parent are refused.',
+    'Templates: humanoid-side (view "side"), humanoid-front ("front"), humanoid-back ("back"). Without view a new view is created (named after the template, or viewName); with view the rest pose is set there. The template origin is the document origin. Rest: pelvis -90 (up), limbs 180 relative to it (down). Proportions are generic: compare with render_frame (bones) and refit with rig_edit_bones before any part_split. Bones that exist with another parent are refused.',
   mcp: { name: 'rig_apply_template' },
   input: z.strictObject({
     doc: DocRef,

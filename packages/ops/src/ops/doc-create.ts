@@ -17,7 +17,7 @@ export const docCreate = defineOp({
   summary:
     'Create a new empty RGBA document (no layers, no animations) and open it. Save it with doc_save.',
   description:
-    'The origin defaults to the bottom-centre pixel of the canvas (where the feet go). Import art with import_file, add animations with anim_create, or apply a skeleton with rig_apply_template. Use doc_set_color_mode for indexed colour.',
+    'The origin defaults to the bottom-centre pixel of the canvas (where the feet go). For a sprite sheet make the canvas the size of one cell. Import art with import_file, apply a skeleton with rig_apply_template, add animations with anim_create. Use doc_set_color_mode for indexed colour. Nothing is on disk until doc_save with a path.',
   input: z.strictObject({
     name: z
       .string()

@@ -18,7 +18,7 @@ export const frameDelete = defineOp({
   summary:
     'Delete one frame with its bone and part keys, cels and overrides; the last frame cannot go.',
   description:
-    'Links to the frame cels are materialised first: the other linked frames keep their picture as their own copy. Images nothing references any more are removed. An animation keeps at least one frame.',
+    "Links to the frame's cels are materialised first: the other linked frames keep their picture as their own copy. Images nothing references any more are removed. Later frames move down one index. An animation keeps at least one frame.",
   input: z.strictObject({
     doc: DocRef,
     animation: AnimRef,

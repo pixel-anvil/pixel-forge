@@ -23,7 +23,7 @@ export const frameSetMeta = defineOp({
   summary:
     "Set one frame's duration (ms), markers (name -> int px), events (names) and root motion (int px).",
   description:
-    "Only the fields you give change. markers merge by name (null removes one); events replace the whole list; rootMotion is the move the game applies when this frame is played (int px, y down). New marker and event names are added to the document's markerDefs / eventDefs. Mirror animations have no frames: edit the source.",
+    "Only the fields you give change, on this one frame. markers merge by name (null removes one); events replace the whole list; rootMotion is the move the game applies when this frame plays (int px, y down). New marker and event names join the document's markerDefs / eventDefs. Mirror animations have no frames: edit the source.",
   input: z.strictObject({
     doc: DocRef,
     animation: AnimRef,

@@ -22,7 +22,7 @@ export const rigJointCheck = defineOp({
   summary:
     'Sweep each joint of one rig view and report the pixel gaps that open on the outer side of a bend.',
   description:
-    'Read-only. A rig passes when summary.gapCount is 0. The sweep defaults to the params in the output; set them only to narrow a check. Fix gaps by adjusting the part pivots or overrides, then check again. Checks the view that draws the first direction of the given view (default: the first view).',
+    'A rig passes when summary.gapCount is 0. The output is long, about 400 characters per joint even when clean: for pass or fail alone use lint with enable ["rig.jointGap"]. The sweep moves one joint at a time, rangeDeg around rest (default 30): a pose beyond that is not checked, so look at the render. Fix gaps with part_paint_overlap, or by moving part pivots, then check again. Checks the view that draws the first direction of the given view (default: the first view).',
   mcp: { name: 'rig_joint_check' },
   input: z.strictObject({
     doc: DocRef,

@@ -22,7 +22,7 @@ export const rigSetPivot = defineOp({
   summary:
     "Set a part variant's pivot: the pixel (int px, in the variant image) that sits on the bone pivot.",
   description:
-    "Coordinates are in the variant image, origin top-left, pixel centre; the pivot may lie outside the image (a floating hand). Moving the pivot moves the part's art relative to the bone, so run rig_joint_check afterwards. Variant names repeat across views: pass view when the name is ambiguous.",
+    "Binding already puts the pivot on the bone: use this to shift a part against its bone. Coordinates are in the variant image, origin top-left, pixel centre; the pivot may lie outside the image (a floating hand). It moves the part's art relative to the bone, so do not nudge it to clear joint gaps: use part_paint_overlap. Run rig_joint_check next. Variant names repeat across views: pass view when the name is ambiguous.",
   input: z.strictObject({
     doc: DocRef,
     part: PartRef,

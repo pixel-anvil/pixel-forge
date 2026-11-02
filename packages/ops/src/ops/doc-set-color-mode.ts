@@ -16,7 +16,7 @@ export const docSetColorMode = defineOp({
   summary:
     'Switch the document between "rgba" and "indexed" pixels, and/or lock it to its palette.',
   description:
-    'Converting is exact: to "indexed" every colour must be an entry of the active palette (the first alpha-0 entry is the transparent index), else the call is refused and nothing changes; to "rgba" indices resolve through the palette. Both need an active palette. The lock does not recolour: lint (palette.offPalette) judges the render.',
+    'Converting is exact: to "indexed" every colour must be an entry of the active palette (the first alpha-0 entry is the transparent index), else the call is refused and nothing changes; to "rgba" indices resolve through the palette. Both need an active palette. The lock does not recolour: run lint next (palette.offPalette judges the render).',
   input: z.strictObject({
     doc: DocRef,
     colorMode: z.enum(COLOR_MODES).optional().describe('"rgba" or "indexed" (default: unchanged).'),

@@ -13,7 +13,7 @@ export const frameDuplicate = defineOp({
   safety: 'mutate',
   summary: 'Duplicate one frame; the copy goes right after it, with linked cels and copied keys.',
   description:
-    'Cels of the copy link to the source frame (edit one, both change). Bone keys, part keys, markers, events, root motion, duration and overrides are copied.',
+    'Cels of the copy link to the source frame (edit one, both change). Bone keys, part keys, markers, events, root motion, duration and overrides are copied, so the copy starts from the same pose: change it with rig_set_pose.',
   input: z.strictObject({
     doc: DocRef,
     animation: AnimRef,

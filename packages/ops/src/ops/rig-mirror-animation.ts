@@ -16,7 +16,7 @@ export const rigMirrorAnimation = defineOp({
   summary:
     'Add a mirror of an animation under a new direction: same group, flipped around the origin.',
   description:
-    "The mirror stores no frames or pixels: it plays the source flipped horizontally about the document origin (markers flip too, names stay), so editing the source updates it. Asymmetric art needs a separate animation. The mirror takes the source's group and loop; the direction must be new for that group (I6). A source cannot be a mirror itself. Final overrides of the mirror can be added later with pixels_write_grid on the mirror.",
+    "The mirror stores no frames or pixels: it plays the source flipped horizontally about the document origin (markers flip too, names stay), so later edits of the source carry over: pose the source, not the mirror. Asymmetric art needs a separate animation. The mirror takes the source's group and loop; the direction must be new for that group. A source cannot be a mirror itself. Final overrides of the mirror can be added with pixels_write_grid on it.",
   input: z.strictObject({
     doc: DocRef,
     source: AnimRef.describe('The animation to mirror (an authored one, not itself a mirror).'),

@@ -86,7 +86,7 @@ export const docSummary = defineOp({
   summary:
     'Summarise an open document: canvas, palette, layers, rig (bones, parts, views) and animations.',
   description:
-    'Names in the result (bones, parts, layers, animation group/direction) are what the other ops take as references.',
+    'Names in the result (bones, parts, layers, animation group/direction) are what the other tools take as references. It shows no rest angles and no pose keys: for pivots and tips as numbers use render_frame with bones: true.',
   input: z.strictObject({ doc: DocRef }),
   output: DocSummary,
   examples: [{ title: 'Summarise the hero', input: { doc: 'doc_g1ed5q' } }],

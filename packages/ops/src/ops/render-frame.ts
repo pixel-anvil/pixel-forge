@@ -33,7 +33,7 @@ export const renderFrame = defineOp({
   summary:
     'Render one frame to an upscaled PNG on a checkerboard (long edge at most 1568 px), optionally with bone lines and pivot markers.',
   description:
-    'Look at the result of an edit: vision judges gesture, proportions and readability, lint.run owns precision (1 px gaps, off-palette pixels). The image is `output.image` (PNG, base64). `bones` draws a yellow line from each bone pivot to its tip, `pivots` a red square on each snapped pivot pixel (both need a rig; `output.bones` lists the points as numbers). Transparent pixels show a grey checkerboard.',
+    'Look at the result of an edit: vision judges gesture, proportions and readability, lint owns precision (1 px gaps, off-palette pixels). `bones` draws a yellow line from each bone pivot to its tip, `pivots` a red square on each pivot pixel (both need a rig). With either, `output.bones` lists pivots and tips as canvas numbers: how to read a posed skeleton. Transparent pixels show a grey checkerboard.',
   input: z.strictObject({
     doc: DocRef,
     animation: AnimRef,

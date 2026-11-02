@@ -167,7 +167,7 @@ export const pixelsWriteGrid = defineOp({
   safety: 'mutate',
   summary: 'Paint a text grid (at most 32x32 px) at (x, y) of a frame; symbols come from "legend".',
   description:
-    '"." writes transparent, "_" keeps the pixel. On a rig (part layers) the differences from the rendered frame become overrides (a part override inside one part, else a final one) that survive re-posing (see override.list, `newlyStale`). Otherwise name the pixel `layer` (optional if only one): its cel is rewritten. Palette-locked and indexed documents only take palette colours.',
+    '"." writes transparent, "_" keeps the pixel. On a rig omit layer: differences from the rendered frame become overrides of this frame only. They are for touch-ups of a few pixels: art pasted over a pose is not rig animation and goes stale when the pose changes. If the rig cannot show something, say so instead. A part layer is refused. On flat art name the pixel `layer`. Locked palettes only take palette colours.',
   input: z.strictObject({
     doc: DocRef,
     animation: AnimRef,

@@ -13,7 +13,7 @@ export const docUndo = defineOp({
   transaction: false,
   summary: 'Undo the newest applied change of the document (one history entry).',
   description:
-    'Reverts the last applied history entry, whatever op made it. Nothing to undo is not an error: undone is false. Re-apply with doc.redo.',
+    'Reverts the last applied history entry, whatever tool made it. Nothing to undo is not an error: undone is false. Re-apply with redo.',
   mcp: { name: 'undo' },
   input: z.strictObject({
     doc: DocRef,

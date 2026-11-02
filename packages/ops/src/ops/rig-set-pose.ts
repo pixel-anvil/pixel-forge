@@ -57,7 +57,9 @@ export const PartKeyInput = z
     z: z
       .int()
       .optional()
-      .describe("Draw order override; higher draws on top (default: the view's)."),
+      .describe(
+        "Draw order in this animation; holds until the next key; higher draws on top (default: the view's).",
+      ),
     visible: z.boolean().optional().describe('Show or hide the part from this frame on.'),
   })
   .refine(
@@ -106,7 +108,7 @@ export const rigSetPose = defineOp({
   summary:
     'Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z, visible) on one frame.',
   description:
-    'Keys are sparse and merge: the channels you pass replace the stored ones, the others stay; null removes the whole key of that bone or part on this frame. Angles are relative to the rest pose and compose down the hierarchy. Mirror animations have no frames: pose their source. Check the result with render_frame and rig_joint_check.',
+    'Channels you pass replace the stored ones; null removes the whole key of that bone or part. Angles are from rest and compose down the hierarchy. A channel with no key here interpolates between its keys on other frames (wrapping in a loop), not back to rest: key offsets on every frame or on none. Part keys hold both ways: set z or visible once per animation. Art past the canvas edge is cut off. Next: render_contact_sheet.',
   input: z.strictObject({
     doc: DocRef,
     animation: AnimRef,
@@ -130,7 +132,7 @@ export const rigSetPose = defineOp({
   }),
   examples: [
     {
-      title: 'Raise the right arm and bend the elbow on frame 0',
+      title: 'Raise the right arm on frame 0',
       input: {
         doc: 'doc_g1ed5q',
         animation: { group: 'default' },

@@ -15,7 +15,7 @@ export type JsonSchema = Record<string, unknown>;
 
 /** Conventions every tool description states (spec 8). */
 export const CONVENTIONS =
-  'Conventions: origin top-left, y down, angles in degrees clockwise, integer pixels.';
+  'Conventions: origin top-left, y down, angles deg clockwise, integer px.';
 
 /** The JSON Schema of the `confirm` field the registry adds to destructive ops. */
 export const CONFIRM_SCHEMA: JsonSchema = Object.freeze({
@@ -69,17 +69,25 @@ export function exampleInput(op: AnyOp, input: unknown): unknown {
 
 const SAFETY_NOTE: Readonly<Record<Safety, string>> = {
   read: 'Read-only.',
-  mutate: 'Changes the document as one undo step.',
-  destructive: 'Destructive: pass "confirm": true. Changes the document as one undo step.',
-  io: 'Reads or writes files through the host.',
+  mutate: 'Edit: one undo step.',
+  destructive: 'Destructive: pass "confirm": true. One undo step.',
+  io: 'File I/O.',
 };
+
+/** The safety note of an op: a history op (no transaction) moves through the steps, it adds none. */
+function safetyNote(op: AnyOp): string {
+  const mutates = op.safety === 'mutate' || op.safety === 'destructive';
+  return mutates && !op.transactional
+    ? 'Moves through the history, adds no undo step.'
+    : SAFETY_NOTE[op.safety];
+}
 
 /** The MCP tool description: summary, guidance, safety, conventions and the first example. */
 export function toolDescription(op: AnyOp): string {
   const parts = [op.summary];
   if (op.description !== undefined) parts.push(op.description.trim());
   parts.push(
-    `${SAFETY_NOTE[op.safety]}${op.confirmText === undefined ? '' : ` ${op.confirmText}`} ${CONVENTIONS}`,
+    `${safetyNote(op)}${op.confirmText === undefined ? '' : ` ${op.confirmText}`} ${CONVENTIONS}`,
   );
   const ex = op.examples[0];
   if (ex !== undefined) {

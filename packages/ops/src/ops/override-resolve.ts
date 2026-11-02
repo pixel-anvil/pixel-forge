@@ -16,7 +16,7 @@ export const overrideResolve = defineOp({
   safety: 'mutate',
   summary: 'Resolve overrides: "keep" them, "rebase" onto the current art, or "discard" them.',
   description:
-    'Name overrides by id (from override_list) or pass allStale: true for every stale one. "keep" changes nothing (a stale override is still applied) and just confirms the ids exist. "rebase" accepts the art under the override as the new base, so it stops being stale; it needs the frame to render. "discard" deletes the override and its pixels. With allStale, overrides that fail to render are left out of a rebase and reported in skipped.',
+    'Name overrides by id (from override_list) or pass allStale: true. "keep" changes nothing (a stale override is still applied) and just confirms the ids exist. "rebase" accepts the art under the override as the new base, so it stops being stale; the frame must render. "discard" deletes the override and its pixels. With allStale, overrides that fail to render are left out of a rebase and listed in skipped. Check the frame with render_frame after a discard.',
   input: z.strictObject({
     doc: DocRef,
     action: z.enum(['keep', 'rebase', 'discard']).describe('What to do with them.'),

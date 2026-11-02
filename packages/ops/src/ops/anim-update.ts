@@ -16,7 +16,7 @@ export const animUpdate = defineOp({
   summary:
     'Rename an animation (group, direction), set its loop mode, angle quantum or post-passes.',
   description:
-    "(group, direction) must stay unique (I6). Renaming the group of a source animation renames its mirrors too (a mirror shares its source's group); a mirror's group cannot be changed on its own. Loop, angleQuantum and postPasses belong to the source: a mirror has none. null clears direction, angleQuantum or postPasses. Frame durations, markers and events: frame_set_meta.",
+    '(group, direction) must stay unique. Renaming the group of a source animation renames its mirrors too; a mirror\'s group cannot change on its own. Loop, angleQuantum and postPasses belong to the source: a mirror has none. null clears direction, angleQuantum or postPasses. The loop mode changes how keys interpolate at the ends: "loop" wraps from the last frame to the first, "once" and "pingpong" hold. Frame durations, markers, events: frame_set_meta.',
   input: z.strictObject({
     doc: DocRef,
     animation: AnimRef,
