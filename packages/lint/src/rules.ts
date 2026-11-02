@@ -297,9 +297,15 @@ const clipped: LintRule = {
         for (let y = 0; y < m.h; y++)
           for (let x = 0; x < m.w; x++) {
             if (m.on[y * m.w + x] !== 1) continue;
-            const cx = mirrored ? 2 * ox - (p.offset.x + x) : p.offset.x + x;
+            // The renderer clips the source frame to the canvas, then flips it about the origin
+            // column and clips again: a pixel is lost if either position is outside. The pixel is
+            // reported where it left the canvas (the source position when that was first).
+            const sx = p.offset.x + x;
             const cy = p.offset.y + y;
-            if (cx >= 0 && cx < w && cy >= 0 && cy < h) continue;
+            const srcOut = sx < 0 || sx >= w || cy < 0 || cy >= h;
+            const fx = mirrored ? 2 * ox - sx : sx;
+            if (!srcOut && fx >= 0 && fx < w) continue;
+            const cx = srcOut ? sx : fx;
             n++;
             lost.push([cx, cy]);
             if (cx < 0) sides.left++;
@@ -364,7 +370,7 @@ const partHole: LintRule = {
         if (holes.length <= intended) continue;
         const bone = rig.bones.find((b) => b.id === p.boneId)?.name ?? p.boneId;
         bones[bone] = (bones[bone] ?? 0) + holes.length;
-        found.push(...holes);
+        for (const h of holes) found.push(h);
       }
       if (found.length === 0) continue;
       found.sort((a, b) => a[1] - b[1] || a[0] - b[0]);

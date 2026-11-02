@@ -1755,7 +1755,7 @@ Move the forearm pivot two pixels right:
 
 Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z, visible) on one frame or many.
 
-Channels you pass replace the stored ones; null removes a bone or part key. A channel with no key here interpolates between keys on other frames, not back to rest: key offsets on every frame or on none. Part keys hold both ways: set z or visible once. "frames" poses many frames as one undo step. targets {bone:{x,y}}: IK sets parent angle keys; reached: within 1 px. Output keyed: bones keyed; interpolated: keyed elsewhere, not on a posed frame (keyAll keys them at rest). Art past the canvas edge is cut off. Next: render_contact_sheet.
+Channels you pass replace the stored ones; null removes a bone or part key. A channel not keyed here interpolates between keys on other frames, not to rest: key offsets on every frame or none. Part keys hold both ways: set z or visible once. "frames" poses many frames as one undo step. targets {bone:{x,y}}: IK sets parent angles (wins over bones, earlier targets); reached: within 1 px. Output keyed: bones keyed; interpolated: keyed elsewhere, not on a posed frame (keyAll keys them at rest). Off-canvas art is cut. Next: render_contact_sheet.
 
 - Safety: `mutate`
 - MCP tool: `rig_set_pose`

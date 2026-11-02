@@ -84,6 +84,15 @@ export const rigApplyPreset = defineOp({
     const direction = input.direction ?? SUPPORTED_VIEW;
     const rig = requireRig(doc);
     const rigView = viewForAnimation(doc, { direction });
+    if (rigView.name !== SUPPORTED_VIEW) {
+      throw new OpError(
+        'BAD_INPUT',
+        `direction "${direction}" is drawn by the rig view "${rigView.name}", but presets are built for the "${SUPPORTED_VIEW}" view only`,
+        {
+          issues: [{ path: 'direction', message: `must be drawn by the "${SUPPORTED_VIEW}" view` }],
+        },
+      );
+    }
     const result = preset.generate({ bones: rig.bones, view: rigView }, params);
 
     const existing = doc.animations.find((a) => a.group === group && a.direction === direction);
@@ -133,6 +142,14 @@ export const rigApplyPreset = defineOp({
         });
       }
       for (let i = have - 1; i >= n; i--) deleteFrame(ctx.tx, ref, i);
+      if (input.durationMs !== undefined) {
+        const durationMs = input.durationMs;
+        ctx.tx.update((d) => {
+          const anim = d.animations.find((a) => a.id === id);
+          if (anim === undefined || !('frames' in anim)) return;
+          for (const f of anim.frames) f.durationMs = durationMs;
+        });
+      }
       if (existing.overrides.length > 0) {
         warnings.push(
           `${String(existing.overrides.length)} pixel override(s) kept; check them with override_list (they may be stale)`,

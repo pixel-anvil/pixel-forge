@@ -105,6 +105,39 @@ describe('rig.applyPreset', () => {
     expect(documentHash(hero.store)).toBe(before);
   });
 
+  it('applies durationMs to every frame of a replaced animation', async () => {
+    const { hero, run } = await openHero();
+    await apply(run, { preset: 'walk', frames: 8 });
+    const out = await apply(run, { preset: 'walk', frames: 6, replace: true, durationMs: 55 });
+    const a = need(hero.store.doc.animations.find((x) => x.id === out.animation));
+    if (!('frames' in a)) throw new Error('not authored');
+    expect(a.frames.map((f) => f.durationMs)).toEqual(Array<number>(6).fill(55));
+    // Grown: the old frames and the new ones all take it.
+    const grown = await apply(run, { preset: 'walk', frames: 9, replace: true, durationMs: 70 });
+    const g = need(hero.store.doc.animations.find((x) => x.id === grown.animation));
+    if (!('frames' in g)) throw new Error('not authored');
+    expect(g.frames.map((f) => f.durationMs)).toEqual(Array<number>(9).fill(70));
+    // Without durationMs the stored durations stay.
+    await apply(run, { preset: 'walk', frames: 9, replace: true });
+    const k = need(hero.store.doc.animations.find((x) => x.id === grown.animation));
+    expect('frames' in k && k.frames.every((f) => f.durationMs === 70)).toBe(true);
+  });
+
+  it('rejects a direction that the rig draws with a view other than side', async () => {
+    const { hero, run } = await openHero();
+    await registry.execute(
+      'rig.editBones',
+      { doc: HERO_ID, edits: [{ action: 'addView', name: 'front', directions: ['front'] }] },
+      run,
+    );
+    const before = documentHash(hero.store);
+    const err = await rejection(apply(run, { preset: 'walk', direction: 'front' }));
+    expect(err.code).toBe('BAD_INPUT');
+    expect(err.message).toContain('"front"');
+    expect(err.message).toContain('"side"');
+    expect(documentHash(hero.store)).toBe(before);
+  });
+
   it('is deterministic', async () => {
     const a = await openHero();
     const b = await openHero();

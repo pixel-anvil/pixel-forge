@@ -179,7 +179,7 @@ export const rigSetPose = defineOp({
   summary:
     'Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z, visible) on one frame or many.',
   description:
-    'Channels you pass replace the stored ones; null removes a bone or part key. A channel with no key here interpolates between keys on other frames, not back to rest: key offsets on every frame or on none. Part keys hold both ways: set z or visible once. "frames" poses many frames as one undo step. targets {bone:{x,y}}: IK sets parent angle keys; reached: within 1 px. Output keyed: bones keyed; interpolated: keyed elsewhere, not on a posed frame (keyAll keys them at rest). Art past the canvas edge is cut off. Next: render_contact_sheet.',
+    'Channels you pass replace the stored ones; null removes a bone or part key. A channel not keyed here interpolates between keys on other frames, not to rest: key offsets on every frame or none. Part keys hold both ways: set z or visible once. "frames" poses many frames as one undo step. targets {bone:{x,y}}: IK sets parent angles (wins over bones, earlier targets); reached: within 1 px. Output keyed: bones keyed; interpolated: keyed elsewhere, not on a posed frame (keyAll keys them at rest). Off-canvas art is cut. Next: render_contact_sheet.',
   input: z.strictObject({
     doc: DocRef,
     animation: AnimRef,
@@ -299,6 +299,7 @@ export const rigSetPose = defineOp({
 
     // Resolve every reference before touching the document.
     const seenByFrame: Set<string>[] = [];
+    const targetsByPlan: [string, z.output<typeof EffectorTarget>][][] = [];
     const plans: FramePlan[] = items.map((it) => {
       const { index: frameIndex, frame } = resolveFrame(animation, it.frame);
       if (frameSeen.has(frameIndex)) {
@@ -360,21 +361,43 @@ export const rigSetPose = defineOp({
         }
         return { id: part.id, name, stored, next };
       });
-      const targetResults: TargetResult[] = [];
-      if (targets.length > 0 && rig !== undefined) {
-        // The pose the solver starts from: the resolved frame, then this call's explicit angles,
-        // then each earlier target's solve (so two targets on one frame see each other).
-        const pose = new Map<BoneId, PoseKey>(resolvePose(rig, animation, frameIndex));
-        for (const e of boneEdits) {
-          if (e.next !== undefined) pose.set(e.id, { ...pose.get(e.id), ...e.next });
+      targetsByPlan.push(targets);
+      return {
+        frameIndex,
+        frameId: frame.id,
+        bones: boneEdits,
+        parts: partEdits,
+        targets: [],
+      };
+    });
+
+    if (rig !== undefined && hasTargets) {
+      // The solver starts from a copy of the animation with every explicit bone edit of this call
+      // applied on all frames (a null removes the key), so interpolation sees the whole call. Each
+      // solve is written back into the copy before the next target, on this frame or a later one.
+      const working = {
+        ...animation,
+        frames: animation.frames.map((f) => ({ ...f, boneKeys: { ...f.boneKeys } })),
+      };
+      plans.forEach((p) => {
+        const wf = working.frames[p.frameIndex];
+        if (wf === undefined) return;
+        for (const e of p.bones) {
+          if (e.next === undefined) Reflect.deleteProperty(wf.boneKeys, e.id);
+          else wf.boneKeys[e.id] = e.next;
         }
-        const view = viewForAnimation(doc, animation);
-        for (const [ref, t] of targets) {
+      });
+      const view = viewForAnimation(doc, animation);
+      plans.forEach((p, i) => {
+        const wf = working.frames[p.frameIndex];
+        const frame = animation.frames[p.frameIndex];
+        if (wf === undefined || frame === undefined) return;
+        for (const [ref, t] of targetsByPlan[i] ?? []) {
           const effector = resolveBone(doc, ref);
           const sol = solveIk({
             rig,
             view,
-            pose,
+            pose: new Map<BoneId, PoseKey>(resolvePose(rig, working, p.frameIndex)),
             effector: effector.id,
             target: { x: t.x, y: t.y },
             angleQuantum: animation.angleQuantum ?? 1,
@@ -384,19 +407,21 @@ export const rigSetPose = defineOp({
           const keyedNames: string[] = [];
           for (const [id, angle] of sol.angles) {
             const bone = resolveBone(doc, id);
-            unique(bone.id, `${it.path}targets.${ref}`);
-            const stored = frame.boneKeys[bone.id];
-            boneEdits.push({
-              id: bone.id,
-              name: bone.name,
-              stored,
-              next: mergeBoneKey(stored, { angle }),
+            // A solved angle replaces an explicit or earlier angle on the same bone; its other
+            // channels stay.
+            const edit = p.bones.find((e) => e.id === bone.id);
+            const next = mergeBoneKey(edit === undefined ? frame.boneKeys[bone.id] : edit.next, {
+              angle,
             });
-            pose.set(bone.id, { ...pose.get(bone.id), angle });
+            if (edit === undefined) {
+              p.bones.push({ id: bone.id, name: bone.name, stored: frame.boneKeys[bone.id], next });
+            } else edit.next = next;
+            wf.boneKeys[bone.id] = next;
+            seenByFrame[i]?.add(bone.id);
             keyedNames.push(bone.name);
           }
-          targetResults.push({
-            frame: frameIndex,
+          p.targets.push({
+            frame: p.frameIndex,
             bone: effector.name,
             target: { x: t.x, y: t.y },
             effector: { x: sol.effector.x, y: sol.effector.y },
@@ -404,15 +429,8 @@ export const rigSetPose = defineOp({
             keyed: keyedNames,
           });
         }
-      }
-      return {
-        frameIndex,
-        frameId: frame.id,
-        bones: boneEdits,
-        parts: partEdits,
-        targets: targetResults,
-      };
-    });
+      });
+    }
 
     if (rig !== undefined && keyAll) {
       // Key every bone the call did not name, at rest. Offsets only for bones whose offset is keyed

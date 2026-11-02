@@ -142,10 +142,101 @@ describe('rig.setPose targets', () => {
     expect((await bad({ targets: { hand_r: { ...h, chain: 3, bend: 'cw' } } })).code).toBe(
       'INVALID_VALUE',
     );
-    expect((await bad({ bones: { upper_arm_r: { angle: 5 } }, targets: { hand_r: h } })).code).toBe(
-      'BAD_INPUT',
-    );
     expect((await bad({ targets: { root: h } })).code).toBe('INVALID_VALUE');
     expect(hero.store.version).toBe(version);
+  });
+
+  const near = (p: { x: number; y: number }, x: number, y: number) => {
+    expect(Math.abs(p.x - x)).toBeLessThanOrEqual(1);
+    expect(Math.abs(p.y - y)).toBeLessThanOrEqual(1);
+  };
+
+  it('starts the solve from the other frames this call poses (interpolated torso)', async () => {
+    const { hero, run } = await openHero();
+    for (let i = 0; i < 4; i++) {
+      await registry.execute('frame.duplicate', { doc: HERO_ID, animation: anim, frame: 0 }, run);
+    }
+    await registry.execute(
+      'rig.setPose',
+      {
+        doc: HERO_ID,
+        animation: anim,
+        frames: [
+          { frame: 0, bones: { torso: { angle: 20 } } },
+          { frame: 2, targets: { hand_r: { x: 30, y: 22 } } },
+          { frame: 4, bones: { torso: { angle: 20 } } },
+        ],
+      },
+      run,
+    );
+    // The torso is not keyed on frame 2, so it holds 20 there: the arm must reach with it.
+    near(pivotOf(hero, 'hand_r', 2), 30, 22);
+  });
+
+  it('honours a null removal in the same call when it starts the solve', async () => {
+    const { hero, run } = await openHero();
+    await registry.execute(
+      'rig.setPose',
+      { doc: HERO_ID, animation: anim, frame: 0, bones: { torso: { angle: 25 } } },
+      run,
+    );
+    const out = (await registry.execute(
+      'rig.setPose',
+      {
+        doc: HERO_ID,
+        animation: anim,
+        frame: 0,
+        bones: { torso: null },
+        targets: { hand_r: { x: 30, y: 22 } },
+      },
+      run,
+    )) as Out;
+    const a = need(hero.store.doc.animations[0]);
+    const keys = 'frames' in a ? (a.frames[0]?.boneKeys ?? {}) : {};
+    const torso = need(hero.store.doc.rig?.bones.find((b) => b.name === 'torso')).id;
+    expect(keys[torso]).toBeUndefined();
+    expect(out.targets?.[0]?.reached).toBe(true);
+    near(pivotOf(hero, 'hand_r'), 30, 22);
+  });
+
+  it('lets two targets share a chain bone, the later solve winning', async () => {
+    const { hero, run } = await openHero();
+    const out = (await registry.execute(
+      'rig.setPose',
+      {
+        doc: HERO_ID,
+        animation: anim,
+        frame: 0,
+        targets: { hand_r: { x: 26, y: 30, chain: 3 }, hand_l: { x: 14, y: 30, chain: 3 } },
+      },
+      run,
+    )) as Out;
+    expect(out.targets?.map((t) => t.bone)).toEqual(['hand_r', 'hand_l']);
+    expect(out.targets?.[0]?.keyed).toContain('torso');
+    expect(out.targets?.[1]?.keyed).toContain('torso');
+    expect(out.targets?.[1]?.reached).toBe(true);
+    near(pivotOf(hero, 'hand_l'), 14, 30);
+  });
+
+  it('lets a target override an explicit bones angle and keeps its other channels', async () => {
+    const { hero, run } = await openHero();
+    const out = (await registry.execute(
+      'rig.setPose',
+      {
+        doc: HERO_ID,
+        animation: anim,
+        frame: 0,
+        bones: { upper_arm_r: { angle: 5, offset: { x: 1, y: 0 } } },
+        targets: { hand_r: { x: 30, y: 22 } },
+      },
+      run,
+    )) as Out;
+    expect(out.targets?.[0]?.reached).toBe(true);
+    near(pivotOf(hero, 'hand_r'), 30, 22);
+    const a = need(hero.store.doc.animations[0]);
+    const id = need(hero.store.doc.rig?.bones.find((b) => b.name === 'upper_arm_r')).id;
+    const key = 'frames' in a ? a.frames[0]?.boneKeys[id] : undefined;
+    expect(key?.offset).toEqual({ x: 1, y: 0 });
+    expect(key?.angle).not.toBe(5);
   });
 });

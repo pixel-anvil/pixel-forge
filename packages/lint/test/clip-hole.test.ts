@@ -75,6 +75,17 @@ describe('pixels.clipped', () => {
     expect(first(f).data).toMatchObject({ count: 24, sides: { right: 24 } });
   });
 
+  it('loses a mirror pixel the renderer clipped before the flip', () => {
+    // Part columns -3..8 (3 outside on the left), origin column 10: flipped (x' = 20 - x) they
+    // span 12..23, inside. The renderer clips the source first, so 36 pixels are still lost.
+    const s = partStore({ ...base, art: SOLID, at: { x: 3, y: 15 }, originX: 10, mirror: true });
+    const mirrorId = s.doc.animations[1]?.id;
+    const f = only('pixels.clipped', lint(s)).filter((x) => x.location.animationId === mirrorId);
+    expect(f).toHaveLength(1);
+    expect(first(f).data).toMatchObject({ count: 36, sides: { left: 36, right: 0 } });
+    expect(first(f).location).toMatchObject({ pixel: { x: -3, y: 9 } });
+  });
+
   it('caps the listed pixels with maxPixels, and has nothing to say without a rig', () => {
     const s = partStore({ ...base, art: SOLID, at: { x: 3, y: 15 } });
     const f = only('pixels.clipped', lint(s, { maxPixels: 2 }));
