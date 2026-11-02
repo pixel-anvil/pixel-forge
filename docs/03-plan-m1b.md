@@ -43,7 +43,7 @@ Limits stay the same: two agents at a time, at most one on Opus.
 | E2.1 | Variant auto-select with hysteresis | sonnet | high | M | — | ☐ |
 | E2.2 | Lint rule for a large variant residual | sonnet | medium | S | E2.1 | ☐ |
 | E7.1 | Quadruped template (STRETCH: moved out of M1b on 2026-11-02 at the user's request) | haiku | low | S | — | ☐ |
-| E3.1 | Motion preset generator API + walk | opus | high | M | E1.1 | ☐ |
+| E3.1 | Motion preset generator API + walk | opus | high | M | E1.1 | ☑ |
 | E3.2 | Presets: idle-breathe, run, jump, swing | sonnet | medium | M | E3.1 | ☐ |
 | E3.3 | `rig_apply_preset` + W3-presets scenario | sonnet | medium | S | E3.2 | ☐ |
 | G2b | **Mid review:** `code-review` over B0 and B1, MCP smoke run | opus | high | — | B0, B1 | ☐ |

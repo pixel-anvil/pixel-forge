@@ -155,3 +155,32 @@ export type {
   FitPoseResult,
   FitVariantSlot,
 } from './fit-pose.js';
+export {
+  CYCLE_UNITS,
+  commonParams,
+  divRound,
+  param,
+  placeLeg,
+  presetAnimation,
+  presetContext,
+  resolveParams,
+  restLength,
+  scaleAngle,
+  scaleInt,
+  turnCos,
+  turnSin,
+} from './preset.js';
+export type {
+  LegPlacement,
+  Preset,
+  PresetBone,
+  PresetContext,
+  PresetFrame,
+  PresetParamSpec,
+  PresetParamSpecs,
+  PresetParams,
+  PresetResult,
+  PresetRig,
+} from './preset.js';
+export { WALK_PARAMS, walk } from './walk.js';
+export { PRESETS, PRESET_NAMES, getPreset } from './presets.js';
