@@ -3,7 +3,8 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist",
-    "tsBuildInfoFile": "dist/.tsbuildinfo"
+    "tsBuildInfoFile": "dist/.tsbuildinfo",
+    "types": ["node"]
   },
   "include": ["src"],
   "exclude": ["dist"],
@@ -16,6 +17,15 @@
     },
     {
       "path": "../png"
+    },
+    {
+      "path": "../schema"
+    },
+    {
+      "path": "../raster"
+    },
+    {
+      "path": "../rig"
     }
   ]
 }

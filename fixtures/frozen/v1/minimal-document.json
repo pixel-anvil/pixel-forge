@@ -1,0 +1,472 @@
+{
+  "activePaletteId": "pal_w692pj",
+  "animations": [
+    {
+      "angleQuantum": 1,
+      "direction": "right",
+      "frames": [
+        {
+          "boneKeys": {
+            "bon_d0x9zy": {
+              "angle": 5,
+              "interp": "ease-in-out"
+            },
+            "bon_j21xjm": {
+              "angle": -30
+            },
+            "bon_tjt3de": {
+              "offset": {
+                "x": 0,
+                "y": -1
+              }
+            }
+          },
+          "durationMs": 100,
+          "events": [
+            "footstep"
+          ],
+          "id": "frm_01gzt6",
+          "markers": {
+            "ball": {
+              "x": 24,
+              "y": 22
+            },
+            "hand_r": {
+              "x": 19,
+              "y": 20
+            }
+          },
+          "partKeys": {
+            "prt_pzfcgj": {
+              "variant": "auto"
+            }
+          },
+          "rootMotion": {
+            "dx": 2,
+            "dy": 0
+          }
+        },
+        {
+          "boneKeys": {
+            "bon_d0x9zy": {
+              "angle": -5
+            },
+            "bon_j21xjm": {
+              "angle": 30,
+              "flipX": false,
+              "interp": "step"
+            }
+          },
+          "durationMs": 150,
+          "events": [],
+          "id": "frm_5x5f6x",
+          "markers": {
+            "ball": {
+              "x": 25,
+              "y": 21
+            },
+            "hand_r": {
+              "x": 20,
+              "y": 19
+            }
+          },
+          "partKeys": {
+            "prt_pzfcgj": {
+              "variant": "var_dfpvpr",
+              "visible": true,
+              "z": 2
+            }
+          },
+          "rootMotion": {
+            "dx": 3,
+            "dy": 0
+          }
+        }
+      ],
+      "group": "run",
+      "id": "anm_z6wgnj",
+      "loop": "loop",
+      "overrides": [
+        {
+          "anchor": {
+            "x": -1,
+            "y": -1
+          },
+          "baseHash": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "frameId": "frm_01gzt6",
+          "id": "ovr_39k8nx",
+          "set": "img_n4dbrm",
+          "target": {
+            "partId": "prt_pzfcgj"
+          }
+        }
+      ],
+      "postPasses": {
+        "outline": {
+          "color": [
+            20,
+            12,
+            28,
+            255
+          ],
+          "outsideOnly": true
+        },
+        "removeOrphans": {}
+      }
+    },
+    {
+      "direction": "left",
+      "group": "run",
+      "id": "anm_ww0x8m",
+      "mirrorOf": "anm_z6wgnj",
+      "overrides": [
+        {
+          "anchor": {
+            "x": 10,
+            "y": 12
+          },
+          "baseHash": "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",
+          "erase": "img_5ffttn",
+          "frameId": "frm_5x5f6x",
+          "id": "ovr_4mh6yh",
+          "set": "img_5ehg3r",
+          "target": "final"
+        }
+      ]
+    }
+  ],
+  "directionFallback": {
+    "down": [
+      "down",
+      "right"
+    ],
+    "up": [
+      "up",
+      "right"
+    ]
+  },
+  "eventDefs": [
+    {
+      "name": "footstep"
+    }
+  ],
+  "layers": [
+    {
+      "children": [
+        {
+          "export": true,
+          "id": "lay_hg8z88",
+          "kind": "part",
+          "name": "torso",
+          "opacity": 255,
+          "visible": true
+        },
+        {
+          "export": true,
+          "id": "lay_s00y6z",
+          "kind": "part",
+          "name": "hand_r",
+          "opacity": 255,
+          "visible": true
+        }
+      ],
+      "export": true,
+      "id": "lay_hv53ch",
+      "kind": "group",
+      "name": "body",
+      "opacity": 255,
+      "visible": true
+    },
+    {
+      "cels": {
+        "frm_01gzt6": {
+          "imageId": "img_40cp3x",
+          "offset": {
+            "x": 22,
+            "y": 20
+          },
+          "opacity": 255
+        },
+        "frm_5x5f6x": {
+          "linkTo": "frm_01gzt6"
+        }
+      },
+      "export": true,
+      "id": "lay_a2d0xs",
+      "kind": "pixel",
+      "name": "ball",
+      "opacity": 255,
+      "visible": true
+    }
+  ],
+  "markerDefs": [
+    {
+      "name": "hand_r"
+    },
+    {
+      "description": "Where the ball sits.",
+      "name": "ball"
+    }
+  ],
+  "meta": {
+    "canvas": {
+      "h": 32,
+      "w": 32
+    },
+    "colorMode": "indexed",
+    "id": "doc_qzpx4z",
+    "ids": {
+      "next": 28,
+      "seed": 42
+    },
+    "name": "hero",
+    "origin": {
+      "x": 16,
+      "y": 30
+    },
+    "paletteLocked": true,
+    "pixelsPerUnit": 16,
+    "schemaVersion": 1
+  },
+  "palettes": [
+    {
+      "colors": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          20,
+          12,
+          28,
+          255
+        ],
+        [
+          133,
+          76,
+          48,
+          255
+        ],
+        [
+          210,
+          125,
+          44,
+          255
+        ],
+        [
+          255,
+          204,
+          170,
+          255
+        ],
+        [
+          48,
+          52,
+          109,
+          255
+        ],
+        [
+          89,
+          125,
+          206,
+          255
+        ],
+        [
+          222,
+          238,
+          214,
+          255
+        ]
+      ],
+      "id": "pal_w692pj",
+      "name": "Base kit",
+      "ramps": [
+        {
+          "indices": [
+            2,
+            3,
+            4
+          ],
+          "name": "skin"
+        },
+        {
+          "indices": [
+            5,
+            6
+          ],
+          "name": "cloth"
+        }
+      ]
+    },
+    {
+      "colors": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          20,
+          12,
+          28,
+          255
+        ],
+        [
+          133,
+          76,
+          48,
+          255
+        ],
+        [
+          210,
+          125,
+          44,
+          255
+        ],
+        [
+          255,
+          204,
+          170,
+          255
+        ],
+        [
+          117,
+          36,
+          36,
+          255
+        ],
+        [
+          208,
+          70,
+          72,
+          255
+        ],
+        [
+          222,
+          238,
+          214,
+          255
+        ]
+      ],
+      "id": "pal_fq7gaz",
+      "name": "Rival kit",
+      "ramps": [
+        {
+          "indices": [
+            5,
+            6
+          ],
+          "name": "cloth"
+        }
+      ]
+    }
+  ],
+  "rig": {
+    "bones": [
+      {
+        "id": "bon_tjt3de",
+        "length": 0,
+        "name": "root"
+      },
+      {
+        "id": "bon_d0x9zy",
+        "length": 8,
+        "name": "torso",
+        "parentId": "bon_tjt3de"
+      },
+      {
+        "id": "bon_j21xjm",
+        "length": 4,
+        "name": "hand_r",
+        "parentId": "bon_d0x9zy"
+      }
+    ],
+    "parts": [
+      {
+        "boneId": "bon_d0x9zy",
+        "id": "prt_psa5xj",
+        "layerId": "lay_hg8z88",
+        "variants": [
+          {
+            "id": "var_814yd4",
+            "imageId": "img_691kxb",
+            "name": "default",
+            "pivot": {
+              "x": 3,
+              "y": 9
+            },
+            "tags": [],
+            "viewId": "viw_8t40zj"
+          }
+        ]
+      },
+      {
+        "boneId": "bon_j21xjm",
+        "id": "prt_pzfcgj",
+        "layerId": "lay_s00y6z",
+        "maxResidualDeg": 15,
+        "rotation": "rotsprite",
+        "variants": [
+          {
+            "drawnAngle": 90,
+            "id": "var_dfpvpr",
+            "imageId": "img_qwqbs8",
+            "name": "open",
+            "pivot": {
+              "x": 1,
+              "y": 0
+            },
+            "tags": [
+              "open"
+            ],
+            "viewId": "viw_8t40zj"
+          }
+        ]
+      }
+    ],
+    "views": [
+      {
+        "defaultZ": {
+          "prt_psa5xj": 0,
+          "prt_pzfcgj": 1
+        },
+        "directions": [
+          "right"
+        ],
+        "id": "viw_8t40zj",
+        "name": "side",
+        "partVisibility": {
+          "prt_psa5xj": true,
+          "prt_pzfcgj": true
+        },
+        "rest": {
+          "bon_d0x9zy": {
+            "angle": -90,
+            "x": 0,
+            "y": -2
+          },
+          "bon_j21xjm": {
+            "angle": 90,
+            "x": 2,
+            "y": -6
+          },
+          "bon_tjt3de": {
+            "angle": -90,
+            "x": 16,
+            "y": 28
+          }
+        }
+      }
+    ]
+  },
+  "skins": [
+    {
+      "id": "skn_npkj0x",
+      "name": "rival",
+      "paletteId": "pal_fq7gaz"
+    }
+  ]
+}

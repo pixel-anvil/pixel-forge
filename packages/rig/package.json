@@ -1,6 +1,6 @@
 {
   "name": "@pixel-forge/rig",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "FK/IK, key interpolation and quantisation, snapping, variant selection, part render, overrides and staleness, joint check, presets and templates.",
   "license": "MIT",
   "type": "module",
@@ -16,7 +16,10 @@
   ],
   "scripts": {
     "build": "tsc -b",
-    "test": "vitest run --project rig"
+    "test": "vitest run --root ../.. --project rig"
+  },
+  "devDependencies": {
+    "@pixel-forge/testkit": "workspace:*"
   },
   "dependencies": {
     "@pixel-forge/schema": "workspace:*",

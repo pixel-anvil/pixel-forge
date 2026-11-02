@@ -1,0 +1,541 @@
+{
+  "steps": [
+    {
+      "id": "open",
+      "op": "doc.open",
+      "input": {
+        "path": "hero.pxf"
+      }
+    },
+    {
+      "id": "create",
+      "op": "anim.create",
+      "input": {
+        "doc": "${open.output.doc}",
+        "group": "run",
+        "direction": "side",
+        "frames": 6,
+        "durationMs": 83
+      },
+      "expect": {
+        "output": {
+          "label": "run/side"
+        }
+      }
+    },
+    {
+      "id": "pose0",
+      "op": "rig.setPose",
+      "input": {
+        "doc": "${open.output.doc}",
+        "animation": {
+          "group": "run",
+          "direction": "side"
+        },
+        "frame": 0,
+        "bones": {
+          "torso": {
+            "angle": -4
+          },
+          "upper_arm_r": {
+            "angle": 25
+          },
+          "upper_arm_l": {
+            "angle": -25
+          },
+          "lower_arm_r": {
+            "angle": -20
+          },
+          "lower_arm_l": {
+            "angle": -20
+          },
+          "thigh_r": {
+            "angle": 12
+          },
+          "thigh_l": {
+            "angle": 12
+          },
+          "shin_r": {
+            "angle": -24
+          },
+          "shin_l": {
+            "angle": -24
+          }
+        }
+      },
+      "expect": {
+        "output": {
+          "frameIndex": 0
+        }
+      }
+    },
+    {
+      "id": "pose1",
+      "op": "rig.setPose",
+      "input": {
+        "doc": "${open.output.doc}",
+        "animation": {
+          "group": "run",
+          "direction": "side"
+        },
+        "frame": 1,
+        "bones": {
+          "torso": {
+            "angle": 6
+          },
+          "upper_arm_r": {
+            "angle": 28
+          },
+          "upper_arm_l": {
+            "angle": -28
+          },
+          "lower_arm_r": {
+            "angle": -35
+          },
+          "lower_arm_l": {
+            "angle": -35
+          },
+          "thigh_r": {
+            "angle": -28
+          },
+          "thigh_l": {
+            "angle": 22
+          },
+          "shin_r": {
+            "angle": 6
+          },
+          "shin_l": {
+            "angle": -30
+          }
+        }
+      },
+      "expect": {
+        "output": {
+          "frameIndex": 1
+        }
+      }
+    },
+    {
+      "id": "pose2",
+      "op": "rig.setPose",
+      "input": {
+        "doc": "${open.output.doc}",
+        "animation": {
+          "group": "run",
+          "direction": "side"
+        },
+        "frame": 2,
+        "bones": {
+          "torso": {
+            "angle": 8
+          },
+          "upper_arm_r": {
+            "angle": 10
+          },
+          "upper_arm_l": {
+            "angle": -10
+          },
+          "lower_arm_r": {
+            "angle": -35
+          },
+          "lower_arm_l": {
+            "angle": -35
+          },
+          "thigh_r": {
+            "angle": -12
+          },
+          "thigh_l": {
+            "angle": 28
+          },
+          "shin_r": {
+            "angle": -25
+          },
+          "shin_l": {
+            "angle": -28
+          }
+        }
+      },
+      "expect": {
+        "output": {
+          "frameIndex": 2
+        }
+      }
+    },
+    {
+      "id": "pose3",
+      "op": "rig.setPose",
+      "input": {
+        "doc": "${open.output.doc}",
+        "animation": {
+          "group": "run",
+          "direction": "side"
+        },
+        "frame": 3,
+        "bones": {
+          "torso": {
+            "angle": 6
+          },
+          "upper_arm_r": {
+            "angle": -10
+          },
+          "upper_arm_l": {
+            "angle": 10
+          },
+          "lower_arm_r": {
+            "angle": -35
+          },
+          "lower_arm_l": {
+            "angle": -35
+          },
+          "thigh_r": {
+            "angle": 10
+          },
+          "thigh_l": {
+            "angle": 10
+          },
+          "shin_r": {
+            "angle": -30
+          },
+          "shin_l": {
+            "angle": -30
+          }
+        }
+      },
+      "expect": {
+        "output": {
+          "frameIndex": 3
+        }
+      }
+    },
+    {
+      "id": "pose4",
+      "op": "rig.setPose",
+      "input": {
+        "doc": "${open.output.doc}",
+        "animation": {
+          "group": "run",
+          "direction": "side"
+        },
+        "frame": 4,
+        "bones": {
+          "torso": {
+            "angle": 6
+          },
+          "upper_arm_r": {
+            "angle": -28
+          },
+          "upper_arm_l": {
+            "angle": 28
+          },
+          "lower_arm_r": {
+            "angle": -35
+          },
+          "lower_arm_l": {
+            "angle": -35
+          },
+          "thigh_r": {
+            "angle": 22
+          },
+          "thigh_l": {
+            "angle": -28
+          },
+          "shin_r": {
+            "angle": -30
+          },
+          "shin_l": {
+            "angle": 6
+          }
+        }
+      },
+      "expect": {
+        "output": {
+          "frameIndex": 4
+        }
+      }
+    },
+    {
+      "id": "pose5",
+      "op": "rig.setPose",
+      "input": {
+        "doc": "${open.output.doc}",
+        "animation": {
+          "group": "run",
+          "direction": "side"
+        },
+        "frame": 5,
+        "bones": {
+          "torso": {
+            "angle": 8
+          },
+          "upper_arm_r": {
+            "angle": -10
+          },
+          "upper_arm_l": {
+            "angle": 10
+          },
+          "lower_arm_r": {
+            "angle": -35
+          },
+          "lower_arm_l": {
+            "angle": -35
+          },
+          "thigh_r": {
+            "angle": 28
+          },
+          "thigh_l": {
+            "angle": -12
+          },
+          "shin_r": {
+            "angle": -28
+          },
+          "shin_l": {
+            "angle": -25
+          }
+        }
+      },
+      "expect": {
+        "output": {
+          "frameIndex": 5
+        }
+      }
+    },
+    {
+      "id": "undo-pose5",
+      "op": "doc.undo",
+      "input": {
+        "doc": "${open.output.doc}"
+      },
+      "expect": {
+        "output": {
+          "undone": true,
+          "label": "AI: rig.setPose"
+        }
+      }
+    },
+    {
+      "id": "undo-pose4",
+      "op": "doc.undo",
+      "input": {
+        "doc": "${open.output.doc}"
+      },
+      "expect": {
+        "output": {
+          "undone": true,
+          "label": "AI: rig.setPose"
+        }
+      }
+    },
+    {
+      "id": "undo-pose3",
+      "op": "doc.undo",
+      "input": {
+        "doc": "${open.output.doc}"
+      },
+      "expect": {
+        "output": {
+          "undone": true,
+          "label": "AI: rig.setPose"
+        }
+      }
+    },
+    {
+      "id": "undo-pose2",
+      "op": "doc.undo",
+      "input": {
+        "doc": "${open.output.doc}"
+      },
+      "expect": {
+        "output": {
+          "undone": true,
+          "label": "AI: rig.setPose"
+        }
+      }
+    },
+    {
+      "id": "undo-pose1",
+      "op": "doc.undo",
+      "input": {
+        "doc": "${open.output.doc}"
+      },
+      "expect": {
+        "output": {
+          "undone": true,
+          "label": "AI: rig.setPose"
+        }
+      }
+    },
+    {
+      "id": "undo-pose0",
+      "op": "doc.undo",
+      "input": {
+        "doc": "${open.output.doc}"
+      },
+      "expect": {
+        "output": {
+          "undone": true,
+          "label": "AI: rig.setPose"
+        }
+      }
+    },
+    {
+      "id": "undo-create",
+      "op": "doc.undo",
+      "input": {
+        "doc": "${open.output.doc}"
+      },
+      "expect": {
+        "output": {
+          "undone": true,
+          "label": "AI: anim.create"
+        }
+      }
+    },
+    {
+      "id": "undo-empty",
+      "op": "doc.undo",
+      "input": {
+        "doc": "${open.output.doc}"
+      },
+      "expect": {
+        "output": {
+          "undone": false,
+          "label": null
+        }
+      }
+    },
+    {
+      "id": "redo-create",
+      "op": "doc.redo",
+      "input": {
+        "doc": "${open.output.doc}"
+      },
+      "expect": {
+        "output": {
+          "redone": true,
+          "label": "AI: anim.create"
+        }
+      }
+    },
+    {
+      "id": "redo-pose0",
+      "op": "doc.redo",
+      "input": {
+        "doc": "${open.output.doc}"
+      },
+      "expect": {
+        "output": {
+          "redone": true,
+          "label": "AI: rig.setPose"
+        }
+      }
+    },
+    {
+      "id": "redo-pose1",
+      "op": "doc.redo",
+      "input": {
+        "doc": "${open.output.doc}"
+      },
+      "expect": {
+        "output": {
+          "redone": true,
+          "label": "AI: rig.setPose"
+        }
+      }
+    },
+    {
+      "id": "redo-pose2",
+      "op": "doc.redo",
+      "input": {
+        "doc": "${open.output.doc}"
+      },
+      "expect": {
+        "output": {
+          "redone": true,
+          "label": "AI: rig.setPose"
+        }
+      }
+    },
+    {
+      "id": "redo-pose3",
+      "op": "doc.redo",
+      "input": {
+        "doc": "${open.output.doc}"
+      },
+      "expect": {
+        "output": {
+          "redone": true,
+          "label": "AI: rig.setPose"
+        }
+      }
+    },
+    {
+      "id": "redo-pose4",
+      "op": "doc.redo",
+      "input": {
+        "doc": "${open.output.doc}"
+      },
+      "expect": {
+        "output": {
+          "redone": true,
+          "label": "AI: rig.setPose"
+        }
+      }
+    },
+    {
+      "id": "redo-pose5",
+      "op": "doc.redo",
+      "input": {
+        "doc": "${open.output.doc}"
+      },
+      "expect": {
+        "output": {
+          "redone": true,
+          "label": "AI: rig.setPose"
+        }
+      }
+    },
+    {
+      "id": "redo-empty",
+      "op": "doc.redo",
+      "input": {
+        "doc": "${open.output.doc}"
+      },
+      "expect": {
+        "output": {
+          "redone": false
+        }
+      }
+    },
+    {
+      "id": "lint",
+      "op": "lint.run",
+      "input": {
+        "doc": "${open.output.doc}"
+      },
+      "expect": {
+        "output": {
+          "count": 0
+        }
+      }
+    },
+    {
+      "id": "sheet",
+      "op": "render.contactSheet",
+      "input": {
+        "doc": "${open.output.doc}",
+        "animations": [
+          {
+            "group": "run",
+            "direction": "side"
+          }
+        ],
+        "scale": 4
+      },
+      "expect": {
+        "output": {
+          "frames": 6
+        }
+      }
+    }
+  ]
+}

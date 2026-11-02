@@ -1,0 +1,113 @@
+{
+  "frames": [
+    {
+      "filename": "layers_parts 0.aseprite",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      },
+      "sourceSize": {
+        "w": 16,
+        "h": 16
+      },
+      "duration": 100
+    },
+    {
+      "filename": "layers_parts 1.aseprite",
+      "frame": {
+        "x": 16,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      },
+      "sourceSize": {
+        "w": 16,
+        "h": 16
+      },
+      "duration": 100
+    },
+    {
+      "filename": "layers_parts 2.aseprite",
+      "frame": {
+        "x": 32,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      },
+      "sourceSize": {
+        "w": 16,
+        "h": 16
+      },
+      "duration": 100
+    }
+  ],
+  "meta": {
+    "app": "https://www.aseprite.org/",
+    "format": "RGBA8888",
+    "size": {
+      "w": 48,
+      "h": 16
+    },
+    "scale": "1",
+    "frameTags": [],
+    "layers": [
+      {
+        "name": "body",
+        "opacity": 255,
+        "blendMode": "normal"
+      },
+      {
+        "name": "arm"
+      },
+      {
+        "name": "part:upper_arm_r",
+        "group": "arm",
+        "opacity": 255,
+        "blendMode": "normal"
+      },
+      {
+        "name": "part:lower_arm_r@45",
+        "group": "arm",
+        "opacity": 128,
+        "blendMode": "normal"
+      },
+      {
+        "name": "part:hand_r#side",
+        "group": "arm",
+        "opacity": 255,
+        "blendMode": "normal"
+      },
+      {
+        "name": "hidden_guide",
+        "opacity": 255,
+        "blendMode": "normal"
+      }
+    ]
+  }
+}

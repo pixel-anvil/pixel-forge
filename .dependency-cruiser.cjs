@@ -12,12 +12,14 @@ const ALLOWED = {
   convert: ['schema', 'color', 'raster'],
   core: ['schema', 'raster', 'rig'],
   lint: ['core', 'rig'],
-  io: ['core', 'convert', 'png'],
-  ops: ['core', 'lint', 'io', 'rig', 'convert'],
-  server: ['ops'],
+  io: ['core', 'convert', 'png', 'schema', 'raster', 'rig'],
+  ops: ['core', 'lint', 'io', 'rig', 'convert', 'schema', 'raster', 'png'], // raster, png: grid and render ops build and encode images (T5.3)
+  server: ['ops', 'io'], // io: the Node FileSystem/Clock (`@pixel-forge/io/node`)
   cli: ['server', 'ops'],
 };
 const ALL = Object.keys(ALLOWED);
+// Extra edges for test files only: lint tests build documents and images (schema ids, raster images).
+const TEST_EXTRA = { lint: ['schema', 'raster'] };
 
 // Matches a package whether resolved to its folder, through node_modules, or left unresolved.
 const target = (names) =>
@@ -40,7 +42,11 @@ const forbiddenEdges = ALL.flatMap((pkg) => {
       comment,
       severity: 'error',
       from: { path: `^packages/${pkg}/test/` },
-      to: { path: target(forbidden.filter((o) => o !== 'testkit')) },
+      to: {
+        path: target(
+          forbidden.filter((o) => o !== 'testkit' && !(TEST_EXTRA[pkg] ?? []).includes(o)),
+        ),
+      },
     },
   ];
 });
@@ -60,7 +66,8 @@ module.exports = {
       comment: 'Packages must not reach into a sibling package by relative path.',
       severity: 'error',
       from: { path: '^packages/([^/]+)/' },
-      to: { path: '^packages/([^/]+)/', pathNot: '^packages/$1/' },
+      // A sibling's built output (dist/) is how `@pixel-forge/<pkg>` resolves through the workspace symlink.
+      to: { path: '^packages/([^/]+)/', pathNot: ['^packages/$1/', '^packages/[^/]+/dist/'] },
     },
     {
       name: 'no-editor-or-godot-internals',
@@ -68,6 +75,14 @@ module.exports = {
       severity: 'error',
       from: { path: '^packages/' },
       to: { path: '(^packages/editor/|@pixel-forge/editor|^godot/)' },
+    },
+    {
+      name: 'io-no-node-builtins-outside-node-entry',
+      comment:
+        'io is pure except src/node.ts (the @pixel-forge/io/node entry point): no Node built-ins elsewhere in src.',
+      severity: 'error',
+      from: { path: '^packages/io/src/', pathNot: '^packages/io/src/node\\.ts$' },
+      to: { dependencyTypes: ['core'] },
     },
     {
       name: 'no-circular',

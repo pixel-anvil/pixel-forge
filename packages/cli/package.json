@@ -1,6 +1,6 @@
 {
   "name": "@pixel-forge/cli",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "The pf binary: serve, mcp, check, convert, render, export, lint, override import, pack/unpack.",
   "license": "MIT",
   "type": "module",
@@ -11,15 +11,26 @@
       "default": "./dist/index.js"
     }
   },
+  "bin": {
+    "pf": "./bundle/pf.mjs"
+  },
   "files": [
-    "dist"
+    "dist",
+    "bundle"
   ],
   "scripts": {
-    "build": "tsc -b",
-    "test": "vitest run --project cli"
+    "build": "tsc -b && tsup",
+    "bundle": "tsup",
+    "test": "vitest run --root ../.. --project cli"
   },
   "dependencies": {
+    "@pixel-forge/ops": "workspace:*",
     "@pixel-forge/server": "workspace:*",
-    "@pixel-forge/ops": "workspace:*"
+    "commander": "^14.0.3",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "execa": "^10.2.1",
+    "tsup": "^9.0.0"
   }
 }

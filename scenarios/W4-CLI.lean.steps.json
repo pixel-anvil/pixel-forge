@@ -1,0 +1,168 @@
+{
+  "steps": [
+    {
+      "id": "open",
+      "op": "doc.open",
+      "input": {
+        "path": "hero.pxf"
+      }
+    },
+    {
+      "id": "lean0",
+      "op": "rig.setPose",
+      "input": {
+        "doc": "${open.output.doc}",
+        "animation": {
+          "group": "run",
+          "direction": "side"
+        },
+        "frame": 0,
+        "bones": {
+          "torso": {
+            "angle": 1
+          },
+          "neck": {
+            "angle": -5
+          }
+        }
+      },
+      "expect": {
+        "output": {
+          "frameIndex": 0
+        }
+      }
+    },
+    {
+      "id": "lean1",
+      "op": "rig.setPose",
+      "input": {
+        "doc": "${open.output.doc}",
+        "animation": {
+          "group": "run",
+          "direction": "side"
+        },
+        "frame": 1,
+        "bones": {
+          "torso": {
+            "angle": 11
+          },
+          "neck": {
+            "angle": -5
+          }
+        }
+      },
+      "expect": {
+        "output": {
+          "frameIndex": 1
+        }
+      }
+    },
+    {
+      "id": "lean2",
+      "op": "rig.setPose",
+      "input": {
+        "doc": "${open.output.doc}",
+        "animation": {
+          "group": "run",
+          "direction": "side"
+        },
+        "frame": 2,
+        "bones": {
+          "torso": {
+            "angle": 13
+          },
+          "neck": {
+            "angle": -5
+          }
+        }
+      },
+      "expect": {
+        "output": {
+          "frameIndex": 2
+        }
+      }
+    },
+    {
+      "id": "lean3",
+      "op": "rig.setPose",
+      "input": {
+        "doc": "${open.output.doc}",
+        "animation": {
+          "group": "run",
+          "direction": "side"
+        },
+        "frame": 3,
+        "bones": {
+          "torso": {
+            "angle": 11
+          },
+          "neck": {
+            "angle": -5
+          }
+        }
+      },
+      "expect": {
+        "output": {
+          "frameIndex": 3
+        }
+      }
+    },
+    {
+      "id": "lean4",
+      "op": "rig.setPose",
+      "input": {
+        "doc": "${open.output.doc}",
+        "animation": {
+          "group": "run",
+          "direction": "side"
+        },
+        "frame": 4,
+        "bones": {
+          "torso": {
+            "angle": 11
+          },
+          "neck": {
+            "angle": -5
+          }
+        }
+      },
+      "expect": {
+        "output": {
+          "frameIndex": 4
+        }
+      }
+    },
+    {
+      "id": "lean5",
+      "op": "rig.setPose",
+      "input": {
+        "doc": "${open.output.doc}",
+        "animation": {
+          "group": "run",
+          "direction": "side"
+        },
+        "frame": 5,
+        "bones": {
+          "torso": {
+            "angle": 13
+          },
+          "neck": {
+            "angle": -5
+          }
+        }
+      },
+      "expect": {
+        "output": {
+          "frameIndex": 5
+        }
+      }
+    },
+    {
+      "id": "save",
+      "op": "doc.save",
+      "input": {
+        "doc": "${open.output.doc}"
+      }
+    }
+  ]
+}

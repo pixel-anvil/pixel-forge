@@ -1,6 +1,6 @@
 {
   "name": "@pixel-forge/convert",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Image-to-sprite steps and ConvertRecipe.",
   "license": "MIT",
   "type": "module",
@@ -16,7 +16,7 @@
   ],
   "scripts": {
     "build": "tsc -b",
-    "test": "vitest run --project convert"
+    "test": "vitest run --root ../.. --project convert"
   },
   "dependencies": {
     "@pixel-forge/schema": "workspace:*",

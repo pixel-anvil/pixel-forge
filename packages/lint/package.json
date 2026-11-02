@@ -1,6 +1,6 @@
 {
   "name": "@pixel-forge/lint",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Findings: palette, orphans, joints, stale overrides, rotation residual and opacity.",
   "license": "MIT",
   "type": "module",
@@ -16,10 +16,15 @@
   ],
   "scripts": {
     "build": "tsc -b",
-    "test": "vitest run --project lint"
+    "test": "vitest run --root ../.. --project lint"
   },
   "dependencies": {
     "@pixel-forge/core": "workspace:*",
     "@pixel-forge/rig": "workspace:*"
+  },
+  "devDependencies": {
+    "@pixel-forge/raster": "workspace:*",
+    "@pixel-forge/schema": "workspace:*",
+    "@pixel-forge/testkit": "workspace:*"
   }
 }

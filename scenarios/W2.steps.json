@@ -1,0 +1,62 @@
+{
+  "steps": [
+    { "id": "c", "op": "doc.create", "input": { "name": "hero", "width": 48, "height": 48 } },
+    {
+      "id": "template",
+      "op": "rig.applyTemplate",
+      "input": { "doc": "${c.output.doc}", "template": "humanoid-side", "height": 47 },
+      "expect": {
+        "output": {
+          "created": [
+            "root",
+            "pelvis",
+            "torso",
+            "neck",
+            "head",
+            "upper_arm_l",
+            "lower_arm_l",
+            "hand_l",
+            "upper_arm_r",
+            "lower_arm_r",
+            "hand_r",
+            "thigh_l",
+            "shin_l",
+            "foot_l",
+            "thigh_r",
+            "shin_r",
+            "foot_r"
+          ]
+        }
+      }
+    },
+    {
+      "id": "import",
+      "op": "io.import",
+      "input": { "doc": "${c.output.doc}", "file": "hero_parts.aseprite" },
+      "expect": { "output": { "parts": { "bound": 17, "updated": 0, "unbound": 0 } } }
+    },
+    {
+      "id": "bind",
+      "op": "rig.bindParts",
+      "input": { "doc": "${c.output.doc}" },
+      "expect": { "output": { "bound": [], "ambiguous": [], "skipped": [] } }
+    },
+    { "id": "summary", "op": "doc.summary", "input": { "doc": "${c.output.doc}" } },
+    {
+      "id": "joints",
+      "op": "rig.jointCheck",
+      "input": { "doc": "${c.output.doc}" },
+      "expect": {
+        "output": {
+          "summary": { "joints": 15, "jointsWithGaps": 0, "gapCount": 0, "unionCount": 0 }
+        }
+      }
+    },
+    {
+      "id": "lint",
+      "op": "lint.run",
+      "input": { "doc": "${c.output.doc}" },
+      "expect": { "output": { "count": 0 } }
+    }
+  ]
+}

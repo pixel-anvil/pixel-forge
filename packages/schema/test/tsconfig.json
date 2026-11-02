@@ -2,6 +2,7 @@
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "..",
+    "types": ["node"],
     "outDir": "../.check/test",
     "emitDeclarationOnly": true,
     "tsBuildInfoFile": "../.check/test/.tsbuildinfo"

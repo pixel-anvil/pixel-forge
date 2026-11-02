@@ -1,6 +1,6 @@
 {
   "name": "@pixel-forge/png",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Pure, deterministic PNG encode/decode on fflate. Used by testkit and io.",
   "license": "MIT",
   "type": "module",
@@ -16,6 +16,13 @@
   ],
   "scripts": {
     "build": "tsc -b",
-    "test": "vitest run --project png"
+    "test": "vitest run --root ../.. --project png"
+  },
+  "dependencies": {
+    "fflate": "^0.8.3"
+  },
+  "devDependencies": {
+    "@types/pngjs": "^6.0.5",
+    "pngjs": "^7.0.0"
   }
 }

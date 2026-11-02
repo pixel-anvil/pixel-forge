@@ -42,7 +42,7 @@ Each one becomes an automated test (harness or e2e) over fixtures in `fixtures/`
 | ID | Scenario | Passes when | M |
 |---|---|---|---|
 | W1 | **Image → sprite**: convert `fixtures/photo_ball.jpg` to 32 px tall with the PICO-8 palette, producing a 4-variant grid (2 downscale methods × dither on/off) | 4 layers are produced, lint reports 0 off-palette pixels, and the output matches golden images. The same works through MCP `image_to_sprite`. | M1b |
-| W2 | **Rig a character**: import `fixtures/hero_parts.aseprite` (layers named `part:<bone>[@variant]`), apply the humanoid-side template, auto-bind | Every part is bound, the pivots are set, and the joint check reports **exactly** the 3 seeded gaps in `fixtures/gappy` and 0 in `fixtures/clean` | M1a |
+| W2 | **Rig a character**: import `fixtures/hero_parts.aseprite` (layers named `part:<bone>[@variant]`), apply the humanoid-side template, auto-bind | Every part is bound, the pivots are set, and the joint check reports **exactly** the 3 seeded gaps (`unionCount` across `fixtures/joint/gappy_*`) and 0 across `fixtures/joint/clean_*` | M1a |
 | W2b | **Split a flat frame**: from a flat pack frame, split regions into parts and paint the hidden overlap | The split parts recomposite to the original frame pixel for pixel, and the joint check passes after the overlap is painted | M1a |
 | W3 | **Animate with prompts**: in Claude Code, "6-frame run cycle, side view, 12 fps, with anticipation" | The animation exists, lint is clean, every tool call is one undo step, and a contact sheet was rendered and inspected | M1a (manual poses) / M1b (presets) |
 | W4 | **Touch up**: fix 3 px on frame 2 (a part override), then change the torso lean by +5° on all frames | Overrides on parts that **moved but didn't rotate** follow them. Overrides on parts that **rotated** become *stale*. Nothing is silently lost. | M1a (via `pf override import`) / M2 (in the editor) |
@@ -98,7 +98,34 @@ Document
 - I4: IDs are unique, stable and deterministic (seeded generator, never `Math.random`).
 - I5: Pivots, offsets and origin are integers. Angles are finite.
 - I6: `(group, direction)` is unique. `mirrorOf` targets a non-mirrored animation with the same group.
-- I7: Animation, group and layer names match `^[a-z0-9_\-]{1,48}$`, so they're safe in paths and Godot names.
+- I7: Animation, group and layer names match `^[a-z0-9_\-]{1,48}$` and are not reserved JavaScript property names (§3.4.14), so they're safe in paths, records and Godot names.
+
+### 3.4 Clarifications from implementing the schema (T1.1, 2026-10-27)
+These settle ambiguities found while writing `@pixel-forge/schema`. Its README is the code-level reference.
+1. **A mirror with overrides** (FR-RIG-16 allows extra overrides) is written to the render cache as a **normal, fully rendered entry**. Only a mirror *without* overrides is emitted as `mirrorOf` and flipped at runtime.
+2. **Cel links** are same-layer only: `linkTo: FrameId`. A link across animations means the same layer in another animation's frame.
+3. **An undirected animation** uses the reserved direction key `default` in the render cache and its paths. **The unskinned render** uses the reserved skin name `base`.
+4. **`render/index.json` frame `image`** is a path relative to `render/<skin>/`, so frames with equal hashes may share one PNG.
+5. **Variants belong to views.** A part's default variant *for a view* is its first variant with that `viewId`. **Views have a `name`**, used by `#<view>` layer naming, and a `directions[]` list. Front and back are **two views**.
+6. **PartName** (in ops) is the part layer's name. Animations are addressed by `(group, direction)` or id. There is no separate animation name.
+7. **Rig maths conventions:**
+   - 0° points along +x, and angles grow clockwise (y down).
+   - `BoneKey.angle` is **relative to the bone's rest angle**.
+   - A root bone's rest `x, y` is a canvas position. A child's rest position is an offset from its parent's pivot, in the parent's rotated frame.
+   - `flipX` flips **only the bone's own parts**, not its subtree.
+   - A missing `interp` means linear. A missing `drawnAngle` means the rest angle.
+   - An undirected animation uses `views[0]`.
+   - A part missing from `partVisibility` is visible, and one missing from `defaultZ` has z 0.
+
+   T3.1 may refine these with an ADR. **[ADR-012](adr/ADR-012.md) (Accepted, T3.1)** reads "in the parent's rotated frame" as: the child's rest offset is a canvas offset measured at rest, and it turns with the parent's rotation away from rest (not with its rest angle), so the rest pose is exactly the authored canvas positions at any quantum. Interpolation is by frame index, and `loop` animations wrap from the last key to the first.
+8. **Indexed mode:** transparency is any palette entry with alpha 0. **Erase masks** are always 8-bit masks (0 or 255), whatever the colour mode.
+9. **Markers** are stored in canvas pixels. Consumers (Godot) subtract `origin`.
+10. **Hashes** (`baseHash`, frame hashes) are lower-case hex SHA-256, using the testkit layout (u32be width, u32be height, RGBA). Manifest timestamps are UTC ISO 8601 with `Z`.
+11. **Override order:** within one override, `erase` applies first, then `set`, both at the same anchor.
+12. **IDs** look like `lay_7k2m9q`: a kind prefix plus base32. They come from a seeded counter stored in `meta.ids`, so undo and redo replay the same IDs.
+13. **Group `export`** is ANDed with the ancestor groups. Reference layers are never exported or cached.
+14. **Reserved names:** names and record keys may not be JavaScript `Object.prototype` member names (`__proto__`, `constructor`, `prototype`, `toString`, …). They are rejected, never silently dropped (code review of T1.1). Layer trees nest at most 32 levels (`MAX_LAYER_DEPTH`).
+15. **`.aseprite` import (T4.5)**: a `part:` layer is one drawing (the first frame's cel, composed onto a canvas-sized image, so a variant pivot is a canvas coordinate). Re-import writes pixels into the existing image id where the size allows, so a pixel edit of a part leaves the rig data unchanged. Frames match by `(tag, index)`; removed frames are reported with the keys and overrides they lost. See the `io` README for the full rules.
 
 ---
 
@@ -109,7 +136,7 @@ Document
 - FR-DOC-02 [M1a]: **One undo history per document** covering every change. Operations are grouped into labelled transactions. The memory cap (default 512 MB) counts tile bytes.
 - FR-DOC-03 [M2]: Autosave and a crash-recovery journal kept in the app cache dir (`~/Library/Caches/pixel-forge` or `%LOCALAPPDATA%`), never next to the file.
 - FR-DOC-04 [M1a]: **Import `.aseprite`/`.ase`**:
-  - Layers come across with their names. A layer named `part:<bone>[@<variant>][#<view>]` becomes a PartLayer variant.
+  - Layers come across with their names. A layer named `part:<bone>[.<part>][@<variant>][#<view>]` becomes a PartLayer variant. This syntax exists only in *source* (Aseprite) layer names, because document names can't contain `:.@#`. The document's part layer is named `<bone>` or `<bone>_<part>`. Several parts can share a bone (e.g. `part:upper_arm_r` and `part:upper_arm_r.sleeve`), and layers with the same bone and part become variants of one part (T3.2, 2026-10-27).
   - Each **tag maps to an animation** (`group` = tag name). Untagged frames go to an animation called `default`. Frames inside **overlapping tags** become linked cels.
   - The palette and linked cels are imported.
   - **Re-import in place**: when you update a document from an edited `.aseprite`, parts and layers are matched by name. Rig bindings, pivots and keys are kept, and the changed images are replaced.
@@ -160,7 +187,7 @@ Document
 - FR-RIG-02 [M1a]: Skeleton templates: humanoid (bone names `root, pelvis, torso, neck, head, upper_arm_l/r, lower_arm_l/r, hand_l/r, thigh_l/r, shin_l/r, foot_l/r`) with a side view and a front/back view. [M1b]: quadruped.
 - FR-RIG-03 [M1a]: Bind parts to bones automatically by layer name (`part:<bone>…`) or by overlap, and set pivots (pixel-centre).
 - FR-RIG-04 [M1a]: Variants per part and view, with an optional `drawnAngle`.
-- FR-RIG-05 [M1a]: **Joint coverage check.** For each joint, sweep the child's angle over ±N° (default 30°, step 5°) while the parent stays at rest. Report the transparent pixels that open up between parent and child, with coordinates. The result is deterministic and pinned by fixtures (W2).
+- FR-RIG-05 [M1a]: **Joint coverage check.** For each joint, sweep the child's angle over ±N° (default 30°, step 5°) while the parent stays at rest. Report the pixels, within r (default 4) of the joint pivot, that were covered at rest, are transparent at θ, lie on the outer side of the bend, and are pinched between parent and child along a row, column or diagonal. The exact predicate is in `docs/contracts/JOINT_CHECK.md`. The result is deterministic and pinned by hand-written fixtures in `fixtures/joint/` (W2).
 - FR-RIG-06 [M1a]: Default z per part per view. Z can be overridden with a part key.
 - FR-RIG-07 [M1a]: **Split to parts** (for flat art):
   - select a region (rectangle, lasso, or a colour-bounded flood) and move it to a new PartLayer, leaving transparency behind;
@@ -191,15 +218,19 @@ Document
   2. **Hierarchical snapping**: start with the root at its integer position. For each child, rotate the rest offset to its parent attach point with fixed-point trig, round it, and add it to the parent's **snapped** pivot. A child pivot is never rounded independently of its parent.
   3. For each part, choose the variant and render it rotated by the residual with RotSprite. Then align it so the variant's pivot pixel lands exactly on the snapped pivot. Results are cached by `(variantId, quantisedAngle)`.
   4. Apply **part overrides**, anchored to the snapped pivot, to each part's own render.
-  5. Composite the parts in z order (per view default, then the part keys), then the pixel layers.
-  6. **Post-passes** (opt-in per animation): orphan removal, outline.
-  7. Apply **final overrides**.
-  8. Apply the skin remap.
+  5. Composite: the parts, in z order (per view default, then the part keys), form **one rig block**. It's drawn at the tree position of the lowest part layer, so pixel layers before it in the tree are below the character and later ones are above.
+  6. **Post-passes** (opt-in per animation, for any authored animation, rig or not): orphan removal, outline (cropped to the canvas).
+  7. Apply **final overrides** (erase, then set).
+  8. Apply the skin last, by colour on the RGBA composite, in both colour modes.
+
+  Steps 1–4 belong to the rig (the `RigRenderer.renderParts` hook). Steps 5–8 belong to core's `renderFrame`. A mirror animation renders its source through steps 1–7, flips about `origin.x`, applies its own final overrides, then the skin. (T2.3 review, 2026-10-27.) In step 3 (T3.3, 2026-10-27), part keys (`variant`, `z`, `visible`) step and hold like the bone channels (the first key holds before it; a loop wraps), `variant: 'auto'` uses the view's default variant until FR-RIG-14 (M1b), and a bone's `flipX` mirrors its parts about the pivot column after the rotation.
 - FR-RIG-21 [M1a]: Rotation algorithm per part: RotSprite (default), nearest, or none. **RotSprite introduces no new colours**, and a test asserts it.
 - FR-RIG-22 [M1a] **Overrides**:
   - drawing on a rig frame writes a part override if the stroke falls within one part's area, otherwise a final override;
+    - **Attribution** (T3.8, 2026-10-28): a "stroke" is an 8-connected group of changed pixels. Each stroke inside exactly one part's footprint goes into that part's override (one per part); every other stroke goes into the frame's single final override. So one import can give several part overrides plus one final.
   - a part override follows its part when the part moves. If the part's rotation or variant changes, the override becomes **stale** (baseHash mismatch), rather than being moved or dropped;
   - stale overrides are listed by lint and shown in the timeline. You can keep, discard, or re-base them (re-base means recapture baseHash under the current render).
+  - **baseHash** (T3.3, 2026-10-27): SHA-256 of the decoded RGBA under the bbox of the override's non-empty `set` and `erase` pixels, dilated by 1 px, over the target's render before all of its overrides. A part override's target is its part's pre-override render in pivot-relative coordinates (so translation keeps it valid); a final override's target is the composite after the post-passes of the export render. A part that is not drawn in the frame makes its overrides stale too. Stale overrides keep being applied.
 - FR-RIG-23 [M1a]: **Bake**: rig animation → a plain pixel animation, as a new animation, or replacing in place with confirmation.
 - FR-RIG-24 [M1a]: **`pf override import <doc> <anim> <frame> edited.png`** diffs an externally edited frame against the current render and writes the differences as overrides (part overrides where unambiguous, otherwise final). This is the touch-up path before the editor exists.
 
@@ -229,8 +260,8 @@ Document
   - a read returns a grid with a **per-call legend** covering the colours present (≤62 symbols `0-9A-Za-z`; an error beyond that), plus optional coordinate rulers;
   - in writes, `.` means transparent and `_` means keep;
   - writes are capped at 32×32 per call, and reads at 64×64.
-- FR-AI-14 [M1a]: **MCP edits apply directly.** Each mutating call is one transaction labelled `AI: <tool>` and can be undone. `destructive` tools need `confirm: true`.
-- FR-AI-15 [M1a]: Resources: `pf://docs`, `pf://doc/{id}/summary`, `…/palette`, `…/rig`, `…/animations/{group}/{direction}`.
+- FR-AI-14 [M1a]: **MCP edits apply directly.** Each mutating call is one transaction labelled `AI: <op name>` (e.g. `AI: rig.setPose`, the op name, not the tool name) and can be undone as one step. A call that changes nothing records no entry. `destructive` tools need `confirm: true`.
+- FR-AI-15 [M1a]: Resources: `pf://docs`, `pf://doc/{id}/summary`, `…/palette`, `…/rig`, `…/animations/{group}/{direction}`. Read-only JSON; `…/animations/{group}` also serves an animation without a direction. An unknown document or animation is an MCP error (`-32002`).
 - FR-AI-16 [M1b]: MCP prompts: animate-character, image-to-sprite, rig-character, split-flat-art.
 - FR-AI-17 [M1b]: `rig_set_pose` also accepts **end-effector targets** (e.g. `hand_r → (24,30)`) and solves them with IK. LLMs place points more reliably than they chain angles.
 - FR-AI-20 [**M3**] In-app AI panel:
@@ -259,6 +290,12 @@ Document
   - it drives a target through one adapter method `apply(texture, region, offset, flip_h)`. Built-in adapters: `Sprite2D`, `Sprite3D`, and **duck-typed** for any node with `texture/region_rect/offset/flip_h` properties (matches the game's lit billboard node; GAME_NOTES §4, local);
   - mirrored directions set `flip_h` and mirror the markers;
   - **game-driven playback** (from the plan review, P-03): games that time frames from gameplay can use `paused`, `seek_ms(t)`, `set_frame(i)` and `hold_last` (hold the final frame until released), and get a `frame_changed(i)` signal. The exact mapping to the first consumer game (origin ↔ its feet row, the ball marker ↔ its prop anchor, per-frame rise ↔ root motion) is fixed by plan card T6.0 (GAME_NOTES §4, local).
+  - **Addendum (T6.0, 2026-10-28)**: the contract is [`docs/contracts/GODOT_INTEGRATION.md`](contracts/GODOT_INTEGRATION.md). In short:
+    - the **origin point** is the bottom-centre of the origin pixel, `(origin.x + 0.5, origin.y + 1)`; it sits on the game node's origin. `marker()` and the adapter `offset` are relative to it (so `marker_metres()` is `marker()` with y flipped, divided by `pixels_per_unit`). The adapter `offset` is the region's centre in pixels, y down, already mirrored; adapters convert to their node's convention and never mirror it again;
+    - a game-requested `mirror` property is added; the applied flip is `mirror XOR` the animation's mirror flag. Also added: `play(group, direction)`, `clock_mode` (idle, physics, manual) with `advance()`, `frame_progress()`, `has_marker()`, `frame_events()`, `root_motion()`;
+    - `hold_last` stops on the last frame of the first pass in every loop mode. Events fire when their frame starts; the clock never drops them; `seek_ms` and `set_frame` fire only the target frame's events; a direction change fires none. A per-frame flag is an event name present on those frames;
+    - a per-frame drawing lift (the game's "rise") is baked into the render (pixels and markers). Root motion is the root's displacement during the frame and never moves the picture.
+- FR-GD-02 addendum (T6.0): `PixelForgeAsset` also has `canvas_size` (the frame PNG size) and `skins`; all skin atlases share one layout; `frames` has one entry per authored frame (regions may be shared); markers stay in canvas pixels. Helper queries (`resolve`, `has_animation`, `frame_count`, `duration_ms`, `marker_px`, `marker_metres`) are listed in the contract.
 - FR-GD-04 [M1a]: Import options: which animations and skins to include, trim on/off, and padding.
 - FR-GD-05 [M1a]: The importer reads only the **render cache** in the `.pxf` (`ZIPReader` + JSON + `Image.load_png_from_buffer`). The rig is never evaluated in Godot.
 - FR-GD-06 [M1b]: Convenience output: `SpriteFrames` per direction, plus `PixelForgeSprite2D` and `PixelForgeSprite3D` (billboard, nearest filter, alpha scissor) wrapping the driver.
@@ -312,9 +349,9 @@ schema   ← color ← raster ← rig ─┐
 | `convert` | Image→sprite steps + ConvertRecipe | schema, color, raster |
 | `core` | Document store, transactions, patches, history, frame operations (§3.2), `validate()`, **`renderFrame`** | schema, raster, rig |
 | `lint` | Findings: palette, orphans, joints, stale overrides, rotation residual, opacity | core, rig |
-| `io` | `.pxf` read/write + migrations + render cache, PNG/GIF/JPEG/WebP codecs, spritesheet JSON, `.aseprite` import (+ re-import) | core, convert (for import remaps) |
-| `ops` | Op registry, definitions, handlers, error types, generators (MCP tool JSON, CLI, docs) | core, lint, io, rig, convert |
-| `server` | DocumentHost, lockfiles and discovery, WS sync, HTTP, MCP transports, providers, keychain, workspace roots | ops |
+| `io` | `.pxf` read/write + migrations + render cache, PNG/GIF/JPEG/WebP codecs, spritesheet JSON, `.aseprite` import (+ re-import) | core, convert (for import remaps), png, schema, raster, rig (part-layer names for import) |
+| `ops` | Op registry, definitions, handlers, error types, generators (MCP tool JSON, CLI, docs) | core, lint, io, rig, convert, schema (reference and value schemas for op inputs, T5.1), raster and png (the grid and render ops build images and encode PNG, T5.3) |
+| `server` | DocumentHost, lockfiles and discovery, WS sync, HTTP, MCP transports, providers, keychain, workspace roots | ops, io (Node `FileSystem`/`Clock` from `@pixel-forge/io/node`) |
 | `cli` | `pf` binary: `serve`, `mcp`, `check` (harness), `convert`, `render`, `export`, `lint`, `override import`, `pack/unpack` | server, ops |
 | `editor` [M2] | React UI | ops (types), core (read-model), raster |
 | `godot/addons/pixel_forge` | GDScript importer, driver, adapters, GUT tests | (reads `.pxf` render cache) |
@@ -342,7 +379,7 @@ export const setPose = defineOp({
 ### 6.4 State, transactions & history
 - Immutable JSON structure plus **sparse copy-on-write tile stores**.
 - A transaction records patches: structural (JSON-patch style) and tile before/after. Undo applies the inverses. Each document has one linear stack.
-- Every committed transaction increments `doc.version`.
+- `store.version` is a **runtime** counter, not saved in the document. It increases by 1 on every commit, undo and redo, so it is monotonic and is used for sync gap detection and proposal checks.
 
 ### 6.5 Process model, ownership & sync
 ```

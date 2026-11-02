@@ -1,0 +1,550 @@
+{
+  "steps": [
+    {
+      "id": "gappy_elbow_doc",
+      "op": "doc.create",
+      "input": {
+        "name": "gappy_elbow",
+        "width": 14,
+        "height": 12
+      }
+    },
+    {
+      "id": "gappy_elbow_bones",
+      "op": "rig.editBones",
+      "input": {
+        "doc": "${gappy_elbow_doc.output.doc}",
+        "edits": [
+          {
+            "action": "addView",
+            "name": "side",
+            "directions": ["side"]
+          },
+          {
+            "action": "addBone",
+            "name": "upper",
+            "length": 7,
+            "rest": {
+              "view": "side",
+              "x": 0,
+              "y": 0,
+              "angle": 0
+            }
+          },
+          {
+            "action": "addBone",
+            "name": "lower",
+            "parent": "upper",
+            "length": 7,
+            "rest": {
+              "view": "side",
+              "x": 7,
+              "y": 5,
+              "angle": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "gappy_elbow_upper",
+      "op": "io.import",
+      "input": {
+        "doc": "${gappy_elbow_doc.output.doc}",
+        "file": "gappy_elbow-parent.png",
+        "layerName": "upper",
+        "animations": [
+          {
+            "group": "rest",
+            "cells": [[0, 0]]
+          }
+        ]
+      }
+    },
+    {
+      "id": "gappy_elbow_lower",
+      "op": "io.import",
+      "input": {
+        "doc": "${gappy_elbow_doc.output.doc}",
+        "file": "gappy_elbow-child.png",
+        "layerName": "lower",
+        "animations": [
+          {
+            "group": "rest_child",
+            "cells": [[0, 0]]
+          }
+        ]
+      }
+    },
+    {
+      "id": "gappy_elbow_bind",
+      "op": "rig.bindParts",
+      "input": {
+        "doc": "${gappy_elbow_doc.output.doc}"
+      }
+    },
+    {
+      "id": "gappy_elbow_check",
+      "op": "rig.jointCheck",
+      "input": {
+        "doc": "${gappy_elbow_doc.output.doc}",
+        "rangeDeg": 30,
+        "stepDeg": 30,
+        "radius": 2
+      }
+    },
+    {
+      "id": "gappy_knee_doc",
+      "op": "doc.create",
+      "input": {
+        "name": "gappy_knee",
+        "width": 15,
+        "height": 12
+      }
+    },
+    {
+      "id": "gappy_knee_bones",
+      "op": "rig.editBones",
+      "input": {
+        "doc": "${gappy_knee_doc.output.doc}",
+        "edits": [
+          {
+            "action": "addView",
+            "name": "side",
+            "directions": ["side"]
+          },
+          {
+            "action": "addBone",
+            "name": "upper",
+            "length": 7,
+            "rest": {
+              "view": "side",
+              "x": 0,
+              "y": 0,
+              "angle": 0
+            }
+          },
+          {
+            "action": "addBone",
+            "name": "lower",
+            "parent": "upper",
+            "length": 7,
+            "rest": {
+              "view": "side",
+              "x": 7,
+              "y": 5,
+              "angle": 90
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "gappy_knee_upper",
+      "op": "io.import",
+      "input": {
+        "doc": "${gappy_knee_doc.output.doc}",
+        "file": "gappy_knee-parent.png",
+        "layerName": "upper",
+        "animations": [
+          {
+            "group": "rest",
+            "cells": [[0, 0]]
+          }
+        ]
+      }
+    },
+    {
+      "id": "gappy_knee_lower",
+      "op": "io.import",
+      "input": {
+        "doc": "${gappy_knee_doc.output.doc}",
+        "file": "gappy_knee-child.png",
+        "layerName": "lower",
+        "animations": [
+          {
+            "group": "rest_child",
+            "cells": [[0, 0]]
+          }
+        ]
+      }
+    },
+    {
+      "id": "gappy_knee_bind",
+      "op": "rig.bindParts",
+      "input": {
+        "doc": "${gappy_knee_doc.output.doc}"
+      }
+    },
+    {
+      "id": "gappy_knee_check",
+      "op": "rig.jointCheck",
+      "input": {
+        "doc": "${gappy_knee_doc.output.doc}",
+        "rangeDeg": 10,
+        "stepDeg": 10,
+        "radius": 2
+      }
+    },
+    {
+      "id": "clean_capped_elbow_doc",
+      "op": "doc.create",
+      "input": {
+        "name": "clean_capped_elbow",
+        "width": 14,
+        "height": 12
+      }
+    },
+    {
+      "id": "clean_capped_elbow_bones",
+      "op": "rig.editBones",
+      "input": {
+        "doc": "${clean_capped_elbow_doc.output.doc}",
+        "edits": [
+          {
+            "action": "addView",
+            "name": "side",
+            "directions": ["side"]
+          },
+          {
+            "action": "addBone",
+            "name": "upper",
+            "length": 7,
+            "rest": {
+              "view": "side",
+              "x": 0,
+              "y": 0,
+              "angle": 0
+            }
+          },
+          {
+            "action": "addBone",
+            "name": "lower",
+            "parent": "upper",
+            "length": 7,
+            "rest": {
+              "view": "side",
+              "x": 7,
+              "y": 5,
+              "angle": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "clean_capped_elbow_upper",
+      "op": "io.import",
+      "input": {
+        "doc": "${clean_capped_elbow_doc.output.doc}",
+        "file": "clean_capped_elbow-parent.png",
+        "layerName": "upper",
+        "animations": [
+          {
+            "group": "rest",
+            "cells": [[0, 0]]
+          }
+        ]
+      }
+    },
+    {
+      "id": "clean_capped_elbow_lower",
+      "op": "io.import",
+      "input": {
+        "doc": "${clean_capped_elbow_doc.output.doc}",
+        "file": "clean_capped_elbow-child.png",
+        "layerName": "lower",
+        "animations": [
+          {
+            "group": "rest_child",
+            "cells": [[0, 0]]
+          }
+        ]
+      }
+    },
+    {
+      "id": "clean_capped_elbow_bind",
+      "op": "rig.bindParts",
+      "input": {
+        "doc": "${clean_capped_elbow_doc.output.doc}"
+      }
+    },
+    {
+      "id": "clean_capped_elbow_check",
+      "op": "rig.jointCheck",
+      "input": {
+        "doc": "${clean_capped_elbow_doc.output.doc}"
+      }
+    },
+    {
+      "id": "clean_inner_corner_doc",
+      "op": "doc.create",
+      "input": {
+        "name": "clean_inner_corner",
+        "width": 14,
+        "height": 13
+      }
+    },
+    {
+      "id": "clean_inner_corner_bones",
+      "op": "rig.editBones",
+      "input": {
+        "doc": "${clean_inner_corner_doc.output.doc}",
+        "edits": [
+          {
+            "action": "addView",
+            "name": "side",
+            "directions": ["side"]
+          },
+          {
+            "action": "addBone",
+            "name": "upper",
+            "length": 7,
+            "rest": {
+              "view": "side",
+              "x": 0,
+              "y": 0,
+              "angle": 0
+            }
+          },
+          {
+            "action": "addBone",
+            "name": "lower",
+            "parent": "upper",
+            "length": 7,
+            "rest": {
+              "view": "side",
+              "x": 7,
+              "y": 7,
+              "angle": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "clean_inner_corner_upper",
+      "op": "io.import",
+      "input": {
+        "doc": "${clean_inner_corner_doc.output.doc}",
+        "file": "clean_inner_corner-parent.png",
+        "layerName": "upper",
+        "animations": [
+          {
+            "group": "rest",
+            "cells": [[0, 0]]
+          }
+        ]
+      }
+    },
+    {
+      "id": "clean_inner_corner_lower",
+      "op": "io.import",
+      "input": {
+        "doc": "${clean_inner_corner_doc.output.doc}",
+        "file": "clean_inner_corner-child.png",
+        "layerName": "lower",
+        "animations": [
+          {
+            "group": "rest_child",
+            "cells": [[0, 0]]
+          }
+        ]
+      }
+    },
+    {
+      "id": "clean_inner_corner_bind",
+      "op": "rig.bindParts",
+      "input": {
+        "doc": "${clean_inner_corner_doc.output.doc}"
+      }
+    },
+    {
+      "id": "clean_inner_corner_check",
+      "op": "rig.jointCheck",
+      "input": {
+        "doc": "${clean_inner_corner_doc.output.doc}"
+      }
+    },
+    {
+      "id": "clean_pockets_doc",
+      "op": "doc.create",
+      "input": {
+        "name": "clean_pockets",
+        "width": 14,
+        "height": 12
+      }
+    },
+    {
+      "id": "clean_pockets_bones",
+      "op": "rig.editBones",
+      "input": {
+        "doc": "${clean_pockets_doc.output.doc}",
+        "edits": [
+          {
+            "action": "addView",
+            "name": "side",
+            "directions": ["side"]
+          },
+          {
+            "action": "addBone",
+            "name": "upper",
+            "length": 7,
+            "rest": {
+              "view": "side",
+              "x": 0,
+              "y": 0,
+              "angle": 0
+            }
+          },
+          {
+            "action": "addBone",
+            "name": "lower",
+            "parent": "upper",
+            "length": 7,
+            "rest": {
+              "view": "side",
+              "x": 6,
+              "y": 5,
+              "angle": 180
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "clean_pockets_upper",
+      "op": "io.import",
+      "input": {
+        "doc": "${clean_pockets_doc.output.doc}",
+        "file": "clean_pockets-parent.png",
+        "layerName": "upper",
+        "animations": [
+          {
+            "group": "rest",
+            "cells": [[0, 0]]
+          }
+        ]
+      }
+    },
+    {
+      "id": "clean_pockets_lower",
+      "op": "io.import",
+      "input": {
+        "doc": "${clean_pockets_doc.output.doc}",
+        "file": "clean_pockets-child.png",
+        "layerName": "lower",
+        "animations": [
+          {
+            "group": "rest_child",
+            "cells": [[0, 0]]
+          }
+        ]
+      }
+    },
+    {
+      "id": "clean_pockets_bind",
+      "op": "rig.bindParts",
+      "input": {
+        "doc": "${clean_pockets_doc.output.doc}"
+      }
+    },
+    {
+      "id": "clean_pockets_check",
+      "op": "rig.jointCheck",
+      "input": {
+        "doc": "${clean_pockets_doc.output.doc}"
+      }
+    },
+    {
+      "id": "clean_staircase_doc",
+      "op": "doc.create",
+      "input": {
+        "name": "clean_staircase",
+        "width": 14,
+        "height": 12
+      }
+    },
+    {
+      "id": "clean_staircase_bones",
+      "op": "rig.editBones",
+      "input": {
+        "doc": "${clean_staircase_doc.output.doc}",
+        "edits": [
+          {
+            "action": "addView",
+            "name": "side",
+            "directions": ["side"]
+          },
+          {
+            "action": "addBone",
+            "name": "upper",
+            "length": 7,
+            "rest": {
+              "view": "side",
+              "x": 0,
+              "y": 0,
+              "angle": 0
+            }
+          },
+          {
+            "action": "addBone",
+            "name": "lower",
+            "parent": "upper",
+            "length": 7,
+            "rest": {
+              "view": "side",
+              "x": 7,
+              "y": 5,
+              "angle": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "clean_staircase_upper",
+      "op": "io.import",
+      "input": {
+        "doc": "${clean_staircase_doc.output.doc}",
+        "file": "clean_staircase-parent.png",
+        "layerName": "upper",
+        "animations": [
+          {
+            "group": "rest",
+            "cells": [[0, 0]]
+          }
+        ]
+      }
+    },
+    {
+      "id": "clean_staircase_lower",
+      "op": "io.import",
+      "input": {
+        "doc": "${clean_staircase_doc.output.doc}",
+        "file": "clean_staircase-child.png",
+        "layerName": "lower",
+        "animations": [
+          {
+            "group": "rest_child",
+            "cells": [[0, 0]]
+          }
+        ]
+      }
+    },
+    {
+      "id": "clean_staircase_bind",
+      "op": "rig.bindParts",
+      "input": {
+        "doc": "${clean_staircase_doc.output.doc}"
+      }
+    },
+    {
+      "id": "clean_staircase_check",
+      "op": "rig.jointCheck",
+      "input": {
+        "doc": "${clean_staircase_doc.output.doc}"
+      }
+    }
+  ]
+}

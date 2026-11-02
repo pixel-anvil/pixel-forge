@@ -1,0 +1,62 @@
+# Orchestrator runbook
+
+How the main session runs the plan cheaply and safely. Read this after `docs/STATUS.md`. The full protocol is plan §0.
+
+## Session setup
+- **Model:** run the orchestrator on **Opus at medium effort** (`/model opus`, `/effort medium`). Use `/effort high` for gates (G1, G2) and when integrating Opus cards (reading their code reviews). The saving comes mostly from short, fresh contexts. The orchestrator keeps Opus because its main value is judgment (licensing, design deviations, spec conflicts).
+- **Keep the context short.** When a session gets long, start a fresh one from `docs/STATUS.md`. Nothing is lost: all state lives in the repo, the worktrees and `~/pf-work/`.
+- **Parallelism:** at most two background agents at a time, and at most one of them on Opus. The session usage quota is the real limit.
+
+## Session length
+The orchestrator cannot read its token count, so it counts work instead.
+- After each integrated card, end the message with one line: `Session: <n> cards integrated, ~<m> turns`.
+- **Tell the user to reset** at the first of these: 3 cards integrated; 1 Opus card with its code review; about 60 tool calls; a wave ended; or the harness has summarised the conversation once.
+- Before saying so, get STATUS current (in-flight agents with their ids and worktrees, next step), commit it, then print: `RESET NOW: context is long, STATUS is current. Start a fresh session with: Read docs/STATUS.md and docs/ai/ORCHESTRATOR.md, then continue M1a`.
+- With agents in flight, record them in STATUS first. Do not start a new card after the warning.
+
+## The loop
+1. Read `docs/STATUS.md` (Current focus / Next), then only the board rows and the cards you're about to run.
+2. **Dispatch** with the Agent tool:
+   - `model` and `effort` from the card;
+   - `isolation: "worktree"` and `run_in_background: true`;
+   - a brief that starts with: `git merge --ff-only m1a-wave1`, then `pnpm install && pnpm build`, then "Do NOT commit/push; never use git stash";
+   - the card's context pack, naming exact files and spec IDs;
+   - the **report contract** below.
+3. **On a report**, verify in the worktree:
+   `cd <worktree> && pnpm -s verify >/dev/null 2>&1 && echo ok`
+   Open images only when a new golden needs review.
+4. **Integrate as a patch**:
+   ```sh
+   git -C <wt> add -A && git -C <wt> diff --cached --binary > <scratch>/<card>.patch
+   cd <repo> && git apply --3way <scratch>/<card>.patch
+   ```
+   Conflict rules:
+   - files that are only appended to (`src/index.ts`, `README.md`): keep both sides;
+   - `package.json`: take the union of the dependencies;
+   - `pnpm-lock.yaml`: take ours, then run `pnpm install`.
+5. **Commit only if verify passes**, in one `if` (never chain the commit after an `echo`):
+   `if pnpm -s verify >/dev/null 2>&1; then git commit … && git push; else echo VERIFY_FAILED; fi`
+   Then `git worktree remove --force <wt>` and `git branch -D worktree-<name>`.
+   **Parallel cards cannot see each other's code.** Before dispatching two cards in one package, name in both briefs any helper they will both need and give it to one card, or commit it first (as `OpHost.rebind` was). When integrating the second card, list its new non-op files and exports, and merge any that overlap the first card's before committing.
+6. **Record**: tick the board row, add card notes (≤ 6 lines: what, key decisions, cost) and update STATUS.
+7. **Opus cards T3.3, T3.8 and T5.1**: run the `code-review` skill (high) on the staged diff, then dispatch a Sonnet/high fix agent with the findings. Accept or reject each finding explicitly.
+
+## Report contract (paste into every brief)
+> Write your full report (files, API, decisions, test output, doubts) to `.claude/reports/<card>.md` at the root of the MAIN repo checkout, not your worktree (git-ignored). Your final message to the orchestrator must be **at most 15 lines** and must always include these labelled lines (write "none" if empty):
+> - `Status:` done/blocked; `verify:` pass/fail; `Worktree:` path
+> - `Deviations:` anything that differs from the card or the spec
+> - `External sources:` any code, algorithm or data taken from outside the repo, with its licence/provenance (papers, docs, other projects). Say explicitly if anything was ported or adapted from existing code.
+> - `Design decisions:` every choice the card or spec didn't settle
+> - `Doubts:` the top 3
+>
+> Run only the checks the card asks for. No extra mutation testing or exploratory benchmarks unless the card requests them.
+
+**The orchestrator reads the full report file** whenever `Deviations`, `External sources` or `Design decisions` is not "none", or the card has design content (contracts, algorithms, pipelines, file formats).
+
+## Usage-limit recovery
+If an agent stops with "session limit", wait for the reset, then `SendMessage` to the same agent id ("continue from where you stopped"). Its worktree keeps the work. Record the agent id and worktree in STATUS as soon as it stops.
+
+## Hygiene
+- The public repo must contain no game-specific terms and no absolute home paths. The privacy hook enforces it; the details live in `~/pf-work/GAME_NOTES.md`.
+- No code ported from non-permissive sources (AGENTS.md "Licensing of code").
+- Never use bare `git stash`. The stash stack is shared across worktrees.

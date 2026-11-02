@@ -21,7 +21,16 @@
       "path": "../rig"
     },
     {
+      "path": "../png"
+    },
+    {
+      "path": "../raster"
+    },
+    {
       "path": "../convert"
+    },
+    {
+      "path": "../schema"
     }
   ]
 }

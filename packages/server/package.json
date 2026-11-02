@@ -1,6 +1,6 @@
 {
   "name": "@pixel-forge/server",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "DocumentHost, lockfiles and discovery, WS sync, HTTP, MCP transports, providers, keychain and workspace roots.",
   "license": "MIT",
   "type": "module",
@@ -16,9 +16,14 @@
   ],
   "scripts": {
     "build": "tsc -b",
-    "test": "vitest run --project server"
+    "test": "vitest run --root ../.. --project server"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "@pixel-forge/io": "workspace:*",
     "@pixel-forge/ops": "workspace:*"
+  },
+  "devDependencies": {
+    "execa": "^10.2.1"
   }
 }

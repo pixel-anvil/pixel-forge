@@ -1,6 +1,6 @@
 {
   "name": "@pixel-forge/core",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Document store, transactions, patches, history, frame operations, validate() and renderFrame.",
   "license": "MIT",
   "type": "module",
@@ -16,7 +16,10 @@
   ],
   "scripts": {
     "build": "tsc -b",
-    "test": "vitest run --project core"
+    "test": "vitest run --root ../.. --project core"
+  },
+  "devDependencies": {
+    "@pixel-forge/testkit": "workspace:*"
   },
   "dependencies": {
     "@pixel-forge/schema": "workspace:*",

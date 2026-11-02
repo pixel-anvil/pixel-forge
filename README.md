@@ -17,6 +17,7 @@ pixel-forge is a pixel-art editor and animator for game assets. It has a pixel-a
 - `packages/` — the pnpm workspace packages (`schema`, `png`, `color`, `raster`, `rig`, `core`, `io`, `lint`, `ops`, `convert`, `server`, `cli`, `testkit`).
 - `docs/` — research, specification, plan, ADRs and agent playbooks.
 - `fixtures/` — synthetic and CC0 test art.
+- `scenarios/` — the W-scenario scripts (`*.steps.json`, `pf check` format); `pnpm scenarios` runs them with the built `pf` (see `docs/ai/PLAYBOOKS.md`).
 - `scripts/` — repository tooling.
 
 ## Contributing and docs
@@ -25,7 +26,7 @@ Start with [AGENTS.md](AGENTS.md) (build/test commands, conventions) and [CONTRI
 
 ## Quick start
 
-Coming in M1a.
+Coming in M1a. To use the MCP server from Claude Code, see [docs/guides/claude-code.md](docs/guides/claude-code.md).
 
 ## Credits
 

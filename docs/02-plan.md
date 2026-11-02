@@ -17,6 +17,7 @@
 3. **Dispatch**: send each card to a subagent with the card's **model and effort** (`Agent` `model: haiku|sonnet|opus`, `effort: low|medium|high|xhigh`). **Every ∥ card runs with `isolation: "worktree"`.** The brief contains:
    - the card text;
    - the **standard context pack** (§0.3).
+   - **Worktree base**: `isolation: "worktree"` branches from the default branch (`main`), not from the current wave branch. Each brief must tell the subagent to run `git merge --ff-only <wave-branch>` first. The orchestrator integrates the subagent's uncommitted diff as a patch (`git diff --cached --binary` → `git apply --3way`).
 4. **Subagents don't commit.** They leave changes in their worktree and report: the files they changed, the commands they ran, and anything they're unsure about.
 5. **Verify** as the orchestrator, inside the worktree:
    - run the acceptance commands;
@@ -58,8 +59,12 @@ Prices per million tokens (input/output): Opus 5.5 $4/$20, Sonnet 5.5 $2/$10, Ha
   1. On the first failed verification, if the failure looks like a **reasoning slip** (a wrong edge case, a missed rule), retry once on the same model with effort one level higher.
   2. If the failure looks like a **capability gap** (it misunderstood the task or the architecture), or the retry also fails, move one model up at the card's original effort.
   3. Note every escalation on the card. If a class of cards keeps escalating, change the model or effort columns for similar future cards.
+- **Cost update (2026-10-27, after Wave 1, at the user's request to reduce spend):**
+  - The remaining Opus cards (T3.3, T3.8, T5.1) run at **high**, not xhigh. Every xhigh card still needed a review-fix pass, so the review is the quality gate.
+  - The orchestrator runs on **Opus/medium** in a fresh session per wave (`docs/ai/ORCHESTRATOR.md`). The user chose Opus over Sonnet to keep review judgment.
+  - Subagents follow the short **report contract** (full report to a local file, a final message of at most 15 lines) and do no unrequested extra verification.
 - **Calibration at gates**: at G1 and G2, compare what cards actually cost (the tokens in subagent results) against how often they escalated. Lower the effort where cards passed easily and raise it where they struggled.
-- **Orchestrator**: run the main session on **Sonnet at medium effort** for routine waves. Use **Opus at high effort** for waves that include Opus cards (to review their output) and for gates. Switch with `/model` and `/effort` at the start of the session.
+- **Orchestrator**: run the main session on **Opus at medium effort**, in a fresh session per wave. Use **high** effort for gates and when integrating Opus cards. Switch with `/model` and `/effort` at the start of the session.
 - **Review after Opus cards**: after T1.1, T1.6, T2.1, T3.1, T3.3, T3.8 and T5.1, run the `code-review` skill (high effort) on the card's diff before dependent cards start. T1.1 also gets a short look from the user.
 
 ### 0.3 Standard context pack (every card)
@@ -127,59 +132,68 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | Card | Title | Model | Effort | Size | Deps | ∥ | ☐/☑ |
 |---|---|---|---|---|---|---|---|
 | T0.1 | ADRs + agent docs | sonnet | medium | M | — | ∥ | ☑ |
-| T0.4 | **RotSprite spike** on real pack art, vs Aseprite's own RotSprite | opus | high | M | — | ∥ | ☐ |
+| T0.4 | **RotSprite spike** on real pack art, vs Aseprite's own RotSprite | opus | high | M | — | ∥ | ☑ |
 | T0.5 | Fetch and check a CC0 character sheet → `fixtures/cc0/` | haiku | low | S | — | ∥ | ☑ |
 | T0.2 | Monorepo scaffold, tooling, CI | sonnet | medium | M | T0.1 | | ☑ |
 | T0.6 | Public-readiness: scrub game refs → GAME_NOTES.md, LICENSE, README, SECURITY, privacy hook | sonnet | medium | S | T0.1, T0.2 | | ☑ |
-| O-1 | User creates the `pixel-anvil` org → public repo, branch protection, push, CI green | orchestrator | — | S | T0.6 | | ☐ |
-| T1.8 | `png` package: deterministic PNG encode/decode | sonnet | high | S | T0.2 | | ☐ |
-| T0.3 | testkit: golden helper, ASCII helpers, golden sheets, fixture runner | sonnet | medium | S | T1.8 | | ☐ |
-| T1.1 | schema: domain types + zod + ids (**+ review + user look**) | opus | xhigh | M | T0.2 | | ☐ |
-| T1.2 | color: OKLab/OKLCH, nearest colour, palette ops | sonnet | medium | S | T1.1 | ∥ | ☐ |
-| T1.3 | color: palette presets from fetched Lospec `.hex` sources | haiku | low | S | T1.2 | ∥ | ☐ |
-| T1.4 | raster: sparse tiled image, compositing, basic transforms | sonnet | high | M | T1.1, T0.3 | ∥ | ☐ |
-| T1.5 | raster: primitives (line, rect, ellipse, fill, pixel-perfect) | sonnet | medium | S | T1.4 | ∥ | ☐ |
-| T1.6 | raster: fixed-point trig + RotSprite (+ review) | opus | xhigh | M | T1.4, T0.4 | ∥ | ☐ |
-| T1.7 | raster: orphan removal + outline pass | sonnet | medium | S | T1.4 | ∥ | ☐ |
-| T2.1 | core: document store, transactions, patches, history, rig hook interface (+ review) | opus | xhigh | M | T1.1, T1.4 | ∥ | ☐ |
-| T3.0 | rig: joint-gap definition + hand-written ASCII gap fixtures | opus | high | S | T1.1 | ∥ | ☐ |
-| T3.1 | rig: FK, interpolation + quantisation, hierarchical snapping (+ review) | opus | xhigh | M | T1.1, T1.6 | ∥ | ☐ |
-| T2.2 | core: frame ops (§3.2) + `validate()` | sonnet | medium | M | T2.1 | ∥ | ☐ |
-| T2.3 | core: `renderFrame` (pixel layers) + cache key | sonnet | medium | S | T2.1 | ∥ | ☐ |
-| T3.2 | rig: templates, bind by name/overlap, pivots, views | sonnet | medium | M | T3.1 | ∥ | ☐ |
-| T4.3 | io: spritesheet import (cell ranges, outline sheet), sheet + JSON export, contact sheet | sonnet | medium | M | T2.3, T1.8 | ∥ | ☐ |
-| T4.2 | io: `.pxf` read/write, migrations, render cache, atomic save, pack/unpack | sonnet | high | M | T4.3, T2.2 | | ☐ |
-| T6.0 | Godot integration contract with the first consumer game (spec addendum) | opus | high | S | T4.2 | | ☐ |
-| T6.1 | Godot: `.pxf` reader + import plugin + test harness + fixture `.pxf` generator | sonnet | high | M | T6.0 | | ☐ |
-| T6.2 | Godot: PixelForgeDriver (clock + game-driven playback), adapters, mirroring, markers/events | sonnet | high | M | T6.1 | | ☐ |
-| T6.3 | Godot: demo scene + CI job (ubuntu, 4.6.1 headless) | haiku | low | S | T6.2 | | ☐ |
-| D1 | **Early demo**: flat target-move `.pxf` → plays in the first consumer game through the driver (user approval) | orchestrator + sonnet | medium | M | T6.3 | | ☐ |
-| T3.3 | rig: part render pipeline + overrides + staleness; core hook (+ review) | opus | xhigh | M | T3.2, T2.3, T1.7 | ∥ | ☐ |
-| T3.8 | rig: `attributeEdit(render, edited) → overrides` (+ review) | opus | xhigh | M | T3.3 | | ☐ |
-| T3.4 | rig: `jointCheck` (implements the T3.0 definition) | sonnet | high | M | T3.0, T3.3 | | ☐ |
-| T3.5 | rig `overlapMask` + core `splitRegion` transaction | sonnet | high | M | T3.4 | ∥ | ☐ |
-| T3.6 | core: derived mirror in `renderFrame`; rig: pose clipboard (mirrored) | sonnet | medium | S | T3.3 | ∥ | ☐ |
-| T3.7 | core: bake | sonnet | medium | S | T3.3 | ∥ | ☐ |
-| T3.9 | fixtures: synthetic humanoid "hero" (TS doc + `.aseprite` via Lua) | sonnet | medium | M | T3.2, T0.3 | ∥ | ☐ |
-| G1 | **Gate: core + rig** | opus | high | — | W1–W3 rig track | | ☐ |
-| T4.6 | fixtures: synthetic `.aseprite` files via Aseprite Lua | sonnet | medium | S | T0.3 | ∥ | ☐ |
-| T4.4 | io: `.aseprite` binary parser (Aseprite CLI as oracle) | sonnet | high | M | T4.6 | | ☐ |
-| T4.5 | io: `.aseprite` → document mapping + in-place re-import (explicit rules) | sonnet | high | M | T4.4, T4.2 | ∥ | ☐ |
-| T4.1 | lint: rules + structured findings | sonnet | medium | M | T3.4, T3.3 | ∥ | ☐ |
-| T5.1 | ops: registry framework + generators + 3 exemplar ops (+ review) | opus | xhigh | M | T4.1, T4.2 | | ☐ |
-| T5.2a | ops (no logic, from table) | haiku | medium | S | T5.1 | ∥ | ☐ |
-| T5.2b | ops with logic + P-06 ops | sonnet | medium | M | T5.1 | ∥ | ☐ |
-| T5.3 | ops: text grid read/write + render/contact sheet with overlays | sonnet | high | M | T5.1, T3.8, T4.3 | ∥ | ☐ |
-| T5.4 | server: DocumentHost, lockfiles, discovery, workspace roots | sonnet | high | M | T5.1 | ∥ | ☐ |
-| T5.5 | MCP stdio server | sonnet | high | M | T5.2a, T5.2b, T5.3, T5.4 | | ☐ |
-| T5.6a | CLI shell + `check` harness + `tsup` bundle + `pf` on PATH | sonnet | medium | M | T5.5 | | ☐ |
-| T5.6b | CLI subcommands from registry metadata (+ override import/list/resolve, `pf godot install`) | haiku | medium | S | T5.6a | ∥ | ☐ |
-| T5.7 | Claude Code setup guide + `.mcp.json` | haiku | low | S | T5.6a | ∥ | ☐ |
-| T5.9 | W-scenario suite (`pf check` scripts for W2, W2b, W3-manual, W4-CLI) in CI | sonnet | medium | M | T5.6b, T3.9 | | ☐ |
-| T5.8 | **MCP dogfood evaluation** (CC0 character + synthetic hero) | opus | high | M | T5.9, T0.5 | | ☐ |
-| T6.4 | Target-move rebuild from pack art (with the user) | opus orchestrating | high | session | T5.8, D1 | | ☐ |
-| T6.5 | Swap the rigged target move into the first consumer game (user approval) | sonnet | medium | S | T6.4 | | ☐ |
-| G2 | **Gate: M1a exit** + v0.1.0 + M1b breakdown | opus | high | — | all | | ☐ |
+| O-1 | User creates the `pixel-anvil` org → public repo, branch protection, push, CI green | orchestrator | — | S | T0.6 | | ☑ |
+| T1.8 | `png` package: deterministic PNG encode/decode | sonnet | high | S | T0.2 | | ☑ |
+| T0.3 | testkit: golden helper, ASCII helpers, golden sheets, fixture runner | sonnet | medium | S | T1.8 | | ☑ |
+| T1.1 | schema: domain types + zod + ids (**+ review + user look**) | opus | xhigh | M | T0.2 | | ☑ |
+| T1.2 | color: OKLab/OKLCH, nearest colour, palette ops | sonnet | medium | S | T1.1 | ∥ | ☑ |
+| T1.3 | color: palette presets from fetched Lospec `.hex` sources | haiku | low | S | T1.2 | ∥ | ☑ |
+| T1.4 | raster: sparse tiled image, compositing, basic transforms | sonnet | high | M | T1.1, T0.3 | ∥ | ☑ |
+| T1.5 | raster: primitives (line, rect, ellipse, fill, pixel-perfect) | sonnet | medium | S | T1.4 | ∥ | ☑ |
+| T1.6 | raster: fixed-point trig + RotSprite (+ review) | opus | xhigh | M | T1.4, T0.4 | ∥ | ☑ |
+| T1.7 | raster: orphan removal + outline pass | sonnet | medium | S | T1.4 | ∥ | ☑ |
+| T2.1 | core: document store, transactions, patches, history, rig hook interface (+ review) | opus | xhigh | M | T1.1, T1.4 | ∥ | ☑ |
+| T3.0 | rig: joint-gap definition + hand-written ASCII gap fixtures | opus | high | S | T1.1 | ∥ | ☑ |
+| T3.1 | rig: FK, interpolation + quantisation, hierarchical snapping (+ review) | opus | xhigh | M | T1.1, T1.6 | ∥ | ☑ |
+| T2.2 | core: frame ops (§3.2) + `validate()` | sonnet | medium | M | T2.1 | ∥ | ☑ |
+| T2.3 | core: `renderFrame` (pixel layers) + cache key | sonnet | medium | S | T2.1 | ∥ | ☑ |
+| T3.2 | rig: templates, bind by name/overlap, pivots, views | sonnet | medium | M | T3.1 | ∥ |☑ |
+| T4.3 | io: spritesheet import (cell ranges, outline sheet), sheet + JSON export, contact sheet | sonnet | medium | M | T2.3, T1.8 | ∥ |☑ |
+| T4.2 | io: `.pxf` read/write, migrations, render cache, atomic save, pack/unpack | sonnet | high | M | T4.3, T2.2 | |☑ |
+| T6.0 | Godot integration contract with the first consumer game (spec addendum) | opus | high | S | T4.2 | | ☑ |
+| T6.1 | Godot: `.pxf` reader + import plugin + test harness + fixture `.pxf` generator | sonnet | high | M | T6.0 | | ☐☑ |
+| T6.2 | Godot: PixelForgeDriver (clock + game-driven playback), adapters, mirroring, markers/events | sonnet | high | M | T6.1 | | ☑ |
+| T6.3 | Godot: demo scene + CI job (ubuntu, 4.6.1 headless) | haiku | low | S | T6.2 | | ☑ |
+| D1 | **Early demo**: flat target-move `.pxf` → plays in the first consumer game through the driver (user approval) | orchestrator + sonnet | medium | M | T6.3 | | ☑ |
+| T3.3 | rig: part render pipeline + overrides + staleness; core hook (+ review) | opus | high | M | T3.2, T2.3, T1.7 | ∥ | ☑ |
+| T3.8 | rig: `attributeEdit(render, edited) → overrides` (+ review) | opus | high | M | T3.3 | | ☐☑ |
+| T3.4 | rig: `jointCheck` (implements the T3.0 definition) | sonnet | high | M | T3.0, T3.3 | | ☑ |
+| T3.5 | rig `overlapMask` + core `splitRegion` transaction | sonnet | high | M | T3.4 | ∥ | ☑ |
+| T3.6 | core: derived mirror in `renderFrame`; rig: pose clipboard (mirrored) | sonnet | medium | S | T3.3 | ∥ | ☑ |
+| T3.7 | core: bake | sonnet | medium | S | T3.3 | ∥ | ☑ |
+| T3.9 | fixtures: synthetic humanoid "hero" (TS doc + `.aseprite` via Lua) | sonnet | medium | M | T3.2, T0.3 | ∥ | ☑ |
+| T3.9b | fixtures: widen hero joint caps until `jointCheck` is clean; regenerate `hero.pxf` with a render cache | sonnet | medium | S | T3.4, T3.3 | ∥ | ☑ |
+| G1 | **Gate: core + rig** | opus | high | — | W1–W3 rig track | | ☑ |
+| T4.6 | fixtures: synthetic `.aseprite` files via Aseprite Lua | sonnet | medium | S | T0.3 | ∥ | ☑ |
+| T4.4 | io: `.aseprite` binary parser (Aseprite CLI as oracle) | sonnet | high | M | T4.6 | |☑ |
+| T4.5 | io: `.aseprite` → document mapping + in-place re-import (explicit rules) | sonnet | high | M | T4.4, T4.2 | ∥ | ☑ |
+| T4.1 | lint: rules + structured findings | sonnet | medium | M | T3.4, T3.3 | ∥ | ☑ |
+| T5.1 | ops: registry framework + generators + 3 exemplar ops (+ review) | opus | high | M | T4.1, T4.2 | | ☑ |
+| T5.2a | ops (no logic, from table) | haiku | medium | S | T5.1 | ∥ | ☑ |
+| T5.2b | ops with logic + P-06 ops | sonnet | medium | M | T5.1 | ∥ | ☑ |
+| T5.3 | ops: text grid read/write + render/contact sheet with overlays | sonnet | high | M | T5.1, T3.8, T4.3 | ∥ | ☑ |
+| T5.4 | server: DocumentHost, lockfiles, discovery, workspace roots | sonnet | high | M | T5.1 | ∥ | ☑ |
+| T5.5 | MCP stdio server | sonnet | high | M | T5.2a, T5.2b, T5.3, T5.4 | | ☑ |
+| T5.6a | CLI shell + `check` harness + `tsup` bundle + `pf` on PATH | sonnet | medium | M | T5.5 | | ☑ |
+| T5.6b | CLI subcommands from registry metadata (+ override import/list/resolve, `pf godot install`) | sonnet | medium | S | T5.6a | ∥ | ☑ |
+| T5.7 | Claude Code setup guide + `.mcp.json` | haiku | low | S | T5.6a | ∥ | ☑ |
+| T5.9 | W-scenario suite (`pf check` scripts for W2, W2b, W3-manual, W4-CLI) in CI | sonnet | medium | M | T5.6b, T3.9 | | ☑ |
+| T5.8 | **MCP dogfood evaluation** (CC0 character + synthetic hero) | opus | high | M | T5.9, T0.5 | | ☑ |
+| T5.10 | `rig.readPose` read op, moved up from M1b (MCP-03) | sonnet | medium | S | T5.8 | | ☐ |
+| T5.11 | `lint` rule for overrides that replace the rig (MCP-07) | sonnet | medium | S | T5.8 | | ☐ |
+| T5.12 | `lint` rules for canvas clipping and holes in rotated parts (LINT-01, LINT-02) | sonnet | medium | M | T5.8 | | ☐ |
+| T5.13 | Set a part's default z after creation (RIG-07) | sonnet | medium | S | T5.8 | | ☐ |
+| T5.14 | Paint a part variant's own art (RIG-07) | sonnet | medium | M | T5.8 | | ☐ |
+| T5.15 | Compact `rig.jointCheck` output, additive (MCP-05) | haiku | low | S | T5.8 | | ☐ |
+| T5.16 | Fit a template to art from landmarks | sonnet | medium | M | T5.8 | | ☐ |
+| T5.17 | Pose several frames in one call, one undo step | sonnet | medium | S | T5.8 | | ☐ |
+| T6.4 | Target-move rebuild from pack art (with the user) | opus orchestrating | high | session | T5.8, D1 | | ☑ |
+| T6.5 | Swap the rigged target move into the first consumer game (user approval) | sonnet | medium | S | T6.4 | | ☑ |
+| G2 | **Gate: M1a exit** + v0.1.0 + M1b breakdown | opus | high | — | all | | ⏳ |
 
 **Mix**: Opus 12 cards (T0.4, T1.1, T1.6, T2.1, T3.0, T3.1, T3.3, T3.8, T6.0, T5.1, T5.8, T6.4) + 2 gates; Sonnet 32; Haiku 6; orchestrator steps 2 (O-1, D1). Opus is about 25 % of the cards and roughly 35 % of the tokens. Sonnet carries most of the volume.
 
@@ -214,6 +228,13 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - try the pixel-centre pivot convention.
 - **Deliverables** — `spikes/rotsprite/REPORT.md`, recommending the algorithm and parameters, `maxResidualDeg`, the joint-cap size, and where variants will be needed.
 - **Acceptance** — the report has images and timings. The user has seen the sheets (orchestrator shows them).
+- **Notes (2026-10-26)** — ☑ The orchestrator viewed the sheets and re-ran the pivot stress test (134,280 runs, 0 failures) and the benchmark (cold 0.093 ms, 16 warm parts 0.044 ms on an M5; NFR-01 targets are 10 ms and 2 ms). Findings:
+  - no new colours and an exact pivot for RotSprite, nearest and shear;
+  - RotSprite clearly beats nearest on parts ≥ ~16 px, and is about equal on 2 px limbs;
+  - Aseprite's built-in RotSprite doesn't track pivots (ruled out as an oracle for pivots);
+  - recommended: a 1 px hidden overlap as the joint cap; `maxResidualDeg` 22.5 (15 for detailed parts); variants for hands, for feet beyond ±30°, and for heads.
+
+  Public report: `spikes/rotsprite/REPORT.md`. Reference implementation: `spikes/rotsprite/reference/rot.mjs`. Private full report: `~/pf-work/spikes/rotsprite/REPORT_FULL.md`. Cost: about 224k subagent tokens and 20 minutes, the most expensive W0 card.
 
 #### T0.5 CC0 character sheet  [haiku] [S] ∥
 - **Do**:
@@ -260,6 +281,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - runs `gh repo create pixel-anvil/pixel-forge --public --source . --push --description "Pixel-art editor and animator with pixel-aware rigs, MCP and Godot import"`;
   - enables branch protection on `main` (requires CI to pass; no force-push), Dependabot alerts, and private vulnerability reporting.
 - Wait for CI to go green, and fix any CI-only failures here.
+- **Notes (2026-10-26)** — ☑ The org is **`pixel-anvil`** (the user's choice). Repo https://github.com/pixel-anvil/pixel-forge is public, and the user's org membership is private. First CI run is green on ubuntu and macOS. `main` is protected: required checks `verify (ubuntu-latest)` and `verify (macos-latest)` (strict), linear history, no force-push or deletion. Admins can bypass it, so the orchestrator follows the PR flow by convention. Dependabot alerts and private vulnerability reporting are on.
 
 #### T1.8 `png` codec  [sonnet] [S]
 - **Deliverables** — `packages/png`:
@@ -267,6 +289,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - `decodePng`, which supports colour types 0/2/3/4/6 at 8-bit, plus palette PNGs.
 - **Oracle** — decode our output with `pngjs` and `sips`. Decode PNGs written by `pngjs`.
 - **Acceptance** — byte-stable: the same input gives the same bytes on repeated runs. Decoding matches pngjs on a corpus of 10 PNGs, which includes Aseprite exports.
+- **Notes (2026-10-26)** — ☑ Verified (`pnpm verify` passes in the worktree and on `m1a-wave1`). fflate `zlibSync` at level 9, mem 8. Per-row filter chosen by the minimum sum of absolute residuals, ties to the lowest type. SHA-256 pins on two reference encodings. A 23-file corpus (CC0 sheets, pngjs, handmade low-bit/tRNS/multi-IDAT, sips, Aseprite) decodes the same as pngjs. 99 tests, 98 % line coverage. The orchestrator fixed every package's `test` script (`--root ../..`, so `pnpm --filter` works), added `png` to the coverage-enforced list, and logged KNOWN_ISSUES PNG-01 and PNG-02. Cost: about 124k subagent tokens.
 
 #### T0.3 testkit  [sonnet] [S]
 - **Deliverables** — `packages/testkit` (private):
@@ -275,6 +298,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - `pnpm golden:sheet` (×8 upscale with a grid, for review);
   - the `pnpm fixtures` runner.
 - **Acceptance** — self-tests pass. A golden mismatch writes the diff files.
+- **Notes (2026-10-26)** — ☑ Verified (`pnpm verify` passes, `fixtures:check` is up to date). Goldens live in `<test dir>/__golden__/<name>.png`. The hash is SHA-256 over u32be width, u32be height and RGBA. Diff: magenta for differing pixels, cyan for alpha-only differences. 3×5 bitmap font. The fixtures runner uses `default async generate(ctx)` with `fixtures:check`, and the CLIs need `tsc -b` first. The orchestrator added `vitest` as a peer and dev dependency of testkit. PLAYBOOKS "add a golden/ASCII test" is filled in. Cost: about 121k subagent tokens.
 
 ### Wave 1 — schema / color / raster
 
@@ -286,10 +310,16 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - `constants.ts`;
   - `refs.ts`.
 - **Acceptance** — `fixtures/src/minimal-doc.ts` round-trips through the schema. Invalid names are rejected. JSON Schema export works. **Review: the code-review skill (high), then show the user the domain types summary** before the wave fans out.
+- **Notes (2026-10-27)** — Implemented (Opus/xhigh; interrupted once by the usage limit and resumed; about 268k subagent tokens). The spec ambiguities it raised are settled in spec §3.4. Code review (high) found 10 issues, all fixed by Sonnet/high (about 128k tokens), and the orchestrator re-checked the worst two:
+  - `__proto__` record keys were silently dropped by zod → a `record()` helper now rejects reserved keys;
+  - a 5000-deep layer tree crashed `safeParse` → `MAX_LAYER_DEPTH` 32 with an iterative pre-check.
+
+  Also: frozen v1 fixture at `fixtures/frozen/v1/minimal-document.json`. 89 tests, 100 % line coverage. The user signed off on the domain summary on 2026-10-27 → ☑.
 
 #### T1.2 color basics  [sonnet] [S] ∥
 - **Deliverables** — sRGB ↔ linear ↔ OKLab/OKLCH conversion; `nearestIndex` (OKLab, cached, ties go to the lower index); palette operations.
 - **Oracle** — the reference values published with Björn Ottosson's OKLab, to 1e-4.
+- **Notes (2026-10-27)** — ☑ Verified: `verify` passes, and the orchestrator independently checked red → OKLab (0.62796, 0.22486, 0.12585). Conversions use only + − × ÷ and `sqrt`, with roots by fixed-iteration Newton, so there's no `Math.pow` or `cbrt` variance. OKLCH hue uses trig and is documented as not cross-platform safe (it only affects `sortBy('hue')`). `nearestIndex`: alpha-0 input → the first alpha-0 entry; ties → the lower index; a FIFO cache tied to palette identity, so palettes must be treated as immutable. Palette ops return `{palette, remap}` and remap ramps. About 89k subagent tokens.
 
 #### T1.3 palette presets  [haiku] [S] ∥
 - **Do**:
@@ -298,6 +328,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - write each preset module to **load from the committed `.hex`** (exemplar: write PICO-8 first, following the format in `presets/README.md`);
   - record each preset's source URL and licence.
 - **Acceptance** — a test compares each preset with its `.hex` file byte for byte. The colour counts are as published.
+- **Notes (2026-10-27)** — ☑ Verified: PICO-8 matches its canonical 16 colours, and the counts are 16, 55, 4, 32, 64, 64, 16. Game Boy uses Lospec slug `nintendo-gameboy-bgb`. **No Lospec page states a licence.** Authors are credited in each preset (Lexaloffle, ENDESGA, Kerrie Lake, Adigun A. Polack, GrafxKid). Decision (orchestrator): keep them; a list of colour values is generally treated as unprotectable data, and attribution is kept. See KNOWN_ISSUES PAL-01. About 63k subagent tokens.
 
 #### T1.4 raster core  [sonnet] [M] ∥
 - **Deliverables**:
@@ -307,10 +338,12 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - `hashRGBA`.
 - **Oracle** — property tests (involutions). ASCII expectations for compositing.
 - **Acceptance** — a 256² image with 10 % fill uses ≤ 30 tiles.
+- **Notes (2026-10-27)** — ☑ Verified: `verify` passes in the worktree and on the branch. The orchestrator checked half-transparent red over blue → (128, 0, 127, 255), and that a clone is independent. **Dirty-tile contract for T2.1** (in the README): `version` +1 per mutating call; `tilesChanged(since)`; `captureTiles` / `restoreTiles` with shared, immutable snapshot buffers; transaction recipe base-clone → ops → before/after capture. `IndexedImage` has an explicit `transparentIndex` (default 0) and core must validate that it has alpha 0. Out-of-bounds `get` returns transparent and `set` is a no-op. Pure SHA-256 checked against node:crypto. Composite uses exact rational rounding with a BigInt oracle. Bench: 0.07 ms per 64×64 composite. Notes for T1.5: tuple get/set allocates, so consider a packed-u32 path for hot loops. About 147k subagent tokens.
 
 #### T1.5 primitives  [sonnet] [S] ∥
 - **Deliverables** — Bresenham line, rectangle, midpoint ellipse, flood fill (4- or 8-connected, contiguous or global), and the pixel-perfect stroke filter.
 - **Oracle** — hand-written ASCII expectations, plus compare against Aseprite's line and ellipse via Lua on 5 cases.
+- **Notes (2026-10-27)** — ☑ Symmetric Zingl Bresenham (endpoints ordered so A→B = B→A), square and round brushes 1–8, iterative flood fill (4/8-connected, global, tolerance), and the pixel-perfect L-corner filter. All 12 oracle cases (5 lines, 7 ellipses) match Aseprite's own tools rendered via Lua `app.useTool`. **Licensing incident:** the first version *ported* Aseprite's proprietary ellipse code. The orchestrator caught it in verification, before any commit. A fresh Sonnet agent rewrote the ellipse clean-room from Zingl's published `plotEllipseRect`, without reading Aseprite or the old bodies. The AGENTS.md rule "Licensing of code" was added. About 116k + 51k subagent tokens.
 
 #### T1.6 fixed-point trig + RotSprite  [opus] [M] ∥
 - **Spec** — FR-RIG-20/21, NFR-02, `spikes/rotsprite/REPORT.md`.
@@ -326,10 +359,20 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - the alpha area stays within ±10 %;
   - a metric comparison with Aseprite's RotSprite (from the spike).
 - **Acceptance** — a cold 32×32 rotation takes < 10 ms (record it on the card). Then the review.
+- **Notes (2026-10-27)** — ☑ Opus/xhigh, about 314k tokens, interrupted once by the usage limit and resumed. The orchestrator viewed the torso review sheet (pivot fixed, clean outline to 135°; copies in `~/pf-work/review/`). Cold 32×32 0.09 ms; 16 warm parts 0.07–0.11 ms. Quarter-wave Q16 table from exact BigInt maths, committed and checked by `pnpm gen:check`. Production adds a symmetric centre-line tie rule, so mirror IoU = 1 at every angle (the spike's rule gave a worst of 0.9375). Code review (high) found 9 issues, fixed by Sonnet/high (about 135k tokens):
+  - 80 committed output hashes in `test/rotsprite-hashes.json`;
+  - a Math-trig stub test;
+  - exact per-subject area bounds — edge replication does **not** give ±1 px (3 px on thin limbs, like production);
+  - an angle-independent size limit and lazy `prepareRotSprite`;
+  - the `roundQ16` range bound;
+  - Mazzoleni and Xenowhirl provenance;
+  - schema constants, deduplicated rounding, and `gen`/`gen:check` wired into `verify`.
+- **Input from T0.4** — port `spikes/rotsprite/reference/rot.mjs`: Scale2x×3 with a cached ×8 image, then the fused integer pass `sx8 = 8px+4 + sfloor(C·dx+S·dy, 8192)` with C and S = cos/sin×65536, symmetric ties away from the pivot (plain `floor` breaks mirror symmetry at 30° and 60°), the pivot colour forced, and `(ox, oy)` returned. Don't use the majority-colour downsample. Keep the spike's sentinel, mirror-IoU and colour-subset tests as oracles.
 
 #### T1.7 orphan removal + outline  [sonnet] [S] ∥
 - **Deliverables** — `removeOrphans`, and `outline(img, colour, {outsideOnly, corners})` producing a four-connected, one-pixel outline.
 - **Oracle** — hand-written ASCII cases: convex and concave corners, single pixels, holes.
+- **Notes (2026-10-27)** — ☑ Verified. `removeOrphans` makes a single pass with no cascading (`XXX` with minNeighbours 2 → `.X.`). `outline` always grows the canvas by 1 px and returns `{img, offset:{1,1}}`; it never paints over opaque pixels; holes are 4-connected flood. The orchestrator changed the default corners to **'round'** so it matches the schema (`corners` absent = false = round), and updated the tests to state their mode explicitly. About 72k subagent tokens.
 
 ### Wave 2 — core + rig foundations
 
@@ -340,6 +383,21 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - the **`RigRenderer` hook interface**, which `renderFrame` will call and `rig` will implement.
 - **Oracle** — property test: random operations, then undo all, give the initial hash; redo all gives the final hash.
 - **Acceptance** — a PLAYBOOKS entry, "how mutations work". Then the review.
+- **Notes (2026-10-27)** — ☑ Opus/xhigh, about 335k tokens, interrupted by the usage limit and resumed.
+  - **API:** `DocumentStore` with frozen JSON plus copy-on-write images, and `transact`/`begin`. Transactions offer `update` (Proxy draft), `set`/`insert`/`remove`, `newId`, and `createImage`/`writeImage`/`deleteImage`.
+  - **Patches:** produced by one deterministic diff at commit (RFC 6902 style, with before/after) plus tile snapshots. Undo is strict (`PATCH_CONFLICT`).
+  - **Other:** reference-counted tile-byte accounting; `documentHash`; the `RigRenderer` hook is passed as a `renderFrame` option; no nested transactions.
+  - **Review:** code review (high) found 10 issues, fixed by Sonnet/high (about 150k tokens; 30 regression tests fail on the old code):
+    - writeImage busy guard;
+    - read-only snapshot image view;
+    - explicit edits of the id counter now commit;
+    - root must be an object;
+    - eviction from the end farthest from the cursor;
+    - commit-time IMAGE_MUTATED check, and copies-on-access for event tile buffers;
+    - store mutations from listeners throw TX_BUSY;
+    - no image-map copies on pure JSON edits;
+    - read-only draft scans don't copy.
+  - **Docs:** the orchestrator fixed spec §6.4 and ADR-007, because `version` is runtime state that also advances on undo and redo.
 
 #### T3.0 joint-gap definition  [opus] [S] ∥
 - **Deliverables** — `docs/contracts/JOINT_CHECK.md`, which defines:
@@ -349,6 +407,8 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 
   Also hand-written ASCII fixtures `fixtures/joint/gappy_*.txt` and `clean_*.txt` with the **expected gap coordinates written by hand**.
 - **Acceptance** — the definition is unambiguous. The expected results are in the fixtures, and they're not generated by code.
+- **Notes (2026-10-27)** — ☑ Delivered `docs/contracts/JOINT_CHECK.md` and 6 fixtures (gappy_elbow 2 gaps, gappy_knee 1 gap, 4 clean traps). The orchestrator verified gappy_knee by hand. The gap predicate is near (Chebyshev ≤ r, default 4) + open + covered at rest + outer side (Q16 sign test) + **pinched** between parent and child along a row, column or diagonal. That replaces this card's original "8-connected closure" wording, which would miss open gaps and flag inner corners. **Joint-cap clarification:** the "1 px hidden overlap" means the parent's whole end column across the limb width, not Chebyshev-1 around the pivot. Spec FR-RIG-05 and W2 have been reworded. About 205k subagent tokens.
+- **Input from T0.4** — a naive "transparent pixel near the joint" rule reports normal inner corners and the art's own staircase steps as gaps. The definition must count only pixels on the **outer side of the bend** that are **opaque at rest** (or inside the rest composite) and transparent at θ. Default joint cap: a 1 px hidden overlap (`max(1, ceil(w/4))` for limbs ≥ 6 px wide). Disc caps change the rest pose on thin limbs, so don't recommend them.
 
 #### T3.1 FK + interpolation + hierarchical snapping  [opus] [M] ∥
 - **Package** — `rig` (pure).
@@ -361,15 +421,45 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - interpolation tables written by hand;
   - results identical across runs.
 - **Acceptance** — then the review.
+- **Notes (2026-10-27)** — ☑ Opus/xhigh (about 305k tokens, resumed once after the usage limit).
+  - **ADR-012 (accepted by the orchestrator):** a child's rest (x, y) is its canvas offset from the parent at rest, rotated by the parent's rotation away from rest. The rest pose reproduces the art exactly at any quantum.
+  - **Interpolation:** by frame index, with exact BigInt rational arithmetic, smoothstep ease, hold outside the keys and wrap for loops.
+  - **Card oracle (e) was flawed:** independent rounding never exceeds `ceil(L·Δθ)+1`. It was replaced with the tighter `ceil(L·Δθ)` plus an exact rigid-vector check, which do catch the jitter bug.
+  - **Code review (high):** 9 issues, fixed by Sonnet/high (about 159k tokens):
+    - every key is validated up front (`prepareAnimation`);
+    - an independent reference compares all 42,881 bones exactly, with 29 genuinely float-ambiguous roundings checked as one of two legal values;
+    - oracles derive their inputs from the keys, not from outputs;
+    - the arm-swing table is independently derived;
+    - `interpWeight` validates its inputs;
+    - `isValidAngleQuantum` is shared from schema.
 
 #### T2.2 frame ops + validate  [sonnet] [M] ∥
 - **Spec** — §3.2, I1–I7.
 - **Deliverables** — `insertFrame`, `duplicateFrame`, `deleteFrame` (which materialises links into the deleted frame), `reorderFrames`, `validate`.
 - **Oracle** — one test per §3.2 rule. Property test: after random frame operations, `validate()` reports no errors.
+- **Notes (2026-10-27)** — ☑ About 170 core tests; resumed once after the usage limit. `validate()` runs the schema first, then 46 finding codes (39 errors, 7 warnings), each with a failing fixture. The property test runs 6 seeds × 40 random ops, checks validity after every step, and confirms undo-all restores the hash. Decisions:
+  - frame-op refusals use `BAD_ARGUMENT` with `details.reason`, to be promoted to codes later;
+  - part-layer names are unique document-wide, other layer names among siblings (warning);
+  - `deleteFrame` materialises links into the first linker and deletes orphaned images;
+  - `ID_COUNTER_BEHIND` is a warning.
+
+  Follow-up CORE-01: the I4 detector copies schema scramble constants, so the schema should export the decoder.
 
 #### T2.3 renderFrame (pixel layers)  [sonnet] [S] ∥
 - **Deliverables** — `renderFrame` for pixel and group layers (links, opacity, visibility, the `export` filter), calling the `RigRenderer` hook when it's present, plus the input-hash memo.
 - **Oracle** — ASCII expectations. The cache key changes only when its inputs change.
+- **Notes (2026-10-27)** — ☑ Sonnet; about 164k + 151k tokens for the revision; resumed once after the usage limit. The orchestrator changed the pipeline contract after reading the doubts list:
+  - **Rig block:** all parts sorted by z are drawn as one block at the tree position of the lowest part layer, so pixel layers interleave correctly.
+  - **Core owns FR-RIG-20 steps 5–8:**
+    - composite;
+    - post-passes for any authored animation;
+    - final overrides (erase where mask = 255, then set with an "over" blend);
+    - mirror: source steps 1–7, then flip `x' = 2·origin.x − x`, then the mirror's own finals;
+    - skin last, by colour, in both modes.
+  - **RigRenderer is now parts-only** (`finishFrame` removed).
+  - **`renderInputKey`** (SHA-256 over a canonical description) covers post-passes, final overrides and the rig-block position.
+
+  Doubts for T3.3/T3.6: erase masks are read as 8-bit value or alpha, and only 255 clears; a mirror's part overrides are T3.6. Spec FR-RIG-20 is updated.
 
 #### T3.2 templates, binding, pivots, views  [sonnet] [M] ∥
 - **Package** — `rig` (pure) and `core` (the transaction wrappers).
@@ -381,6 +471,12 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - `setPivot`, bone CRUD, bone length, and rest pose per view;
   - view CRUD.
 - **Acceptance** — a fixture binds completely. The ambiguous case returns candidates.
+- **Notes (2026-10-27)** — ☑ Sonnet (about 185k tokens, resumed once).
+  - Humanoid side, front and back templates use the spec's bone names; rest pivots are rounded once (ADR-012).
+  - `bindByOverlap` uses nearest-segment voting with reach 4, minShare 0.5 and margin 0.2; it never guesses.
+  - Source naming is `part:<bone>[.<part>][@variant][#view]`. The orchestrator required several parts per bone (R-15), so document part layers are named `<bone>` or `<bone>_<part>`, with refusals instead of renames.
+  - Rig-edit ops in core. `deleteBone` never destroys art. Pivots may lie outside the variant image.
+  - Known: bone length is per bone, not per view; animated pixel layers are skipped by binding.
 
 ### Wave 3a — Godot track (early demo)
 
@@ -391,6 +487,13 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - spritesheet + JSON export (Aseprite hash format);
   - `contactSheet(frames, {scale, labels})`, keeping the long edge ≤ 1568 px.
 - **Oracle** — compare the JSON with Aseprite's own `--sheet --data` output for the same frames. Labels checked by golden, after review.
+- **Notes (2026-10-27)** — ☑ About 169k tokens.
+  - `importSpritesheetTx`/`createDocumentFromSpritesheet`, plus a CC0 `sheet.json` adapter. Default origin is the bottom-centre pixel of the cell.
+  - `exportSpritesheet`: JSON deep-equals Aseprite's at ×1 and ×2, and the PNG is pixel-identical.
+  - `contactSheet`: long edge ≤ 1568.
+  - **Golden reviewed:** the orchestrator viewed the hero contact sheet.
+  - The orchestrator removed two fully transparent CC0 cells from `sheet.json` (attack [0,2], slide [1,1]), giving 22 frames.
+  - Depcruise now lets io import schema and raster directly; spec §6.2 is updated.
 
 #### T4.2 `.pxf` io  [sonnet] [M]
 - **Spec** — §7, NFR-03, FR-DOC-01.
@@ -405,6 +508,11 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - a no-op save leaves `modified` unchanged;
   - the render cache equals `renderFrame`;
   - a fake FS failure midway through a write leaves the original intact.
+- **Notes (2026-10-27)** — ☑ Sonnet/high (about 235k tokens, resumed once).
+  - `readPxf`, `buildPxf` (pass the returned `file` as `previous` for incremental saves), `saveAtomic`, `pack`/`unpack` with `.gdignore`; FileSystem and Clock ports plus `@pixel-forge/io/node`.
+  - ZIP: fixed order; JSON deflated, PNGs stored; DOS mtime from `manifest.modified` in UTC (bytes are timezone-independent); checked with the system `unzip`.
+  - Render cache: `render/<skin>/<group>/<dir>/<n>.png`, with frames of equal hash sharing a PNG; mirrors without overrides use `mirrorOf`; `RIG_REQUIRED` when part layers exist and no rig is given.
+  - Known: IO-01 (an IndexedImage's transparentIndex isn't stored).
 
 #### T6.0 Godot integration contract  [opus] [S]
 - **Context** — the first consumer game's shot controller, character-art and sprite-sheet records, prop-anchor script, lit billboard script, and pipeline doc (file list: GAME_NOTES §4, local). Read only.
@@ -418,6 +526,12 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 
   If the spec needs an addendum to FR-GD-03, write it.
 - **Acceptance** — a mapping table from every character-art and sprite-sheet field the shot controller uses to a source in the PixelForgeAsset.
+- **Notes (2026-10-28)** — ☑ Opus/high; about 162k tokens; resumed once after the usage limit. `docs/contracts/GODOT_INTEGRATION.md` plus FR-GD-02/03 addenda. The private game names and line refs are in GAME_NOTES §7.
+  - Origin point = bottom-centre of the origin pixel (ox+0.5, oy+1), so origin.y = the game's feet row − 1. Markers and the adapter offset are measured from it; the offset is already mirrored.
+  - The per-frame rise is baked into pixels and markers (D1 moves cels by (0, −rise)), not root motion or an offset channel. A per-frame "art draws the prop" flag becomes a `ball_drawn`-style event.
+  - The driver gains `mirror` (XOR mirrorOf), `clock_mode`/`advance()`, `play()` and query methods. Event rules: events never drop on a long tick; seek/set_frame fire only the target frame; `hold_last` works in every loop mode.
+  - Required additions: T6.1 (canvas_size, a shared atlas layout across skins, asset helpers), T6.2 (driver API). Nothing new in the `.pxf`.
+  - Check in D1: prop heights are 0.5 px lower and the sprite moves 0.5 px sideways against the game's current maths (a game test pins a release height). T6.2 must test that flip_h leaves `offset` unmirrored.
 
 #### T6.1 Godot importer + harness  [sonnet] [M]
 - **Deliverables**:
@@ -425,6 +539,10 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - `godot/test/`: a project with GUT vendored and pinned to 9.6.1, and `run_tests.sh` **copied from the game's runner (GAME_NOTES §1)** (it does `--import` before GUT and fails when GUT reports parse errors);
   - `fixtures/src/godot.ts`, which generates `godot/test/fixtures/*.pxf` covering two directions, a mirror, markers, events and trimmed frames. CI checks the output is up to date.
 - **Oracle** — in GUT, crop every atlas region and compare it pixel for pixel with the `render/*.png` frames in the `.pxf`.
+- **Notes (2026-10-28)** — ☑ Sonnet/high; about 258k tokens. 76 GUT tests pass headless on Godot 4.6.1 (the orchestrator re-ran them). The atlas oracle compares each region with an independent ZIPReader decode of `render/*.png`.
+  - GUT 9.6.1 (MIT) is vendored unmodified with its LICENSE. `run_tests.sh` keeps only the game runner's structure (import first, fail on script errors); nothing game-specific remains.
+  - The import logic is in `PixelForgeImport` (testable without the editor); the plugin is a thin shell. Trim = the union of opaque pixels across the imported skins; a fully transparent frame becomes a 1×1 region. Selecting a mirror imports its source.
+  - Also: CI now runs `pnpm fixtures:check`; testkit generators may write under `../godot/`; `godot/test/addons/pixel_forge` is a symlink to the addon (Windows needs `core.symlinks`, see KNOWN_ISSUES GD-01). The GUT CI job is T6.3.
 
 #### T6.2 PixelForgeDriver  [sonnet] [M]
 - **Spec** — FR-GD-03 and `GODOT_INTEGRATION.md`.
@@ -436,10 +554,15 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - adapters: Sprite2D, Sprite3D and duck-typed;
   - mirroring (`flip_h` and mirrored markers).
 - **Oracle** — GUT tests for timing, `seek` and `hold`, fallback, mirrored markers, and the duck-typed adapter on a fake node with the lit billboard node's properties.
+- **Notes (2026-11-01)** — ☑ Sonnet/high; about 170k tokens; resumed once after the weekly limit. 161 GUT tests pass headless (85 new; the orchestrator re-ran them). `PixelForgeDriver`, a base/duck-typed `PixelForgeAdapter`, and Sprite2D/Sprite3D adapters.
+  - T6.0 doubt settled: `flip_h` leaves `offset` unmirrored in Sprite2D and Sprite3D (seen in a real render, pinned headless via `get_item_rect`; contract §8.1). Adapters pass the already-mirrored offset through.
+  - Decisions (contract §3.5): a long `advance()` fires the intermediate frames' events before applying the final frame (their handlers see the old frame); `finished` also fires when seek/set_frame/hold_last lands at the end, once per `play()`; `frame` is −1 with nothing playing; an unknown skin falls back to `base`.
+  - `auto_direction` (4/8 sectors, sets `direction` and `mirror`, facing −Z) is the agent's own design; D1 or the game may change it.
 
 #### T6.3 demo + CI  [haiku] [S]
 - **Deliverables** — `godot/demo/` (plays the fixture character), and a CI job on ubuntu with Godot 4.6.1 headless (binary cached) that runs `godot/test/run_tests.sh`.
 - **Acceptance** — the CI job is green.
+- **Notes (2026-11-01)** — ☑ Haiku/low; about 67k tokens. `godot/demo/` (Sprite2D + `PixelForgeDriver` playing `walker.pxf`; Left/Right mirror, Space cycles animations; the addon and fixture are symlinked). CI job `godot` on ubuntu: cached 4.6.1 editor, demo import plus a 60-frame smoke run (fails on SCRIPT ERROR), then GUT.
 
 #### D1 Early demo: the flat target move in the game  [orchestrator + sonnet]
 - **Ask the user first.**
@@ -451,6 +574,10 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - runs the game's test runner;
   - records a screenshot or GIF.
 - **Acceptance** — the user approves the demo, which should look identical to the current art. Mismatches go to KNOWN_ISSUES.
+- **Notes (2026-11-01)** — ☑ **Approved by the user.** Generic builder `scripts/demo/flat-move.ts` (private config and output in `~/pf-work/`); game side on a local demo branch in a separate worktree (uncommitted, not pushed; details in GAME_NOTES / `~/pf-work/d1/`).
+  - The `.pxf` frames equal the game's sheets (0 px). The first capture showed the contract's half-pixel origin point: the sprite 0.5 px sideways, the prop 0.5 px low, so the jump apex was 2.3 cm higher. Fixed with the driver option `pixel_edge_origin` (contract §6.3); the game reads markers through it.
+  - After the fix, the old and new paths match except small in-air differences (mostly ≤ 50 px per frame) and one landing frame shown 16.7 ms early (rounding): GD-02. Game tests pass on an idle Mac; the earlier physics-test failures were CPU load from parallel agents.
+  - Cost: script agent about 110k, game agent about 216k (Sonnet); the fix was done by the orchestrator with the user running tests and captures by hand.
 
 ### Wave 3b — Rig track
 
@@ -471,6 +598,11 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - an untouched part's override stays valid;
   - the outline runs before final overrides.
 - **Acceptance** — then the review.
+- **Notes (2026-10-27)** — ☑ Opus/high (about 291k tokens), then code-review high (10 findings, all accepted), then a Sonnet/high fix pass (about 172k tokens).
+  - rig: `renderParts` (steps 1–4), the `(variant, angle)` cache, `baseHash` (bbox of set ∪ erase ±1, against the pre-override target), `staleOverrides`, `rebase`, `discard`, and shared `paintOverride`/`maskAt`/`unionRect`. core: `createRigRenderer`, `checkOverrides`, `listStaleOverrides`, `rebaseOverrides`, `discardOverrides`. No skin hook was needed (core applies the skin last).
+  - Part targets are pivot-relative, so translation keeps an override valid and rotation makes it stale. Final targets are the export render after post-passes. Stale overrides are still applied.
+  - Fixes: per-override cache-key description; `RigRenderer.renderKey` (`PART_RENDER_VERSION` + raster `ROTSPRITE_VERSION`), else the conservative key; per-override `'error'` status; an indexed set pixel equal to the part's transparent index is refused; `none` rotation is cached once; part keys are precomputed.
+  - Follow-ups: RIG-03, CORE-03; T3.8 must hash finals against the same export render; mirror part overrides are T3.6.
 
 #### T3.8 attributeEdit  [opus] [M]
 - **Package** — `rig` (pure).
@@ -481,10 +613,19 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - the erase mask, anchor and `baseHash`.
 - **Oracle** — hand-written cases: an edit inside one part, an edit straddling two parts, an erase at the silhouette, an edit then a re-pose (W4).
 - **Acceptance** — then the review.
+- **Notes (2026-10-28)** — ☑ Opus/high (about 221k tokens; resumed once after the usage limit), then code-review high (10 findings: 9 accepted, 1 rejected), then a Sonnet/high fix pass (about 134k tokens).
+  - rig `attributeEdit(ctx, before, edited) → AttributedOverride[]` (images inline, no ids; rig is pure). core `attributeEditTx` / `attributeEditTxReport` (`{ids, newlyStale}`, covering this frame and the mirrors) build the context from `renderStages` on the export render; final hashes use the same `beforeFinals` as `checkOverrides`.
+  - **Rejected finding / decision:** attribution is per 8-connected stroke, not per whole edit (spec FR-RIG-22 clarified). A part override that doesn't show through the composite is demoted to the final.
+  - Fixes: alpha-0 palette entries are transparent in footprints; erase masks are 8-bit `IndexedImage`; a `before` that doesn't match the render is refused (`before-mismatch`); `EditContext.finalOnly` for mirrors; no duplicate renders. RigError gained `BAD_ARGUMENT` + `reason`.
+  - Follow-ups: RIG-04 (new part overrides can stale nearby finals here and in mirrors; reported via `newlyStale`). An indexed colour missing from the palette has no dedicated CLI reason (T5.x).
 
 #### T3.4 joint check  [sonnet] [M]
 - **Deliverables** — `jointCheck(...)`, implementing `JOINT_CHECK.md`.
 - **Acceptance** — exactly matches the expected coordinates written by hand in T3.0.
+- **Notes (2026-10-28)** — ☑ Sonnet/high; about 164k tokens; resumed once after the usage limit. `jointGaps`/`jointCheck` in `rig/src/joint.ts`; all 6 `fixtures/joint` cases deep-equal their `expected.json`, and the real RotSprite path agrees.
+  - Input: `{rig, images, canvas, direction?, partKeys?, palette?, angleQuantum?, rangeDeg?, stepDeg?, radius?, cache?}`, with no animation or frame; it rasterises the pre-override part images. No core wrapper yet (MCP `rig_joint_check` may want per-frame keys).
+  - **The T3.9 hero fails it:** 20 gaps over 8 pixels in 5 of 15 joints (head, both thighs, both shins) at ±30°. Pinned in `hero-fixture.test.ts` with an `it.fails`; follow-up card T3.9b widens the caps.
+  - Perf: full-canvas masks per angle; use a window-only mask if G1's bench shows a cost.
 
 #### T3.5 overlap mask + split  [sonnet] [M] ∥
 - **Deliverables** — `rig.overlapMask(joint)` and `core.splitRegion(doc, layer, frame, selection)` (rectangle, lasso or colour-bounded flood) as one transaction.
@@ -492,18 +633,32 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - W2b: the split parts recomposite to the source frame by hash;
   - painting inside the mask leaves the composite at rest unchanged;
   - painting outside the mask is reported.
+- **Notes (2026-11-01)** — ☑ Sonnet/high; about 271k tokens. rig `overlapMask` (images level) and `overlapMasks(jointCheckInput)` (rig level; ambiguous/rotated-rest joints are `skipped`), `checkOverlapPaint` → `{inside, outsideHidden, outsideVisible}`; `jointCheck` now shares an internal `sweepJoints` (output unchanged). core `splitRegion(tx, layer, frameId, selection)`: rect, lasso (even-odd rule, written from the definition) or flood; moves pixels into a new layer above the source on one frame and binds via `bindParts`.
+  - Mask = 3×3 blocks around each gap's inverse-rotated source, limited to pixels the parent covers and the child doesn't draw. `jointCheck` after painting is the judge (RIG-05). Split parts draw in every rig frame (CORE-04): the flat exit move needs per-frame visibility.
+  - For T5.2b: factor the paint-overlap step (grow the variant, shift the pivot) out of the W2b test into an op.
 
 #### T3.6 mirroring + pose clipboard  [sonnet] [S] ∥
 - **Deliverables** — the derived mirror in `renderFrame` (flipped around `origin.x`; markers mirrored, names kept), and `copyPose` / `pastePose({mirrored})`.
 - **Oracle** — the mirror equals `flipH` about the origin. The marker formula `x' = 2·origin.x − x`. A mirrored paste swaps `_l`/`_r` and negates angles.
+- **Notes (2026-11-01)** — ☑ Sonnet/medium; about 128k tokens. T2.3 already flipped the pixels; added core `mirrorMarkers`/`frameMarkers` (names and y kept; consistent with the contract's ox+0.5 origin point). Mirror **part** overrides stay refused (never rendered or listed; rebase/discard refuse them; correctly absent from `renderInputKey`), which closes IO-02.
+  - rig `copyPose`/`pastePose({mirrored})`/`mirrorBoneName`; core `copyPoseTx`/`pastePoseTx` (merges into the frame; refuses a mirror animation). A mirrored paste swaps `_l`/`_r`, negates angles **and offset.x** (accepted: a mirror flips x translation). Bone keys only; a missing partner is skipped and reported.
 
 #### T3.7 bake  [sonnet] [S] ∥
 - **Deliverables** — `bakeAnimation(doc, animRef, {mode})`, with overrides merged.
 - **Acceptance** — the baked render equals the rig render for every frame (hash).
+- **Notes (2026-11-01)** — ☑ Sonnet/medium; about 117k tokens. `bakeAnimation(tx, animRef, {mode, name?, rig?})` → `{animationId, layerId, frames, dropped}`; one new pixel layer `baked` at the first part layer's slot holding the export composite (no skin); the baked animation hides all parts with a frame-0 `visible:false` part key.
+  - `new`: fresh ids, group `<group>_baked`, source untouched. `replace`: keeps animation and frame ids (mirrors and their finals stay valid), drops keys/overrides/post-passes (reported), and consumes other exported layers' cels at those frames: T5.2b `rig.bake` confirm text must say so.
+  - Mirrors stay derived (baking a mirror is refused). Identical frames are not linked.
 
 #### T3.9 synthetic hero  [sonnet] [M] ∥
 - **Deliverables** — `fixtures/src/hero.ts`, which builds a 48×48 humanoid side view (parts with joint caps, the template bones, and one variant on the forearm) as a `.pxf`, plus `fixtures/src/aseprite/hero_parts.lua`, which writes the same parts as `fixtures/hero_parts.aseprite` with `part:` layer names.
 - **Acceptance** — the joint check is clean. Every part binds by name. Both files regenerate deterministically.
+- **Notes (2026-10-27)** — ☑ Sonnet/medium; about 129k tokens. Golden reviewed (8× sheet of the rest pose).
+  - `fixtures/src/hero.ts` → `fixtures/generated/hero.pxf` (byte-identical regeneration); `hero_parts.lua` → `fixtures/aseprite/hero_parts.aseprite` (next to the other Aseprite fixtures, not `fixtures/`) plus CLI oracles.
+  - Pivots from `humanoidSide({height: 47})`; each child part reaches 2 px into its parent; the forearm has a `sleeve` variant. Testkit gained `FixtureContext.writeFile`.
+  - Joint check: hand-computed rest-cap rectangles per joint plus `it.todo` for T3.4 (`jointCheck` must also cover ±30°). The T4.5 import of the `.aseprite` matches the TS parts' pixels.
+  - Follow-ups: regenerate `hero.pxf` with a render cache after T3.3; the rect table is duplicated in TS and Lua (guarded by the import test).
+- **T3.9b (2026-10-28)** — ☑ Sonnet/medium; about 65k tokens. `jointCheck` now finds 0 gaps in all 15 joints at the default sweep: the neck is 5 px wide, the head has a chin rect, the pelvis is 7×7 and the thighs are 16 px tall; pivots are unchanged. `hero.pxf` now has a render cache (`createRigRenderer`). Golden reviewed.
 
 #### G1 Gate: core + rig  [opus]
 - The `code-review` skill (high) over the rig track.
@@ -512,6 +667,11 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 - Flip ADR-008 and ADR-010 to Accepted, or revise them.
 - Update KNOWN_ISSUES. Correct the model columns for W4.
 - **Exit** — no open Blocker or Major findings.
+- **Notes (2026-11-01)** — ☑ Exit met. Code-review high (about 355k tokens): 10 findings, all accepted and reproduced; 7 were Major class. Sonnet/high fix pass (about 346k tokens), which added refusals `rig-block-order`, `view-in-use` and `translucent`.
+  - **CI had been red for 5 commits:** pnpm refused esbuild's unapproved build script (fixed; `allowBuilds` records the decision). Image-heavy tests also passed the 5 s timeout on shared runners, so the limit is 30 s for all tests.
+  - **Bench** (`pnpm bench` is real now; Apple M5, p95): cold RotSprite 32×32 under 1 ms (target 10), posed 16-part 48×48 frame warm 0.08 ms (target 2), open 13 MB `.pxf` 106 ms (target 500). jointCheck and overlapMasks take about 5 ms per rig, so no window-only mask is needed. IO-04 has no RotSprite cost. Godot re-import is left for G2.
+  - **Spec re-check** (§3, §6.2, FR-RIG-20): render order, package dependencies and purity rules match the code. ADR-008 and ADR-010 accepted; Windows unproven (DET-01). New minor issues: RIG-06, CORE-05.
+  - **Calibration:** no card escalated a model. Averages per card: Sonnet/medium 175k, Sonnet/high 226k, Opus 280k to 320k, Haiku/low 72k, Haiku/medium 181k. Keep the columns for T5.9, T5.8 and T6.4. The gate review still found 10 bugs in code already reviewed per card, so keep it at G2.
 
 ### Wave 4 — io, lint, ops, server, CLI, MCP
 
@@ -524,11 +684,17 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - a compressed cel.
 
   The generated files (< 20 KB each) are committed. Each fixture also gets an `expected.json` from the Aseprite CLI (`--list-layers --list-tags --data`), which serves as the oracle.
+- **Notes (2026-10-27)** — ☑ 4 fixtures (`layers_parts`, `tags_overlap` with 7 frames and an untagged last frame, `linked_cels` via `app.command.LinkCels`, `indexed_palette`), each 376 B–1.8 KB, with Aseprite-CLI JSON plus per-layer PNG oracles. Aseprite always compresses cels, so there are no raw-cel fixtures. Layer hidden flags appear only in the binary, not in the JSON. The orchestrator sanitised oracle PNG names (`:#@` → `~`, invalid on Windows). About 51k subagent tokens.
 
 #### T4.4 `.aseprite` parser  [sonnet] [M]
 - **Context** — `~/code/aseprite/docs/ase-file-specs.md`.
 - **Deliverables** — a parser for the header, frames, layer, cel (raw, linked, compressed), tag, palette 0x2019 and user-data chunks. Unknown chunks are skipped. Typed errors.
 - **Oracle** — matches `expected.json`. Each cel's pixels equal Aseprite's per-frame `--save-as` PNGs.
+- **Notes (2026-10-27)** — ☑ Implemented from `ase-file-specs.md` only (no Aseprite source); about 149k tokens.
+  - Decodes header, frames, layers, cels (raw, linked, zlib, tilemap header), cel extra, colour profile, tags, new and old palettes, user data and slices. External files, mask, path and tileset chunks are skipped with a note.
+  - All 4 fixtures match the CLI oracles pixel for pixel.
+  - Truncation at every chunk, frame and byte boundary gives `TRUNCATED`, never a crash. Bomb and size limits are enforced.
+  - Indexed transparency applies only to non-background layers.
 
 #### T4.5 `.aseprite` mapping + re-import  [sonnet] [M] ∥
 - **Mapping rules**:
@@ -543,6 +709,11 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - **added frames are appended without keys; removed frames drop their keys and overrides, and these appear in the returned report**;
   - bindings, pivots and keys of matched items are kept.
 - **Acceptance** — one test per rule. Re-importing after a part edit leaves the hash of the rig data unchanged.
+- **Notes (2026-10-27)** — ☑ Sonnet/high; about 244k tokens. `createDocumentFromAseprite`, `importAsepriteTx`, `reimportAsepriteTx`, `reimportAseprite` returning an `AsepriteImportReport`; 26 tests (one per rule plus edge cases).
+  - io now depends on rig (for `parsePartLayerName`/`bindParts`), same precedent as T4.3; spec §6.2 and §3.4 clarification 15 updated.
+  - A part variant is one canvas-sized image at (0,0), taken from the first frame's cel (later differing cels warn). Pivots stay valid and re-import rewrites pixels under the same image id, so the rig hash is unchanged.
+  - Tag direction: reverse reverses the list, pingpong* → pingpong, repeat 1 → once. Names sanitised and reported. Canvas must match; indexed docs take only indexed files; identical palettes are reused.
+  - Follow-ups: IO-03 (re-import overwrites durations), IO-04 (canvas-sized variants vs RotSprite cost; check in G1 bench), and splitting the ~600-line `run()`.
 
 #### T4.1 lint  [sonnet] [M] ∥
 - **Deliverables** — `lint(doc, opts) → Finding[]` with the rules:
@@ -556,6 +727,10 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 
   Plus the PLAYBOOKS entry "add a lint rule".
 - **Acceptance** — one fixture per rule that triggers it and one that doesn't.
+- **Notes (2026-11-01)** — ☑ Sonnet/medium; about 148k tokens; resumed once after the weekly limit. `lint(doc, opts)` with options `enable`/`disable`/`animations`/`skins`/`maxPixels`; findings sorted by rule id, then document order; severities include `info`.
+  - `palette.offPalette`: RGB of alpha>0 render pixels, one finding per frame and skin; a palette skin is checked against its own palette only. `pixels.orphan` = an opaque pixel with no opaque 8-neighbour (`info`).
+  - `rig.jointGap` per view (first direction, default sweep). CORE-03: `'error'` statuses become `rig.overrideError`. Extra rule `lint.renderError`: a frame that fails to render is reported, not thrown. `rig.rotationResidual` is a stub (M1b, FR-RIG-14).
+  - The depcruise `TEST_EXTRA` lets lint tests import schema and raster (src stays core+rig). Fixtures are hand-built. The jointGap test pins only part of the gap set.
 
 #### T5.1 ops framework  [opus] [M]
 - **Spec** — §6.3, FR-AI-01/14.
@@ -565,15 +740,25 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - the exemplars `doc.open`, `doc.summary`, `rig.setPose`;
   - the PLAYBOOKS entry "add an op", written as a Haiku-followable recipe with one fully worked example.
 - **Acceptance** — then the review.
+- **Notes (2026-11-01)** — ☑ Opus/high (about 320k tokens), then code-review high (10 findings, all accepted), then a Sonnet/high fix pass (about 160k tokens).
+  - `defineOp` (checked at load), a registry (one call = one transaction = at most one undo entry, labelled `AI: <op name>`; a no-op records nothing), `OpContext`, `OpError`, safety classes read/mutate/destructive/io with `confirm`, ref resolution (id first, then name; misses list what exists), `OpHost` plus an in-memory host that owns one rig renderer (CORE-03). Core refusals map `unknown-*` → NOT_FOUND, others → REFUSED (CORE-02).
+  - Generators: `packages/ops/scripts/gen-ops.mjs` → `generated/{mcp-tools,cli}.json` and `docs/contracts/OPERATIONS.md`, checked by `gen --check`. ops depends on schema and zod (spec §6.2 updated).
+  - A validate guard refuses changes that add `validate()` errors. Fixes: counts cached per committed store version only; only touched images are scanned (new core `validate(view, {images})` option); a listener throwing after commit gives success plus `warnings`; no unhandled rejections; shared `commit.ts`; variant refs never cross views; concurrent `doc.open` is deduplicated.
+  - For T5.5: resolve the "exactly one undo entry labelled `AI: <tool>`" wording against the rules above (op name, no entry for a no-op). Tool definitions are 3.8–4.4 KB, mostly outputSchema; consider trimming for LLM context. OPS-01: io `ctx.transact` commits before the output check.
 
 #### T5.2a ops without logic  [haiku] [S] ∥
 - **Exemplar** — `rig.setPose` plus the PLAYBOOKS recipe.
 - **Ops** — `doc.undo`, `doc.redo`, `frame.add`, `frame.delete`, `frame.duplicate`, `lint.run`, `rig.jointCheck`, `rig.applyTemplate`.
 - **Acceptance** — each op has a schema test and an example test.
+- **Notes (2026-11-01)** — ☑ Haiku/medium; about 181k tokens. 8 ops plus generated outputs; verify passes. `frame.delete` is `mutate` (spec §9.2 asks for confirm only on bake and animation delete); undo/redo with nothing to do return `undone/redone: false`; `rig.applyTemplate` uses `doc.meta.origin`.
+  - Playbook gaps fixed in PLAYBOOKS ("Gotchas"). `lint.run` has no positive-finding example (the hero lints clean).
 
 #### T5.2b ops with logic  [sonnet] [M] ∥
 - **Ops** — `doc.create`, `doc.save` (roots, lock, atomic), `doc.setColorMode`, `anim.create`, `anim.update` (I6), `frame.setMeta`, `layer.update`, `cel.link`, `part.split`, `rig.bindParts`, `rig.editBones`, `rig.setPivot`, `rig.mirrorAnimation`, `rig.bake` (confirm), `override.list`, `override.resolve`, `io.import` (including cell ranges), `io.export`.
 - **Acceptance** — each op is tested. `gen --check` is clean.
+- **Notes (2026-11-01)** — ☑ Sonnet/medium; about 437k tokens. 19 ops (the card's 18 plus `part.paintOverlap`), ops coverage 98.7%. Accepted beyond the card, since ops cannot import raster or png: core `paintOverlapTx` and `setColorMode`, io `ExportSheetOptions.rig`, ops `confirmText` on destructive ops, and `PngError` mapped to `BAD_FILE`.
+  - `doc.save` builds first, refuses an existing file at a new path without `overwrite`, then rebinds and writes atomically; a failed write re-binds the old path (OPS-03). `rig.bake` asks for `confirm` in both modes (OPS-02). `override.list` returns `stale`, `errors` and `valid` apart.
+  - For T5.5: the longest tool descriptions run 750–1100 characters (`rig_bake`, `import_file`, `part_split`); trim them if context matters.
 
 #### T5.3 text grid + render ops  [sonnet] [M] ∥
 - **Spec** — FR-AI-12/13.
@@ -585,6 +770,8 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - reading then writing is a no-op;
   - more than 62 colours is an error;
   - a write on a rig frame creates the expected override (ASCII check).
+- **Notes (2026-11-01)** — ☑ Sonnet/high; about 283k tokens. Four ops; no new golden. `ops` now depends on `raster` and `png`; io gained `ContactSheetOptions.rig` and `contactSheetFrameOrigin`. Beyond the card: `writeGrid` on flat documents rewrites a layer cel, because M1a has no other way to paint pixels.
+  - For T5.5: images are base64 in a top-level `image` field `{mimeType, data, width, height}`, long edge at most 1568. Emit image content and drop `data` from the JSON text. `writeGrid` sees the export render only, so non-exported layers are invisible to it.
 
 #### T5.4 server: DocumentHost + ownership  [sonnet] [M] ∥
 - **Deliverables** — `DocumentHost`, lockfiles, `server.json` discovery, workspace roots, the Node `FileSystem`.
@@ -592,6 +779,8 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - **two real processes** (via `execa`): the second gets `DOC_LOCKED` with the owner's pid;
   - a stale lock is reclaimed;
   - a path outside the roots is rejected.
+- **Notes (2026-11-01)** — ☑ Sonnet/high; about 135k tokens. `createDocumentHost` wraps the memory host and adds lockfiles (temp file + `link()`; stale locks reclaimed by rename-aside, 6 real processes gave one winner), `server.json` helpers (0600) and `resolveWorkspaceRoots` (explicit, then `PF_WORKSPACE_ROOTS`, then cwd). `resolvePath` walks symlinks itself, so dangling links cannot escape, and returns the canonical path: two names of one file are one document, and echoed paths may differ from typed ones.
+  - `server` may import `io` (Node ports); spec §6.2 updated. A lock from another hostname is never reclaimed (SRV-01). No signal handlers: `pf` must call `dispose()` on SIGINT/SIGTERM (T5.6a). `OpHost.rebind` was added before T5.2b/T5.4 started.
 
 #### T5.5 MCP stdio server  [sonnet] [M]
 - **Spec** — FR-AI-10–15, spec §8 M1a list.
@@ -601,25 +790,43 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - **each mutating call adds exactly one undo entry labelled `AI: <tool>`**;
   - images respect the MIME type and size limit;
   - a destructive op without `confirm` is refused.
+- **Notes (2026-11-01)** — ☑ Sonnet/high; about 285k tokens, 17 min. `createMcpServer` and `serveStdio` in `server`, on SDK 1.32.2's low-level `Server` (MCP-01). 34 tools, all called in tests; `tools/list` is 75 KB without `outputSchema` (was 106 KB). Server coverage 95%, now enforced.
+  - Undo label stays `AI: <op name>`, no entry for a no-op (FR-AI-14 updated). Success text is the ops envelope, error text the bare `OpErrorJson`; `isError` tells them apart. Image block follows the text and only `image.data` is dropped.
+  - Beyond the card: ten descriptions trimmed to at most 800 characters (test-held, MCP-04), `SERVER_PROTOCOL_VERSION = 1`, `/animations/{group}` for undirected animations, `toHex` exported from ops. Calls run one at a time (MCP-02).
+  - For T5.6a: pass `trace` and call `handle.close()` on SIGINT/SIGTERM; the `--trace` flag and `pf mcp` are yours. While a compatible `pf serve` runs, every call gets `NOT_IMPLEMENTED` (SRV-02).
+  - For T5.8: no read op exposes poses, so the `rig` resource shows no angles (MCP-03); watch whether that hurts.
 
 #### T5.6a CLI shell + harness + build  [sonnet] [M]
 - **Deliverables**:
   - `pf` (commander) with `mcp`, `check` (steps.json → report.json + PNGs, exit codes 0, 1 and 2), and `version`;
-  - a `tsup` single-file bundle, with `pnpm link --global`, so `pf` is on PATH;
+  - a `tsup` single-file bundle, symlinked onto PATH as `pf` (pnpm 12 has no `link --global`; `pnpm link .` edits tracked files);
   - generic **registry → subcommand** wiring.
 - **Acceptance** — `pf --version` works from any directory. `pf check` runs a sample script.
+- **Notes (2026-11-01)** — ☑ Sonnet/medium; about 207k tokens, 14 min. Orchestrator checked `pf --version`, a usage error (exit 2), `pf check` on the sample and `pf doc summary` from outside the repo. The agent's report file was never written, so its final message and the CLI README are the record. CLI coverage 96%, now enforced.
+  - `pf` is `~/.local/bin/pf` → `packages/cli/bundle/pf.mjs` (gitignored, 1.9 MB, all dependencies inlined; CLI-01). `pnpm build` now bundles and root `pnpm test` builds first.
+  - Script format is in the CLI README, including `${step.output.path}` references and `expect`. Lint never changes the exit code (CLI-04). `--home`/`PF_HOME` sets the lock folder.
+  - Registry subcommands: `--doc <path>`, `--save` to write, `--confirm` for destructive, relative paths made absolute by field name (CLI-02). Only `pf mcp` handles signals (CLI-03).
 
 #### T5.6b generated subcommands  [haiku] [S] ∥
 - **Deliverables** — `render`, `export`, `lint`, `override import|list|resolve` (`import` uses `attributeEdit`), `pack`, `unpack`, and `godot install <res-dir>` (copies the addon at the plugin.cfg version).
 - **Acceptance** — CLI end-to-end tests on fixtures. `override import` round trip: edit 3 px, import, and the render equals the edited PNG.
+- **Notes (2026-11-01)** — ☑ Sonnet/medium (raised from Haiku, new ops needed); about 200k tokens, 11 min, plus a first run lost to the usage limit. Orchestrator ran `lint`, `unpack` and `godot install` through the symlinked `pf`. 37 MCP tools now.
+  - New ops: `override.import` (safety `io`, not `mutate`: it reads a PNG, and mutate handlers are sync; one undo step), `pxf.pack`, `pxf.unpack` over the existing `.pxfd` layout (ADR-005). Shared `frame-edit.ts` used by `pixels.writeGrid`.
+  - Friendly commands are positional mappings on the same op path (`FRIENDLY` table), so the generic `--doc` spelling of those ops is gone. `pf render` needs `--animation`.
+  - For T5.9: the base for `override import` must come from `pf export` at scale 1, since `pf render` draws a checkerboard (CLI-05). `godot install` copies the addon baked into the bundle (CLI-06). Pack and unpack work on files, not open documents (CLI-07).
 
 #### T5.7 Claude Code guide  [haiku] [S] ∥
 - **Deliverables** — `docs/guides/claude-code.md` (an `.mcp.json` snippet, the workspace-root flag, example prompts) and `fixtures/pf.mcp.json`.
 - **Acceptance** — the orchestrator runs `claude mcp list` with the config and sees `pf` connected.
+- **Notes (2026-11-01)** — ☑ Haiku/low; about 77k tokens, 3 min. The fixture config parses and shows `Pending approval` as a project server; the same command shows `Connected` under local scope. The orchestrator ran a raw `doc_open` and added to the guide that tool paths must be absolute (`BAD_INPUT` otherwise). T5.8 should watch whether that costs the model a retry.
 
 #### T5.9 W-scenario suite  [sonnet] [M]
 - **Deliverables** — `scenarios/*.steps.json` for W2 (`hero_parts.aseprite` + `gappy`/`clean`), W2b, W3-manual (poses are scripted, not from an LLM) and W4-CLI, run by `pnpm scenarios` in CI.
 - **Acceptance** — all pass in CI.
+- **Notes (2026-11-01)** — ☑ Sonnet/medium; about 204k tokens, 12 min. `pnpm scenarios` (`scripts/scenarios.mjs`) runs the real `pf` bundle in a temp folder, 5/5 in about 1.7 s, as a CI step after `pnpm verify`. W2 has two scripts: `W2` (hero_parts) and `W2-joint` (6 fixtures).
+  - The agent could only show "found", not "exactly 3". The orchestrator added optional `rangeDeg`, `stepDeg` and `radius` to `rig.jointCheck` and compares seeded angles exactly. Unseeded mirror angles are not compared: gappy_knee has no -10 frame and a sweep does report a gap there.
+  - W4: the torso lean sets neck -5 so the head moves without rotating; the edited pixels are chosen so that one override stays valid and one goes stale (SCN-04).
+  - For T5.8: import the `.aseprite` after the template (SCN-01). SCN-03 was later fixed (a z-tie order bug), so T6.4 has no paint-order limit.
 
 #### T5.8 MCP dogfood evaluation  [opus] [M]
 - **Do**:
@@ -629,6 +836,10 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   - revise the descriptions and examples;
   - file new cards for missing tools.
 - **Acceptance** — W3-manual is done by the LLM on both characters. `docs/ai/MCP_EVAL_M1a.md` has the evidence. Every tool description has been revised at least once based on it.
+- **Notes (2026-11-01)** — ☑ Opus/high; about 410k tokens plus 7 `claude -p` Sonnet runs (about $6.60 of API-equivalent cost), stopped once by the usage limit. Both characters pass W3 on the final text (hero r7, CC0 r6); 37/37 descriptions revised. Evidence: `docs/ai/MCP_EVAL_M1a.md`.
+  - Run r5 met all of W3's conditions with 47% of a frame pasted from the sheet, so W3 cannot tell a rig animation from pasted art. The evaluation added a 5% override check, which is not in the spec (open question in STATUS).
+  - The revisions improved the process, not the art: the final CC0 jump has speckle and poor arms in frame 3, and lint finds none of it.
+  - Cards T5.10 to T5.17 are proposals from the evaluation, added to the board, not yet scheduled. RIG-08 and MCP-06 were left unrevised so the tested text is what ships.
 
 ### Wave 5 — Target move + exit
 
@@ -642,10 +853,12 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   5. Touch up with `pf override import`.
   6. Add the markers `ball` and `hand_r`, the `release` event, and the T6.0 channels.
 - **Acceptance** — the user approves a side-by-side contact sheet (original vs rig). Lint is clean.
+- **Notes (2026-11-01)** — ☑ **Approved by the user** (contact sheet). Lint 0; render cache equals a fresh render (12/12). GO on splitting, with part variants cut from 3 key frames. Numbers and the work dir are in STATUS. Moves the plan did not name: hidden fill is painted on the flat layer between cuts (no tool paints a part's art, RIG-07), and poses came from a local search over the real renderer, which suggests a `rig.fitPose` card for M1b. Outline: none on the rig; the game derives it.
 
 #### T6.5 Swap in the rigged target move  [sonnet] [S]
 - **User approval required.** On the game branch from D1, replace the flat `.pxf` with the rigged one.
 - **Acceptance** — the game's test runner passes. The user approves the in-game capture. (W5)
+- **Notes (2026-11-01)** — ☑ **Approved by the user** (in-game capture sheet). Committed on the game's local branch, never pushed; the game's test runner passes (445/445). Swap done by the orchestrator (no agent, the card is one file). Two traps: a new or renamed `.pxf` gets the importer default `trim=true`, and the lit billboard needs `false` (contract §8.3; the game's driver test caught it); and a capture from `get_image()` inside `_process` shows the previous tick, so a capture named for log row N is file N+1.
 
 #### G2 Gate: M1a exit  [opus]
 - The `code-review` skill over M1a.
@@ -654,12 +867,15 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 - **Changesets → v0.1.0 tag**, and the addon version bumped to match.
 - **Rolling wave**: write the M1b cards, using what was learned about the models.
 - **Exit** — the user signs off on M1a.
+- **Notes (2026-11-02)** — ⏳ **Waiting for the user's sign-off; the tag is not created.** Re-run on macOS: scenarios 5/5, GUT 162/162, fixtures check, determinism tests, `pnpm bench` (all targets met, see STATUS), game tests 445/445. Godot import step for 20 animations about 115 ms (target 1 s; editor overhead not measured). `code-review` high: 10 findings, all confirmed by reading the code; Sonnet/high fix pass (about 238k tokens) fixed 9 and found the 10th (unpack) was not a defect. New issues IO-05, IO-06, SRV-03, LINT-03. Review of this size found 10 bugs again after 10 at G1: keep a gate review in M1b (G2b, G3). Release prepared: a minor changeset moved all 12 public packages to 0.1.0 and wrote the changelogs (the addon was already 0.1.0). `changeset version` crashes in its formatter step (`spawn ENOEXEC`) after writing the files, so the consumed changesets were deleted by hand. M1b cards: `docs/03-plan-m1b.md`.
 
 ---
 
 ## 4. Later milestones — epics (turned into cards at their gate)
 
 ### M1b — Breadth (≈ 25 cards, Opus ≈ 4)
+**Cards are in `docs/03-plan-m1b.md` (draft from G2, user approval pending). T5.10 and T5.12 to T5.17 move there; T5.11 stays unscheduled.**
+
 | Epic | Spec | Model guidance |
 |---|---|---|
 | E1 IK (two-bone, FABRIK) + end-effector targets in `rig.setPose` | FR-RIG-13, FR-AI-17 | opus (solver + bake to FK), sonnet (op) |

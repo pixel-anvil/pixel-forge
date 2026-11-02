@@ -1,6 +1,6 @@
 {
   "name": "@pixel-forge/ops",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Op registry, definitions, handlers, error types and generators (MCP tool JSON, CLI, docs).",
   "license": "MIT",
   "type": "module",
@@ -16,13 +16,17 @@
   ],
   "scripts": {
     "build": "tsc -b",
-    "test": "vitest run --project ops"
+    "test": "vitest run --root ../.. --project ops"
   },
   "dependencies": {
+    "@pixel-forge/convert": "workspace:*",
     "@pixel-forge/core": "workspace:*",
-    "@pixel-forge/lint": "workspace:*",
     "@pixel-forge/io": "workspace:*",
+    "@pixel-forge/lint": "workspace:*",
+    "@pixel-forge/png": "workspace:*",
+    "@pixel-forge/raster": "workspace:*",
     "@pixel-forge/rig": "workspace:*",
-    "@pixel-forge/convert": "workspace:*"
+    "@pixel-forge/schema": "workspace:*",
+    "zod": "^4.6.7"
   }
 }

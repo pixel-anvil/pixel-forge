@@ -10,12 +10,15 @@ Headless core shared by a CLI (`pf`), an MCP server, a later web editor and a Go
 3. Subagents never commit. Leave changes in the worktree and report files changed, commands run, doubts.
 4. The orchestrator verifies (acceptance commands, public API diff, upscaled golden sheets), then commits and merges. Never trust "done" alone.
 5. Parallel (marked with the parallel symbol) cards run in isolated worktrees.
+6. Never use bare `git stash`: the stash stack is shared by every worktree. To set work aside, make a temporary WIP commit in your own worktree.
+7. The orchestrator tracks session length and tells the user when to reset (`docs/ai/ORCHESTRATOR.md`, "Session length"). Never let a long session run on silently.
 
 ## Definition of done
 
 - `pnpm verify` passes: lint, typecheck, test, depcruise, `gen --check`.
 - Tests written alongside or before logic; coverage of the touched core package stays at or above 85%.
 - No `any`, no `Math.random`, no `Date.now()` in pure packages.
+- No duplicate helpers: search the target package and its dependencies before writing one, and reuse or extend what exists. If the helper looks useful to another card, name it in your report.
 - Public API has TSDoc; update docs the change made stale (README, contracts, KNOWN_ISSUES, PLAYBOOKS).
 - User-visible change adds a changeset (`pnpm changeset`).
 
@@ -35,6 +38,11 @@ Headless core shared by a CLI (`pf`), an MCP server, a later web editor and a Go
 - This repo is public (MIT). Commits use the repo-local pseudonymous identity `pixel-forge dev <dev@pixel-forge.invalid>`; never the global git identity.
 - Never commit game-specific identifiers, art-pack names or absolute home-directory paths. The first consumer game's details live only in the untracked `~/pf-work/GAME_NOTES.md`. Public docs say "the first consumer game".
 - `scripts/privacy-check.sh` runs as a pre-commit hook and rejects absolute home paths and terms in a local denylist.
+
+## Licensing of code
+
+- Never copy or port code from non-permissive sources. That includes Aseprite (proprietary EULA), GPL projects such as LibreSprite, and anything without a licence. Comparing *outputs* against such tools is fine.
+- Implement algorithms from papers or permissively licensed or public-domain references, and name the source in TSDoc. If in doubt, ask the orchestrator.
 
 ## Oracles and goldens
 

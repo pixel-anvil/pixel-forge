@@ -1,13 +1,16 @@
 node_modules
 dist
+packages/cli/bundle
 coverage
 .check
 .golden-diff
 pnpm-lock.yaml
 spikes
 fixtures
+godot
 docs
 .changeset/*.md
 CHANGELOG.md
 AGENTS.md
 CLAUDE.md
+.claude

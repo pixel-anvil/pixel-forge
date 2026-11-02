@@ -1,0 +1,11 @@
+export { brushMask } from './brush.js';
+export type { Brush, BrushMask, BrushShape } from './brush.js';
+export { line, linePoints } from './line.js';
+export type { LineOptions } from './line.js';
+export { ellipse, ellipsePixels, rect } from './shapes.js';
+export type { ShapeOptions } from './shapes.js';
+export { floodFill } from './fill.js';
+export type { FloodFillOptions } from './fill.js';
+export { pixelPerfect } from './pixelPerfect.js';
+export type { Point } from './pixelPerfect.js';
+export type { DrawableImage, PixelOf } from './plot.js';
