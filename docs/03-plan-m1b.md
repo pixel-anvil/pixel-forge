@@ -15,7 +15,7 @@ Written at gate G2 (rolling wave, `docs/02-plan.md` §4). The execution rules ar
 
 ```
 B0  T5.10 → T5.17 ∥ T5.13 ∥ T5.15 → T5.14 ∥ T5.12 → T5.16 ∥ B0.1 → B0.2
-B1  E1.1 → E1.2 ∥ E2.1 → E2.2 → E3.1 → E3.2 → E3.3 → E7.3 → G2b
+B1  E1.1 → E1.2 ∥ E2.1 → E2.2 → E3.1 → E3.2 → E3.3 → E7.3 → E7.4 → G2b
 B2  TG.1 → E5.1 ∥ E5.2 → E5.3 ∥ E5.4 → E5.5
 B3  E4.0 → E4.1 → E4.2 ∥ E4.3 → E4.4 → E4.5
 B4  E6.1 → E6.2 ∥ E8.1 → E8.2
@@ -47,6 +47,7 @@ Limits stay the same: two agents at a time, at most one on Opus.
 | E3.2 | Presets: idle-breathe, run, jump, swing | sonnet | medium | M | E3.1 | ☐ |
 | E3.3 | `rig_apply_preset` + W3-presets scenario | sonnet | medium | S | E3.2 | ☐ |
 | E7.3 | Hero art pass (RIG-10, 11, 12): knee piece retune, shoulder piece, decide on the E7.2 trim | sonnet | medium | S | E3.3 | ☐ |
+| E7.4 | Second test rig from the CC0 `ninja_full.png` (local copy `~/pf-work/local-sprites/`): cut one walk frame into parts, bind, fit template, run all presets | sonnet | high | M | E3.3 | ☐ |
 | G2b | **Mid review:** `code-review` over B0 and B1, MCP smoke run | opus | high | — | B0, B1 | ☐ |
 | TG.1 | Tool groups for the MCP server: `pf mcp --tools core,rig,...` (MCP-04) | sonnet | high | M | B0.3 | ☐ |
 | E5.1 | Palette files: `.hex`, `.gpl`, `.pal`, PNG strip | haiku | low | S | — | ☐ |
@@ -102,6 +103,7 @@ Every card: standard context pack, definition of done and oracles (`docs/02-plan
 - **E3.2 Other presets.** idle-breathe, run, jump (anticipation, rise, apex, fall, land), swing. Each gets a contact sheet.
 - **E3.3 `rig_apply_preset`.** One call, one undo step. **Acceptance:** W3-presets runs in `pnpm scenarios`.
 - **E7.3 Hero art pass.** Added 2026-11-02 at the user's request. Retune the knee piece (RIG-12), add a shoulder piece (RIG-11), and decide on the E7.2 trim (RIG-10; worktree kept). Compare walk, run, swing and jump sheets before and after. Use the user's side-view sprite if supplied (side view only: presets and the template are side view; 3/4 would be a new view, not in M1b). **Acceptance:** sheets reviewed by the user; `jointCheck` clean; no new `pixels.clipped` or `rig.partHole`.
+- **E7.4 Second test rig.** Added 2026-11-02 at the user's request, before G2b. Source: `ninja_full.png` (320x640, native pixels, 32x32 cells, walk in the first frames; user says CC0, no licence file found, so the file stays local and out of the repo until a licence file or source URL exists). Steps: pick a clean side-view walk frame, cut parts (`rig.applyTemplate` / `rig.fitTemplate`, bind parts, joint check), apply walk, run, jump, idle-breathe and swing with `rig_apply_preset`, review contact sheets. Judge the presets on a body with real drawn art; list what fails (new KNOWN_ISSUES rows) and fix only what is small. **Acceptance:** `jointCheck` clean; sheets reviewed by the user; findings recorded. Tests must not depend on the file (it is not in the repo); a script or the sheets are the output.
 - **G2b Mid review.** `code-review` high over B0 and B1. Run an MCP smoke test: a Sonnet client animates the CC0 character with presets. Fix before B2.
 
 ### Wave B2: palette and skins
