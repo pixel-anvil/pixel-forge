@@ -853,6 +853,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
   5. Touch up with `pf override import`.
   6. Add the markers `ball` and `hand_r`, the `release` event, and the T6.0 channels.
 - **Acceptance** — the user approves a side-by-side contact sheet (original vs rig). Lint is clean.
+- **Notes (2026-11-01)** — Rig built, user approval pending. GO on splitting, with part variants cut from 3 key frames. Numbers and the work dir are in STATUS. Moves the plan did not name: hidden fill is painted on the flat layer between cuts (no tool paints a part's art, RIG-07), and poses came from a local search over the real renderer, which suggests a `rig.fitPose` card for M1b. Outline: none on the rig; the game derives it.
 
 #### T6.5 Swap in the rigged target move  [sonnet] [S]
 - **User approval required.** On the game branch from D1, replace the flat `.pxf` with the rigged one.
