@@ -16,7 +16,7 @@ Written at gate G2 (rolling wave, `docs/02-plan.md` §4). The execution rules ar
 ```
 B0  T5.10 → T5.17 ∥ T5.13 ∥ T5.15 → T5.14 ∥ T5.12 → T5.16 ∥ B0.1 → B0.2
 B1  E1.1 → E1.2 ∥ E2.1 → E2.2 ∥ E7.1 → E3.1 → E3.2 → E3.3 → G2b
-B2  E5.1 ∥ E5.2 → E5.3 ∥ E5.4 → E5.5
+B2  TG.1 → E5.1 ∥ E5.2 → E5.3 ∥ E5.4 → E5.5
 B3  E4.0 → E4.1 → E4.2 ∥ E4.3 → E4.4 → E4.5
 B4  E6.1 → E6.2 ∥ E8.1 → E8.2
 B5  E9.1 ∥ E9.2 → E9.3 → E9.4 → G3
@@ -47,6 +47,7 @@ Limits stay the same: two agents at a time, at most one on Opus.
 | E3.2 | Presets: idle-breathe, run, jump, swing | sonnet | medium | M | E3.1 | ☐ |
 | E3.3 | `rig_apply_preset` + W3-presets scenario | sonnet | medium | S | E3.2 | ☐ |
 | G2b | **Mid review:** `code-review` over B0 and B1, MCP smoke run | opus | high | — | B0, B1 | ☐ |
+| TG.1 | Tool groups for the MCP server: `pf mcp --tools core,rig,...` (MCP-04) | sonnet | high | M | B0.3 | ☐ |
 | E5.1 | Palette files: `.hex`, `.gpl`, `.pal`, PNG strip | haiku | low | S | — | ☐ |
 | E5.2 | Ramp generator, palette editing and sorting ops | sonnet | medium | M | — | ☐ |
 | E5.3 | Palette generation: k-means++ in OKLab, median cut | sonnet | high | M | E5.2 | ☐ |
@@ -102,6 +103,8 @@ Every card: standard context pack, definition of done and oracles (`docs/02-plan
 - **G2b Mid review.** `code-review` high over B0 and B1. Run an MCP smoke test: a Sonnet client animates the CC0 character with presets. Fix before B2.
 
 ### Wave B2: palette and skins
+
+- **TG.1 Tool groups.** Added 2026-11-02 at the user's request. Every tool belongs to exactly one group (for example `core`: doc, frame, anim, io, render, pixels, lint, undo; `rig`; later `palette`, `convert`, `gif`). `pf mcp --tools core,rig` (and `PF_TOOLS`) lists only those groups. **Default stays "all groups" until G3**, so nothing changes for current clients; the user decides the final default at G3. The group names and what they hold go into the server `instructions`, so a model knows what exists. Design points to settle in the card and report: (1) an optional `tool_groups` tool that enables a group at run time and sends `notifications/tools/list_changed`: many clients ignore that notification, so it must not be the only way; (2) a call to a hidden tool must fail with a message that names the group, not "unknown tool"; (3) group membership must be a field on the op definition, so a new op without a group fails the build. **Acceptance:** a test that every tool has one group; `core` alone is under 45 KB (measure after B0.3 and adjust); `pnpm scenarios` still runs with all groups; MCP-04 and the Claude Code guide updated. Every card that adds a tool from here on names its group.
 
 - **E5.1 Palette files.** Parsers and writers in `io`. **Oracle:** sample files written by hand from the format docs, and Aseprite reading the written files.
 - **E5.2 Ramps and palette ops.** FR-PAL-03: editing, sorting, ramp generator with hue shift (shadows cool, lights warm).
