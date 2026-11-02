@@ -15,7 +15,7 @@ Planning steps 1 to 5 are done (research, spec, plan and their reviews). Impleme
 - **Tool size:** field descriptions (about 3.9 KB of `pattern`) and input schemas are the rest, so tool groups (card TG.1, first card of wave B2; default stays all groups until G3) are the real fix. Every new tool must remove text elsewhere until then (MCP-04).
 - **Open:** one unexplained flaky full-suite failure in the B0.3 agent's run (3 reruns passed). W3 must be re-run at G2b: a client that ignores server instructions loses the conventions line.
 - Also done: ☑ T5.17 `rig_set_pose` takes `frames:[…]` and `keyAll` (one undo step; output says `keyed` and `interpolated` bones; `keyAll` keys unnamed bones at rest, angle 0). ☑ T5.14 `part_paint_variant` (RIG-07 fully resolved; `PART_RENDER_VERSION` not bumped, overrides go stale by the image hash). `tools/list` was 75,684 bytes after T5.14 alone; the combined size is under the 76,300 limit (test passes), but the margin is very thin.
-- **In flight:** nothing.
+- **In flight (started 2026-11-02, Sonnet/medium):** T5.15 agent `a4ebc722e8970b831`; T5.12 agent `ac0899403fecbb04f`. Reports in `.claude/reports/<card>.md`. Regenerate generated files after integrating, do not hand-merge.
 - **Next:** T5.15 and T5.12 (no dependencies) first; then T5.16 and B0.1 (T5.17 is done); then B0.2 (T5.14 is done). Any new tool or field must cut text elsewhere (margin is thin).
 
 ## Open questions for the user
