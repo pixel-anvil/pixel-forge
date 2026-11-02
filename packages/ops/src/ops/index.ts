@@ -25,6 +25,7 @@ import { rigBake } from './rig-bake.js';
 import { rigBindParts } from './rig-bind-parts.js';
 import { rigEditBones } from './rig-edit-bones.js';
 import { rigMirrorAnimation } from './rig-mirror-animation.js';
+import { rigSetPartZ } from './rig-set-part-z.js';
 import { rigSetPivot } from './rig-set-pivot.js';
 import { docOpen } from './doc-open.js';
 import { docRedo } from './doc-redo.js';
@@ -62,6 +63,7 @@ export { rigBake } from './rig-bake.js';
 export { rigBindParts } from './rig-bind-parts.js';
 export { BoneEdit, rigEditBones } from './rig-edit-bones.js';
 export { rigMirrorAnimation } from './rig-mirror-animation.js';
+export { rigSetPartZ } from './rig-set-part-z.js';
 export { rigSetPivot } from './rig-set-pivot.js';
 export { docOpen } from './doc-open.js';
 export { docRedo } from './doc-redo.js';
@@ -103,6 +105,7 @@ export const ALL_OPS: readonly AnyOp[] = [
   rigEditBones,
   rigMirrorAnimation,
   rigSetPivot,
+  rigSetPartZ,
   docOpen,
   docRedo,
   docSummary,

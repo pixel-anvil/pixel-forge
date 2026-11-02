@@ -39,7 +39,7 @@ export const rigBindParts = defineOp({
       .record(z.string(), z.int())
       .optional()
       .describe(
-        'Default z of new parts by part-layer name, then bone name; higher draws on top. Set once, at creation.',
+        'Default z of new parts by part-layer name, then bone name; higher draws on top. Set at creation; change later with rig_set_part_z.',
       ),
   }),
   output: z.strictObject({

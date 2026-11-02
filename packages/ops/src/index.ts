@@ -145,6 +145,7 @@ export {
   rigJointCheck,
   rigMirrorAnimation,
   rigSetPivot,
+  rigSetPartZ,
   rigSetPose,
   SplitSelectionInput,
 } from './ops/index.js';

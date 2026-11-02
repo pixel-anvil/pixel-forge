@@ -952,7 +952,7 @@
           "flag": "--z-by-bone",
           "kind": "json",
           "required": false,
-          "description": "Default z of the new part by part-layer name, then bone name; higher draws on top. Set once, at creation: plan the draw order before the first split."
+          "description": "Default z of the new part by part-layer name, then bone name; higher draws on top. Set at creation; change later with rig_set_part_z."
         }
       ]
     },
@@ -1397,7 +1397,7 @@
           "flag": "--z-by-bone",
           "kind": "json",
           "required": false,
-          "description": "Default z of new parts by part-layer name, then bone name; higher draws on top. Set once, at creation."
+          "description": "Default z of new parts by part-layer name, then bone name; higher draws on top. Set at creation; change later with rig_set_part_z."
         }
       ]
     },
@@ -1492,6 +1492,42 @@
           "kind": "string",
           "required": true,
           "description": "Direction of the mirror, e.g. \"left\" for a \"right\" source."
+        }
+      ]
+    },
+    {
+      "op": "rig.setPartZ",
+      "command": ["rig", "set-part-z"],
+      "summary": "Set a part's default z (draw order) after creation.",
+      "safety": "mutate",
+      "options": [
+        {
+          "name": "doc",
+          "flag": "--doc",
+          "kind": "string",
+          "required": true,
+          "description": "Document id from doc_open or doc_create."
+        },
+        {
+          "name": "part",
+          "flag": "--part",
+          "kind": "string",
+          "required": true,
+          "description": "Part: its part-layer name (e.g. \"head\"), part id (\"prt_...\") or layer id."
+        },
+        {
+          "name": "z",
+          "flag": "--z",
+          "kind": "integer",
+          "required": true,
+          "description": "New default z."
+        },
+        {
+          "name": "view",
+          "flag": "--view",
+          "kind": "string",
+          "required": false,
+          "description": "View (default: the first)."
         }
       ]
     },

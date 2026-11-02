@@ -2998,7 +2998,7 @@
           "minLength": 1
         },
         "zByBone": {
-          "description": "Default z of the new part by part-layer name, then bone name; higher draws on top. Set once, at creation: plan the draw order before the first split.",
+          "description": "Default z of the new part by part-layer name, then bone name; higher draws on top. Set at creation; change later with rig_set_part_z.",
           "type": "object",
           "propertyNames": {
             "type": "string"
@@ -4097,7 +4097,7 @@
           "minLength": 1
         },
         "zByBone": {
-          "description": "Default z of new parts by part-layer name, then bone name; higher draws on top. Set once, at creation.",
+          "description": "Default z of new parts by part-layer name, then bone name; higher draws on top. Set at creation; change later with rig_set_part_z.",
           "type": "object",
           "propertyNames": {
             "type": "string"
@@ -4778,6 +4778,74 @@
     },
     "_meta": {
       "pixel-forge/op": "rig.mirrorAnimation",
+      "pixel-forge/safety": "mutate"
+    }
+  },
+  {
+    "name": "rig_set_part_z",
+    "title": "rig.setPartZ",
+    "description": "Set a part's default z (draw order) after creation.\n\nHigher z draws on top (default 0). Replaces per-frame z keys of rig_set_pose. A frame z key still wins: keyedFrames counts them. rig_joint_check and part_paint_overlap use the new order.\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Draw the right forearm above the torso): {\"doc\":\"doc_g1ed5q\",\"part\":\"lower_arm_r\",\"z\":5}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id from doc_open or doc_create."
+        },
+        "part": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Part: its part-layer name (e.g. \"head\"), part id (\"prt_...\") or layer id."
+        },
+        "z": {
+          "type": "integer",
+          "description": "New default z."
+        },
+        "view": {
+          "description": "View (default: the first).",
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": ["doc", "part", "z"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "part": {
+          "type": "string",
+          "description": "Part layer name."
+        },
+        "view": {
+          "type": "string",
+          "description": "View id."
+        },
+        "z": {
+          "type": "integer",
+          "description": "Default z afterwards."
+        },
+        "previous": {
+          "type": "integer",
+          "description": "Default z before."
+        },
+        "keyedFrames": {
+          "type": "integer",
+          "description": "Frames with their own z key for this part."
+        }
+      },
+      "required": ["part", "view", "z", "previous", "keyedFrames"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "rig.setPartZ",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "rig.setPartZ",
       "pixel-forge/safety": "mutate"
     }
   },

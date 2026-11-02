@@ -81,6 +81,7 @@ Every failure is `{"code", "message", "details"}`, identical on every transport.
 | [`rig.editBones`](#rigeditbones) | mutate | `rig_edit_bones` | `pf rig edit-bones` | Edit the skeleton: add/delete/reparent/rename bones, set length and rest pose per view, add/rename/delete views. |
 | [`rig.jointCheck`](#rigjointcheck) | read | `rig_joint_check` | `pf rig joint-check` | Sweep each joint of one rig view and report the pixel gaps that open on the outer side of a bend. |
 | [`rig.mirrorAnimation`](#rigmirroranimation) | mutate | `rig_mirror_animation` | `pf rig mirror-animation` | Add a mirror of an animation under a new direction: same group, flipped around the origin. |
+| [`rig.setPartZ`](#rigsetpartz) | mutate | `rig_set_part_z` | `pf rig set-part-z` | Set a part's default z (draw order) after creation. |
 | [`rig.setPivot`](#rigsetpivot) | mutate | `rig_set_pivot` | `pf rig set-pivot` | Set a part variant's pivot: the pixel (int px, in the variant image) that sits on the bone pivot. |
 | [`rig.setPose`](#rigsetpose) | mutate | `rig_set_pose` | `pf rig set-pose` | Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z, visible) on one frame. |
 
@@ -967,7 +968,7 @@ Fit the bones first: the part keeps the bone pivot of this moment. partName ("pa
 | `name` | string | no | Name of the new layer while it is not a part (default "split"). |
 | `bind` | boolean | no | Without partName: try to bind by overlap (default true). |
 | `view` | string | no | View for names without #view and for overlap (default: the first). |
-| `zByBone` | map of integer | no | Default z of the new part by part-layer name, then bone name; higher draws on top. Set once, at creation: plan the draw order before the first split. |
+| `zByBone` | map of integer | no | Default z of the new part by part-layer name, then bone name; higher draws on top. Set at creation; change later with rig_set_part_z. |
 
 ### Output
 
@@ -1336,7 +1337,7 @@ By name: a layer called part:upper_arm_r (or just a bone name) becomes that bone
 | `byOverlap` | boolean | no | Bind the rest by overlap with the bones (default true). |
 | `rawNames` | map of string | no | Source names to parse instead of layer names, by layer: {"arm": "part:upper_arm_r@open#side"}. |
 | `view` | string | no | View for names without #view and for overlap (default: the first). |
-| `zByBone` | map of integer | no | Default z of new parts by part-layer name, then bone name; higher draws on top. Set once, at creation. |
+| `zByBone` | map of integer | no | Default z of new parts by part-layer name, then bone name; higher draws on top. Set at creation; change later with rig_set_part_z. |
 
 ### Output
 
@@ -1461,6 +1462,43 @@ Mirror the hero idle as its left-facing twin:
 
 ```json
 {"doc":"doc_g1ed5q","source":{"group":"default"},"direction":"left"}
+```
+
+## rig.setPartZ
+
+Set a part's default z (draw order) after creation.
+
+Higher z draws on top (default 0). Replaces per-frame z keys of rig_set_pose. A frame z key still wins: keyedFrames counts them. rig_joint_check and part_paint_overlap use the new order.
+
+- Safety: `mutate`
+- MCP tool: `rig_set_part_z`
+- CLI: `pf rig set-part-z`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
+| `part` | string | yes | Part: its part-layer name (e.g. "head"), part id ("prt_...") or layer id. |
+| `z` | integer | yes | New default z. |
+| `view` | string | no | View (default: the first). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `part` | string | yes | Part layer name. |
+| `view` | string | yes | View id. |
+| `z` | integer | yes | Default z afterwards. |
+| `previous` | integer | yes | Default z before. |
+| `keyedFrames` | integer | yes | Frames with their own z key for this part. |
+
+### Examples
+
+Draw the right forearm above the torso:
+
+```json
+{"doc":"doc_g1ed5q","part":"lower_arm_r","z":5}
 ```
 
 ## rig.setPivot
