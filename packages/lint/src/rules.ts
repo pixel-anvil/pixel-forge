@@ -5,8 +5,8 @@
  * @packageDocumentation
  */
 import { CoreError, checkOverrides } from '@pixel-forge/core';
-import { JointCheckError, RigError, jointCheck } from '@pixel-forge/rig';
-import type { PartRender } from '@pixel-forge/rig';
+import { JointCheckError, RigError, jointCheck, partResiduals } from '@pixel-forge/rig';
+import type { PartRender, PartResidual } from '@pixel-forge/rig';
 import type { LintContext, SkinTarget } from './context.js';
 import { RULE_IDS } from './types.js';
 import type { LintFinding, LintSeverity, RuleId } from './types.js';
@@ -426,16 +426,66 @@ const overrideError: LintRule = {
   run: (ctx) => overrideFindings(ctx, true),
 };
 
+/** Schema `MAX_RESIDUAL_DEG_DEFAULT` (lint may not import schema; a test pins the two together). */
+export const MAX_RESIDUAL_DEG_DEFAULT = 22.5;
+
 const rotationResidual: LintRule = {
   id: 'rig.rotationResidual',
   severity: 'warning',
   summary:
-    'A part is rotated by more than maxResidualDeg (default 22.5) from its drawn variant (FR-RIG-14). Stub.',
-  run() {
-    // TODO(E2.2): report abs(residual) > Part.maxResidualDeg ?? MAX_RESIDUAL_DEG_DEFAULT. The input
-    // exists since E2.1: `partResiduals({rig, animation})` of @pixel-forge/rig (per frame and drawn
-    // part, signed residual, same variant fold as the renderer). Registered, no findings yet.
-    return [];
+    'A part is rotated by more than maxResidualDeg (default 22.5) from its drawn variant (FR-RIG-14). One finding per part and animation, at the worst frame.',
+  run(ctx) {
+    const rig = ctx.doc.rig;
+    if (rig === undefined) return [];
+    const out: LintFinding[] = [];
+    for (const animIndex of ctx.animationIndices()) {
+      const anim = ctx.doc.animations[animIndex];
+      if (anim === undefined || 'mirrorOf' in anim) continue; // a mirror has its source's residuals
+      let rows: PartResidual[];
+      try {
+        rows = partResiduals({ rig, animation: anim });
+      } catch (e) {
+        if (e instanceof RigError) continue; // the render rules report a pose that fails
+        throw e;
+      }
+      const worst = new Map<string, { row: PartResidual; limit: number; frames: Set<number> }>();
+      for (const row of rows) {
+        const limit =
+          rig.parts.find((p) => p.id === row.partId)?.maxResidualDeg ?? MAX_RESIDUAL_DEG_DEFAULT;
+        if (Math.abs(row.residual) <= limit + 1e-9) continue;
+        const w = worst.get(row.partId);
+        if (w === undefined) {
+          worst.set(row.partId, { row, limit, frames: new Set([row.frame]) });
+          continue;
+        }
+        w.frames.add(row.frame);
+        if (Math.abs(row.residual) > Math.abs(w.row.residual) + 1e-9) w.row = row;
+      }
+      for (const { row, limit, frames } of worst.values()) {
+        const frame = anim.frames[row.frame];
+        const bone = rig.bones.find((b) => b.id === row.boneId)?.name ?? row.boneId;
+        const deg = Math.round(row.residual * 100) / 100;
+        out.push({
+          rule: 'rig.rotationResidual',
+          severity: 'warning',
+          location: {
+            animationId: anim.id,
+            ...(frame === undefined ? {} : { frameId: frame.id }),
+            frameIndex: row.frame,
+            bone,
+          },
+          message: `part ${row.partId} (bone ${bone}) is rotated ${String(deg)} deg from its drawn variant, above ${String(limit)}`,
+          data: {
+            partId: row.partId,
+            variantId: row.variantId,
+            residualDeg: deg,
+            maxResidualDeg: limit,
+            frames: frames.size,
+          },
+        });
+      }
+    }
+    return out;
   },
 };
 

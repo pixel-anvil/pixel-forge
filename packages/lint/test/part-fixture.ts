@@ -27,6 +27,8 @@ export interface PartSpec {
   hidden?: boolean;
   /** Origin column x (default `at.x`); the mirror flips about it. */
   originX?: number;
+  /** The part's `maxResidualDeg` (default: unset). */
+  maxResidualDeg?: number;
 }
 
 /** Builds the document of `spec`. */
@@ -83,6 +85,7 @@ export function partStore(spec: PartSpec): DocumentStore {
           id: part,
           boneId: bone,
           layerId: lay,
+          ...(spec.maxResidualDeg === undefined ? {} : { maxResidualDeg: spec.maxResidualDeg }),
           variants: [
             {
               id: variant,
