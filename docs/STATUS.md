@@ -7,7 +7,7 @@
 | 3. Spec review & critique | ✅ done, all findings accepted | `docs/01-spec-review.md` |
 | 4. Plan + task breakdown (model-cost-aware) | ✅ v0.3 approved by user | `docs/02-plan.md` |
 | 5. Plan review & critique | ✅ done, 24 findings accepted | `docs/02-plan-review.md` |
-| 6. Implementation | 🔄 M1a Wave 5: T6.4 done, T6.5 waits for the user's capture approval | tasks tracked in `docs/02-plan.md` |
+| 6. Implementation | 🔄 M1a Wave 5: T6.5 done, G2 running | tasks tracked in `docs/02-plan.md` |
 
 User wants to review the spec and the plan before proceeding past each.
 
@@ -33,8 +33,8 @@ User wants to review the spec and the plan before proceeding past each.
 - 2026-11-01 user decisions: W3 stays as it is and T5.11 stays unscheduled, so T6.4 checks its override share by hand (discard the overrides on a copy, export, compare; `docs/ai/MCP_EVAL_M1a.md`). SCN-03: the user chose a warning, but the reproduction showed the cause was a z-tie order bug, not a child above its parent. The orchestrator fixed the bug instead, so no warning exists and none is needed.
 - **T6.4 go/no-go (2026-11-01): GO, continue splitting, with variants.** One frame split into 13 parts recomposites exactly (0 px, 0 overrides), hidden fill painted on the flat layer before the cut. One set of parts cannot reach the air frames (raised arm about 15 px against 9 px at rest; hair, shorts and legs are redrawn). User chose part variants cut from 3 key frames (gather, air, land): exact match with a whole-body shift rises from mean 62%, worst 44% (1 key) to mean 80%, worst 61% (3 keys). Outline: none on the rig; the game's importer derives its outlined look from the frames. Work dir `~/pf-work/target_move/`.
 - **T6.4 approved by the user:** `~/pf-work/target_move/rig_final.pxf`, sheet `compare.png` (top original, bottom rig). 12 frames from 3 key frames, 38 cuts; poses found by a local fitter (`tools/fit.mjs`, bones and variants only). Key frames match 100%; all frames mean 91%, worst 77%; lint 0; joint gaps 72 to 0. Overrides on 4 frames only (6 to 19% of opaque pixels, 6 overrides, all valid; the check is hand-run as the user chose). Markers `ball`, `hand_r`; events and durations kept. Trap: key every bone on every frame, or keys interpolate (the first apply dropped 2 key frames to 42%).
-- **T6.5 swap done, uncommitted, waiting for the user:** in the game's demo worktree the flat `.pxf` is replaced by the rigged one (renamed for its content; `trim=false` must stay in its `.import`). Game tests pass at 120 and 60 fps (445/445). Cache equals a fresh render (12/12). Old against rig, same scripted run: animation, frame and flags equal on 229 of 230 ticks (the other is GD-02), held prop delta 0. Files in `~/pf-work/t65/`, sheet `ingame_sheet.png` (old, rig, diff; one row per frame).
-- **Next:** the user approves the in-game capture, then commit T6.5 on the game's local branch (never push it), tick the board row, then **G2** at `/effort high`.
+- **T6.5 approved by the user and committed (2026-11-01)** on the game's local branch (never push it). In the game's demo worktree the flat `.pxf` is replaced by the rigged one (renamed for its content; `trim=false` must stay in its `.import`). Game tests pass at 120 and 60 fps (445/445). Cache equals a fresh render (12/12). Old against rig, same scripted run: animation, frame and flags equal on 229 of 230 ticks (the other is GD-02), held prop delta 0. Files in `~/pf-work/t65/`, sheet `ingame_sheet.png` (old, rig, diff; one row per frame).
+- **Next:** **G2** at `/effort high` (plan §3): code review over M1a, W-scenarios, bench, determinism, docs, v0.1.0, M1b cards, user sign-off.
 - Token-saving workflow (2026-11-01): for mechanical, output-heavy steps (test loops, captures, comparisons), the orchestrator gives the user commands that write to log files and print only totals; it reads only the failing parts. Use subagents for code-writing cards.
 
   Max two agents at a time; at most one on Opus.

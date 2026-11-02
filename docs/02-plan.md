@@ -192,7 +192,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 | T5.16 | Fit a template to art from landmarks | sonnet | medium | M | T5.8 | | ☐ |
 | T5.17 | Pose several frames in one call, one undo step | sonnet | medium | S | T5.8 | | ☐ |
 | T6.4 | Target-move rebuild from pack art (with the user) | opus orchestrating | high | session | T5.8, D1 | | ☑ |
-| T6.5 | Swap the rigged target move into the first consumer game (user approval) | sonnet | medium | S | T6.4 | | ☐ |
+| T6.5 | Swap the rigged target move into the first consumer game (user approval) | sonnet | medium | S | T6.4 | | ☑ |
 | G2 | **Gate: M1a exit** + v0.1.0 + M1b breakdown | opus | high | — | all | | ☐ |
 
 **Mix**: Opus 12 cards (T0.4, T1.1, T1.6, T2.1, T3.0, T3.1, T3.3, T3.8, T6.0, T5.1, T5.8, T6.4) + 2 gates; Sonnet 32; Haiku 6; orchestrator steps 2 (O-1, D1). Opus is about 25 % of the cards and roughly 35 % of the tokens. Sonnet carries most of the volume.
@@ -858,7 +858,7 @@ W5  T6.4 (go/no-go after one frame) → T6.5 → G2 (v0.1.0)
 #### T6.5 Swap in the rigged target move  [sonnet] [S]
 - **User approval required.** On the game branch from D1, replace the flat `.pxf` with the rigged one.
 - **Acceptance** — the game's test runner passes. The user approves the in-game capture. (W5)
-- **Notes (2026-11-01)** — Swap done by the orchestrator (no agent, the card is one file), capture approval pending. Two traps: a new or renamed `.pxf` gets the importer default `trim=true`, and the lit billboard needs `false` (contract §8.3; the game's driver test caught it); and a capture from `get_image()` inside `_process` shows the previous tick, so a capture named for log row N is file N+1.
+- **Notes (2026-11-01)** — ☑ **Approved by the user** (in-game capture sheet). Committed on the game's local branch, never pushed; the game's test runner passes (445/445). Swap done by the orchestrator (no agent, the card is one file). Two traps: a new or renamed `.pxf` gets the importer default `trim=true`, and the lit billboard needs `false` (contract §8.3; the game's driver test caught it); and a capture from `get_image()` inside `_process` shows the previous tick, so a capture named for log row N is file N+1.
 
 #### G2 Gate: M1a exit  [opus]
 - The `code-review` skill over M1a.
