@@ -93,23 +93,49 @@ export const HERO_PARTS: readonly HeroPart[] = [
 
 /**
  * Knee pieces (joint pieces): a second part on each shin bone, centred on the knee pivot (24,35),
- * drawn above the leg. 6 wide, 5 tall, corners cut, so a bent knee shows a rounded edge. The thighs
- * of `HERO_JOINT_PARTS` end at the pivot, so no cap sticks out when the knee bends.
+ * drawn above the leg. 4 wide (the shin's width), 5 tall, tapered to 2 wide at the top and bottom,
+ * so a bent knee shows a small rounded edge, not a lump (KNOWN_ISSUES RIG-12). The thighs of
+ * `HERO_JOINT_PARTS` end at the pivot, so no cap sticks out when the knee bends. `x` is the shin's left column.
  */
 function kneePiece(layer: string, bone: string, x: number, c: Rgb): HeroPart {
   return {
     layer,
     bone,
     rects: [
-      [x + 1, 33, 4, 1, c],
-      [x, 34, 6, 3, c],
-      [x + 1, 37, 4, 1, c],
+      [x + 1, 33, 2, 1, c],
+      [x, 34, 4, 3, c],
+      [x + 1, 37, 2, 1, c],
     ],
   };
 }
 
-/** Default z of the knee pieces (by part layer name): just above their own leg, so a piece never crosses the other leg. */
-export const HERO_JOINT_Z: Readonly<Record<string, number>> = { shin_l_knee: -2, shin_r_knee: 2 };
+/**
+ * Shoulder pieces (joint pieces, KNOWN_ISSUES RIG-11): a second part on each upper-arm bone, centred
+ * on the shoulder pivot (24,12), shirt colour, so the sleeve top stays round when the arm turns.
+ * Rows 11 to 14, 5 wide in the middle, inside the torso at rest.
+ */
+function shoulderPiece(bone: string, x: number, c: Rgb): HeroPart {
+  return {
+    layer: `part:${bone}.shoulder`,
+    bone,
+    rects: [
+      [x + 1, 11, 3, 1, c],
+      [x, 12, 5, 2, c],
+      [x + 1, 14, 3, 1, c],
+    ],
+  };
+}
+
+/**
+ * Default z of the joint pieces (by part layer name): a knee piece just above its own leg, so it never
+ * crosses the other leg; the shoulder piece level with its arm. `x` is the piece's left column; the rows are 11 to 14.
+ */
+export const HERO_JOINT_Z: Readonly<Record<string, number>> = {
+  shin_l_knee: -2,
+  shin_r_knee: 2,
+  upper_arm_l_shoulder: -2,
+  upper_arm_r_shoulder: 3,
+};
 
 /**
  * The hero with joint pieces (generated/hero_joints.pxf): thighs end at the knee pivot (rows 24 to 35,
@@ -118,8 +144,10 @@ export const HERO_JOINT_Z: Readonly<Record<string, number>> = { shin_l_knee: -2,
 export const HERO_JOINT_PARTS: readonly HeroPart[] = HERO_PARTS.flatMap((part): HeroPart[] => {
   if (part.bone === 'thigh_l') return [{ ...part, rects: [[20, 24, 6, 12, PANTS_FAR]] }];
   if (part.bone === 'thigh_r') return [{ ...part, rects: [[21, 24, 6, 12, PANTS]] }];
-  if (part.layer === 'part:foot_l') return [part, kneePiece('part:shin_l.knee', 'shin_l', 20, PANTS_FAR)];
-  if (part.layer === 'part:foot_r') return [part, kneePiece('part:shin_r.knee', 'shin_r', 21, PANTS)];
+  if (part.layer === 'part:foot_l') return [part, kneePiece('part:shin_l.knee', 'shin_l', 21, PANTS_FAR)];
+  if (part.layer === 'part:foot_r') return [part, kneePiece('part:shin_r.knee', 'shin_r', 22, PANTS)];
+  if (part.layer === 'part:upper_arm_l') return [part, shoulderPiece('upper_arm_l', 21, SHIRT_FAR)];
+  if (part.layer === 'part:upper_arm_r') return [part, shoulderPiece('upper_arm_r', 22, SHIRT)];
   return [part];
 });
 

@@ -1,4 +1,4 @@
-// Joint pieces (docs/ai/KNOWN_ISSUES.md RIG-10): the hero with knee pieces, fixtures/generated/hero_joints.pxf.
+// Joint pieces (docs/ai/KNOWN_ISSUES.md RIG-10 to RIG-12): the hero with knee and shoulder pieces, fixtures/generated/hero_joints.pxf.
 import { readFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { jointCheck } from '@pixel-forge/rig';
@@ -63,6 +63,29 @@ describe('hero_joints.pxf', () => {
       );
       expect(thigh.rects).toHaveLength(1);
       expect((thigh.rects[0]?.[1] ?? 0) + (thigh.rects[0]?.[3] ?? 0) - 1).toBe(35); // ends at the pivot row
+    }
+  });
+
+  it('has a shoulder piece on each upper-arm bone, centred on the shoulder pivot, at its arm z', () => {
+    const z = (layer: string): number => {
+      const p = need(rig.parts.find((q) => layerName(q.layerId) === layer));
+      return need(side.defaultZ[p.id]);
+    };
+    for (const arm of ['upper_arm_l', 'upper_arm_r']) {
+      const parts = rig.parts.filter((p) => boneName(p.boneId) === arm);
+      expect(parts.map((p) => layerName(p.layerId)).sort()).toEqual([arm, `${arm}_shoulder`]);
+      expect(z(`${arm}_shoulder`)).toBe(z(arm));
+      const piece = need(hero.HERO_JOINT_PARTS.find((p) => p.layer === `part:${arm}.shoulder`));
+      const ys = piece.rects.flatMap((r) => [r[1] ?? 0, (r[1] ?? 0) + (r[3] ?? 0) - 1]);
+      expect([Math.min(...ys), Math.max(...ys)]).toEqual([11, 14]); // pivot row 12 near the top
+    }
+  });
+
+  it('keeps each knee piece no wider than the shin (no lump when the knee bends)', () => {
+    for (const side of ['l', 'r']) {
+      const piece = need(hero.HERO_JOINT_PARTS.find((p) => p.layer === `part:shin_${side}.knee`));
+      const widest = Math.max(...piece.rects.map((r) => r[2] ?? 0));
+      expect(widest).toBeLessThanOrEqual(4);
     }
   });
 
