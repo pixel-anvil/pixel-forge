@@ -299,6 +299,11 @@ export const SCENARIOS: Record<string, Scenario> = {
     args: ({ doc }) => ({ doc, part: 'lower_arm_r', z: 5 }),
     entry: 'one',
   },
+  rig_read_pose: {
+    base: 'hero',
+    args: ({ doc }) => ({ doc, animation: frame0, frame: 0 }),
+    entry: READ,
+  },
   rig_set_pivot: {
     base: 'hero',
     args: ({ doc }) => ({ doc, part: 'lower_arm_r', pivot: { x: 3, y: 1 } }),

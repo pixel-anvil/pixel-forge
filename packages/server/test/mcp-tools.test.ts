@@ -25,7 +25,7 @@ describe('tools/list', () => {
     const long = tools.filter((t) => (t.description ?? '').length > 800);
     expect(long.map((t) => `${t.name}: ${String(t.description?.length)}`)).toEqual([]);
     const bytes = Buffer.byteLength(JSON.stringify({ tools }));
-    expect(bytes).toBeLessThan(82_000); // the report states the exact figure
+    expect(bytes).toBeLessThan(83_500); // MCP-04: 83,005 bytes with rig_set_part_z (T5.13) and rig_read_pose (T5.10)
   });
 });
 

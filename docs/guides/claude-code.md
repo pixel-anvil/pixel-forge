@@ -91,7 +91,7 @@ The order that worked in the T5.8 evaluation for a sprite sheet with no parts:
 ## Known gaps
 
 - Tool calls run one at a time, with no cancellation (KNOWN_ISSUES MCP-02).
-- The rig resource does not list bone or part keys, so the agent reads poses through `render_frame` or `pixels_read_grid` (KNOWN_ISSUES MCP-03). `render_frame` with `bones: true` returns pivots and tips as numbers; no tool shows which keys a frame holds.
+- To read a pose, call `rig_read_pose` (or read `pf://doc/{id}/animations/{group}/{direction}/pose/{frame}`). It gives the bone and part values of one frame in the form `rig_set_pose` takes, and `keyed` says which are real keys. The rig resource shows the skeleton only. `render_frame` with `bones: true` returns pivots and tips as numbers.
 - No tool changes a part's default z or paints a part's own art (KNOWN_ISSUES RIG-07).
 
 The evidence for this guide is in `docs/ai/MCP_EVAL_M1a.md`.

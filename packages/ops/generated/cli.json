@@ -1496,6 +1496,35 @@
       ]
     },
     {
+      "op": "rig.readPose",
+      "command": ["rig", "read-pose"],
+      "summary": "Read one frame: bone and part values, and which are real keys (the rest are interpolated or held).",
+      "safety": "read",
+      "options": [
+        {
+          "name": "doc",
+          "flag": "--doc",
+          "kind": "string",
+          "required": true,
+          "description": "Document id from doc_open or doc_create."
+        },
+        {
+          "name": "animation",
+          "flag": "--animation",
+          "kind": "json",
+          "required": true,
+          "description": "Animation: {\"group\": \"run\", \"direction\": \"side\"} ({\"group\": \"idle\"} for an undirected one) or {\"id\": \"anm_...\"}."
+        },
+        {
+          "name": "frame",
+          "flag": "--frame",
+          "kind": "json",
+          "required": true,
+          "description": "Frame: 0-based index or frame id (\"frm_...\")."
+        }
+      ]
+    },
+    {
       "op": "rig.setPartZ",
       "command": ["rig", "set-part-z"],
       "summary": "Set a part's default z (draw order) after creation.",

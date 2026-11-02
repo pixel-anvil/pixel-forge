@@ -37,6 +37,8 @@ describe('resources', () => {
       'pf://doc/{id}/rig',
       'pf://doc/{id}/animations/{group}/{direction}',
       'pf://doc/{id}/animations/{group}',
+      'pf://doc/{id}/animations/{group}/{direction}/pose/{frame}',
+      'pf://doc/{id}/animations/{group}/pose/{frame}',
     ]);
   });
 
@@ -152,6 +154,39 @@ describe('resources', () => {
     const mirror = await read(f, `pf://doc/${HERO_ID}/animations/default/left`);
     expect(mirror).toMatchObject({ label: 'default/left', mirrorOf: 'default' });
     expect(mirror.frames).toEqual(idle.frames);
+  });
+
+  it('reads one frame pose through rig.readPose', async () => {
+    const f = await mcpFixture();
+    await f.call('doc_open', { path: f.hero });
+    await f.call('rig_set_pose', {
+      doc: HERO_ID,
+      animation: frame0,
+      frame: 0,
+      bones: { torso: { angle: 7 } },
+    });
+    const pose = await read(f, `pf://doc/${HERO_ID}/animations/default/pose/0`);
+    expect(pose).toMatchObject({
+      doc: HERO_ID,
+      animation: 'default',
+      frameIndex: 0,
+      bones: { torso: { angle: 7 } },
+      keyed: ['bones.torso.angle'],
+    });
+    const out = await f.call('rig_read_pose', { doc: HERO_ID, animation: frame0, frame: 0 });
+    expect(JSON.stringify(out)).toContain('bones.torso.angle');
+    await f.call('anim_create', { doc: HERO_ID, group: 'run', direction: 'side', frames: 2 });
+    const directed = await read(f, `pf://doc/${HERO_ID}/animations/run/side/pose/1`);
+    expect(directed).toMatchObject({ animation: 'run/side', frameIndex: 1, bones: {} });
+    await expect(
+      f.client.readResource({ uri: `pf://doc/${HERO_ID}/animations/default/pose/9` }),
+    ).rejects.toMatchObject({ code: -32002 });
+    await expect(
+      f.client.readResource({ uri: `pf://doc/${HERO_ID}/animations/nope/pose/0` }),
+    ).rejects.toMatchObject({ code: -32002 });
+    await expect(
+      f.client.readResource({ uri: `pf://doc/${HERO_ID}/animations/default/pose/0/x` }),
+    ).rejects.toMatchObject({ code: -32002 });
   });
 
   it('resources/list names the open documents and their animations', async () => {

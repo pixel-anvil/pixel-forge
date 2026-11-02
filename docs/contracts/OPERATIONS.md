@@ -81,6 +81,7 @@ Every failure is `{"code", "message", "details"}`, identical on every transport.
 | [`rig.editBones`](#rigeditbones) | mutate | `rig_edit_bones` | `pf rig edit-bones` | Edit the skeleton: add/delete/reparent/rename bones, set length and rest pose per view, add/rename/delete views. |
 | [`rig.jointCheck`](#rigjointcheck) | read | `rig_joint_check` | `pf rig joint-check` | Sweep each joint of one rig view and report the pixel gaps that open on the outer side of a bend. |
 | [`rig.mirrorAnimation`](#rigmirroranimation) | mutate | `rig_mirror_animation` | `pf rig mirror-animation` | Add a mirror of an animation under a new direction: same group, flipped around the origin. |
+| [`rig.readPose`](#rigreadpose) | read | `rig_read_pose` | `pf rig read-pose` | Read one frame: bone and part values, and which are real keys (the rest are interpolated or held). |
 | [`rig.setPartZ`](#rigsetpartz) | mutate | `rig_set_part_z` | `pf rig set-part-z` | Set a part's default z (draw order) after creation. |
 | [`rig.setPivot`](#rigsetpivot) | mutate | `rig_set_pivot` | `pf rig set-pivot` | Set a part variant's pivot: the pixel (int px, in the variant image) that sits on the bone pivot. |
 | [`rig.setPose`](#rigsetpose) | mutate | `rig_set_pose` | `pf rig set-pose` | Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z, visible) on one frame. |
@@ -1462,6 +1463,43 @@ Mirror the hero idle as its left-facing twin:
 
 ```json
 {"doc":"doc_g1ed5q","source":{"group":"default"},"direction":"left"}
+```
+
+## rig.readPose
+
+Read one frame: bone and part values, and which are real keys (the rest are interpolated or held).
+
+Output matches rig_set_pose input: pass bones and parts back unchanged. Lists only bones and channels that some frame keys; the rest are at rest. keyed names the real keys on this frame ("bones.<name>.<channel>"); other values are interpolated or held. Writing a value back makes it a key: this frame renders the same, other frames may change, so write back only what you mean to key. Mirror animations: read the source.
+
+- Safety: `read`
+- MCP tool: `rig_read_pose`
+- CLI: `pf rig read-pose`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
+| `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
+| `frame` | integer >= 0 \| string | yes | Frame: 0-based index or frame id ("frm_..."). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `animation` | string | yes |  |
+| `frameIndex` | integer | yes |  |
+| `frameId` | string | yes |  |
+| `bones` | map of map of any | yes | By bone name: angle, offset {x,y}, flipX, and interp of the stored key. |
+| `parts` | map of map of any | yes | By part name: variant name or "auto", z, visible. |
+| `keyed` | string[] | yes |  |
+
+### Examples
+
+Read frame 2 of the run cycle:
+
+```json
+{"doc":"doc_g1ed5q","animation":{"group":"run","direction":"side"},"frame":2}
 ```
 
 ## rig.setPartZ

@@ -4782,6 +4782,127 @@
     }
   },
   {
+    "name": "rig_read_pose",
+    "title": "rig.readPose",
+    "description": "Read one frame: bone and part values, and which are real keys (the rest are interpolated or held).\n\nOutput matches rig_set_pose input: pass bones and parts back unchanged. Lists only bones and channels that some frame keys; the rest are at rest. keyed names the real keys on this frame (\"bones.<name>.<channel>\"); other values are interpolated or held. Writing a value back makes it a key: this frame renders the same, other frames may change, so write back only what you mean to key. Mirror animations: read the source.\n\nRead-only. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Read frame 2 of the run cycle): {\"doc\":\"doc_g1ed5q\",\"animation\":{\"group\":\"run\",\"direction\":\"side\"},\"frame\":2}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id from doc_open or doc_create."
+        },
+        "animation": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "group": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                },
+                "direction": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                }
+              },
+              "required": ["group"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^anm_[0-9a-z]{1,24}$"
+                }
+              },
+              "required": ["id"],
+              "additionalProperties": false
+            }
+          ],
+          "description": "Animation: {\"group\": \"run\", \"direction\": \"side\"} ({\"group\": \"idle\"} for an undirected one) or {\"id\": \"anm_...\"}."
+        },
+        "frame": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^frm_[0-9a-z]{1,24}$"
+            }
+          ],
+          "description": "Frame: 0-based index or frame id (\"frm_...\")."
+        }
+      },
+      "required": ["doc", "animation", "frame"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "animation": {
+          "type": "string"
+        },
+        "frameIndex": {
+          "type": "integer"
+        },
+        "frameId": {
+          "type": "string"
+        },
+        "bones": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "description": "By bone name: angle, offset {x,y}, flipX, and interp of the stored key."
+        },
+        "parts": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "description": "By part name: variant name or \"auto\", z, visible."
+        },
+        "keyed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["animation", "frameIndex", "frameId", "bones", "parts", "keyed"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "rig.readPose",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "rig.readPose",
+      "pixel-forge/safety": "read"
+    }
+  },
+  {
     "name": "rig_set_part_z",
     "title": "rig.setPartZ",
     "description": "Set a part's default z (draw order) after creation.\n\nHigher z draws on top (default 0). Replaces per-frame z keys of rig_set_pose. A frame z key still wins: keyedFrames counts them. rig_joint_check and part_paint_overlap use the new order.\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Draw the right forearm above the torso): {\"doc\":\"doc_g1ed5q\",\"part\":\"lower_arm_r\",\"z\":5}",

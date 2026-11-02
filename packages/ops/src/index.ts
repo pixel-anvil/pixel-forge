@@ -144,6 +144,7 @@ export {
   rigEditBones,
   rigJointCheck,
   rigMirrorAnimation,
+  rigReadPose,
   rigSetPivot,
   rigSetPartZ,
   rigSetPose,
