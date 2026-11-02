@@ -1,8 +1,8 @@
 /**
  * `@pixel-forge/rig`: pure functions over schema types. This release: forward kinematics, key
  * interpolation and quantisation, hierarchical snapping, templates and binding, and the part render
- * pipeline with overrides and staleness, and edit attribution (FR-RIG-10/11/12, FR-RIG-20 steps 1–4,
- * FR-RIG-21/22/24).
+ * pipeline with overrides and staleness, edit attribution, and IK baked to FK keys (FR-RIG-10/11/12/13,
+ * FR-RIG-20 steps 1–4, FR-RIG-21/22/24).
  * No Node built-ins, no clock, no randomness, and no floating-point trig: rotations use raster's Q16
  * table and angles are exact rationals until they are rounded (NFR-02, ADR-010, ADR-012).
  * @packageDocumentation
@@ -134,6 +134,16 @@ export {
   fitPose,
   pixelMismatch,
 } from './fit-pose.js';
+export { IK_ITERATIONS_DEFAULT, IK_MAX_BONES, solveFabrik, solveIk, solveTwoBone } from './ik.js';
+export type {
+  IkBend,
+  IkChain,
+  IkInput,
+  IkOptions,
+  IkPoseSolution,
+  IkSolution,
+  IkSolver,
+} from './ik.js';
 export type {
   FitBone,
   FitImage,

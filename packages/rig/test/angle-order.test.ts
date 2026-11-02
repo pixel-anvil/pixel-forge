@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { wrapSteps } from '../src/angle.js';
 import { boneOrder, normalizeAngle, quantizeAngle } from '../src/index.js';
 import { bone, errorCode, makeRig, prng } from './helpers.js';
 
@@ -113,5 +114,19 @@ describe('boneOrder', () => {
     const ids = Array.from({ length: 20000 }, (_, i) => bone(`c${String(i)}`));
     const rig = makeRig(ids.map((id, i) => (i === 0 ? [id] : [id, ids[i - 1]])));
     expect(boneOrder(rig)).toEqual(ids);
+  });
+});
+
+describe('wrapSteps', () => {
+  it('reduces numbers and bigints into 0..1439, never -0', () => {
+    expect(wrapSteps(0)).toBe(0);
+    expect(wrapSteps(-0)).toBe(0);
+    expect(Object.is(wrapSteps(-1440), 0)).toBe(true);
+    expect(wrapSteps(-1)).toBe(1439);
+    expect(wrapSteps(1441)).toBe(1);
+    expect(wrapSteps(2 ** 53 - 1)).toBe(Number((2n ** 53n - 1n) % 1440n));
+    expect(wrapSteps(-(2 ** 53 - 1))).toBe(1440 - Number((2n ** 53n - 1n) % 1440n));
+    expect(wrapSteps(-1n)).toBe(1439);
+    expect(wrapSteps(2n ** 80n)).toBe(Number(2n ** 80n % 1440n));
   });
 });

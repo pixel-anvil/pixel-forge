@@ -102,8 +102,15 @@ export function safeSteps(steps: bigint, what: string): number {
   return n + 0;
 }
 
-/** `steps` reduced into `0..1439` (one full turn). */
-export function wrapSteps(steps: bigint): number {
+/**
+ * `steps` reduced into `0..1439` (one full turn). A `number` must be a safe integer (the remainder is
+ * then exact); a `bigint` may be any size.
+ */
+export function wrapSteps(steps: bigint | number): number {
+  if (typeof steps === 'number') {
+    const r = steps % ANGLE_STEPS;
+    return (r < 0 ? r + ANGLE_STEPS : r) + 0;
+  }
   const turn = BigInt(ANGLE_STEPS);
   const r = steps % turn;
   return Number(r < 0n ? r + turn : r);
