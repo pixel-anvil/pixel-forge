@@ -1707,7 +1707,7 @@ Move the forearm pivot two pixels right:
 
 Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z, visible) on one frame or many.
 
-Channels you pass replace the stored ones; null removes a bone or part key. A channel with no key here interpolates between keys on other frames, not back to rest: key offsets on every frame or on none. Part keys hold both ways: set z or visible once. "frames" poses many frames as one undo step. Output keyed lists bones keyed; interpolated, bones keyed elsewhere but not on a posed frame (keyAll keys them at rest). Art past the canvas edge is cut off. Next: render_contact_sheet.
+Channels you pass replace the stored ones; null removes a bone or part key. A channel with no key here interpolates between keys on other frames, not back to rest: key offsets on every frame or on none. Part keys hold both ways: set z or visible once. "frames" poses many frames as one undo step. targets {bone:{x,y}}: IK sets parent angle keys; reached: within 1 px. Output keyed: bones keyed; interpolated: keyed elsewhere, not on a posed frame (keyAll keys them at rest). Art past the canvas edge is cut off. Next: render_contact_sheet.
 
 - Safety: `mutate`
 - MCP tool: `rig_set_pose`
@@ -1722,7 +1722,8 @@ Channels you pass replace the stored ones; null removes a bone or part key. A ch
 | `frame` | integer >= 0 \| string | no | Frame: 0-based index or frame id ("frm_..."). |
 | `bones` | map of {angle, offset, flipX, interp} \| null | no | Bone keys by bone name (or id); null removes the key. |
 | `parts` | map of {variant, z, visible} \| null | no | Part keys by part-layer name (or part id); null removes the key. |
-| `frames` | {frame, bones, parts}[] | no | Many frames, instead of frame. |
+| `frames` | {frame, bones, parts, targets}[] | no | Many frames, instead of frame. |
+| `targets` | map of {x, y, chain, bend} | no | End-effector targets by bone name (or id). |
 | `keyAll` | boolean | no | Also key all other bones at rest on posed frames. |
 
 ### Output
@@ -1736,6 +1737,7 @@ Channels you pass replace the stored ones; null removes a bone or part key. A ch
 | `changed` | string[] | yes | Keys that changed, as "bones.<name>" / "parts.<name>"; empty when nothing did. |
 | `keyed` | string[] | yes | Bones this call keys. |
 | `interpolated` | string[] | yes | Bones that interpolate on a posed frame. |
+| `targets` | {frame, bone, target, effector, reached, keyed}[] | no | One entry per end-effector target. |
 
 ### Examples
 
@@ -1749,6 +1751,12 @@ Output:
 
 ```json
 {"animation":"default","frameIndex":0,"frameId":"frm_j83g8j","changed":["bones.lower_arm_r","bones.upper_arm_r"],"keyed":["lower_arm_r","upper_arm_r"],"interpolated":[]}
+```
+
+Put the right hand at (24,30) by IK:
+
+```json
+{"doc":"doc_g1ed5q","animation":{"group":"default"},"frame":0,"targets":{"hand_r":{"x":24,"y":30}}}
 ```
 
 Switch the forearm to its sleeve variant and drop the torso key:

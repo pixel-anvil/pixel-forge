@@ -1838,6 +1838,13 @@
           "description": "Many frames, instead of frame."
         },
         {
+          "name": "targets",
+          "flag": "--targets",
+          "kind": "json",
+          "required": false,
+          "description": "End-effector targets by bone name (or id)."
+        },
+        {
           "name": "keyAll",
           "flag": "--key-all",
           "kind": "boolean",

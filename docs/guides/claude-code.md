@@ -92,6 +92,7 @@ The order that worked in the T5.8 evaluation for a sprite sheet with no parts:
 ## Known gaps
 
 - Tool calls run one at a time, with no cancellation (KNOWN_ISSUES MCP-02).
+- To put a hand or foot on a pixel, pass `targets: {hand_r: {x, y}}` to `rig_set_pose`: IK keys the parent bones (plain angles) and `reached` says if the pivot is within 1 px. A target on the straight line of a folded chain of 3 or more bones can stall (`reached: false`): nudge it 1 px sideways.
 - To read a pose, call `rig_read_pose` (or read `pf://doc/{id}/animations/{group}/{direction}/pose/{frame}`). It gives the bone and part values of one frame in the form `rig_set_pose` takes, and `keyed` says which are real keys. The rig resource shows the skeleton only. `render_frame` with `bones: true` returns pivots and tips as numbers.
 - No tool changes a part's default z or paints a part's own art (KNOWN_ISSUES RIG-07).
 
