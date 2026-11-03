@@ -21,6 +21,15 @@ Over MCP (`pf mcp`, `tools/list` carries no `outputSchema`) a success is that en
 | `destructive` | Like `mutate`, and the caller must pass `"confirm": true`. |
 | `io` | Reads or writes files through the host ports; may change its document once (one undo step). |
 
+## Tool groups
+
+Every op belongs to one group; `pf mcp --tools <groups>` (or `PF_TOOLS`) lists only the chosen ones (default: all).
+
+| Group | Holds |
+| --- | --- |
+| `core` | documents, frames, animations, layers, cels, import/export, renders, pixel grids, lint, undo |
+| `rig` | bones, poses, presets, templates, parts and overrides |
+
 ## Errors
 
 Every failure is `{"code", "message", "details"}`, identical on every transport.
@@ -44,51 +53,51 @@ Every failure is `{"code", "message", "details"}`, identical on every transport.
 
 ## Index
 
-| Op | Safety | MCP tool | CLI | Summary |
-| --- | --- | --- | --- | --- |
-| [`anim.create`](#animcreate) | mutate | `anim_create` | `pf anim create` | Create an animation (group + optional direction) with empty frames of equal duration. |
-| [`anim.update`](#animupdate) | mutate | `anim_update` | `pf anim update` | Rename an animation (group, direction), set its loop mode, angle quantum or post-passes. |
-| [`cel.link`](#cellink) | mutate | `cel_link` | `pf cel link` | Link a layer's cel to another frame's cel (mode "link"), make a linked cel independent ("unlink"), or link all identical cels ("linkIdentical"). |
-| [`doc.create`](#doccreate) | io | `doc_create` | `pf doc create` | Create a new empty RGBA document (no layers, no animations) and open it. Save it with doc_save. |
-| [`doc.open`](#docopen) | io | `doc_open` | `pf doc open` | Open a .pxf file and return its document id, which every other op takes as "doc". |
-| [`doc.redo`](#docredo) | mutate | `redo` | `pf doc redo` | Redo the newest undone change of the document (one history entry). |
-| [`doc.save`](#docsave) | io | `doc_save` | `pf doc save` | Save the document to its .pxf file, or to a new path (first save, save as). |
-| [`doc.setColorMode`](#docsetcolormode) | mutate | `doc_set_color_mode` | `pf doc set-color-mode` | Switch the document between "rgba" and "indexed" pixels, and/or lock it to its palette. |
-| [`doc.summary`](#docsummary) | read | `doc_summary` | `pf doc summary` | Summarise an open document: canvas, palette, layers, rig (bones, parts, views) and animations. |
-| [`doc.undo`](#docundo) | mutate | `undo` | `pf doc undo` | Undo the newest applied change of the document (one history entry). |
-| [`frame.add`](#frameadd) | mutate | `frame_add` | `pf frame add` | Insert an empty frame before or after a frame; the new frame gets no bone or part keys. |
-| [`frame.delete`](#framedelete) | mutate | `frame_delete` | `pf frame delete` | Delete one frame with its bone and part keys, cels and overrides; the last frame cannot go. |
-| [`frame.duplicate`](#frameduplicate) | mutate | `frame_duplicate` | `pf frame duplicate` | Duplicate one frame; the copy goes right after it, with linked cels and copied keys. |
-| [`frame.setMeta`](#framesetmeta) | mutate | `frame_set_meta` | `pf frame set-meta` | Set one frame's duration (ms), markers (name -> int px), events (names) and root motion (int px). |
-| [`io.export`](#ioexport) | io | `export` | `pf export` | Export animations as a spritesheet PNG plus a JSON description (Aseprite hash format). |
-| [`io.import`](#ioimport) | io | `import_file` | `pf import` | Import a PNG spritesheet (cells per animation) or an .aseprite file into a document. |
-| [`layer.update`](#layerupdate) | mutate | `layer_update` | `pf layer update` | Rename a layer, or set its visible flag, opacity (0..255) or export flag. |
-| [`lint.run`](#lintrun) | read | `lint` | `pf lint` | Lint the document: palette, orphan pixels, joint gaps, stale overrides, empty frames, clipping, holes. |
-| [`override.import`](#overrideimport) | io | `override_import` | `pf override import` | Import an edited PNG of a rig frame: the pixels that differ from the render become overrides. |
-| [`override.list`](#overridelist) | read | `override_list` | `pf override list` | List overrides: stale ones (art under them changed) and ones that fail to render, apart. |
-| [`override.resolve`](#overrideresolve) | mutate | `override_resolve` | `pf override resolve` | Resolve overrides: "keep" them, "rebase" onto the current art, or "discard" them. |
-| [`part.paintOverlap`](#partpaintoverlap) | mutate | `part_paint_overlap` | `pf part paint-overlap` | Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite stays the same. |
-| [`part.paintVariant`](#partpaintvariant) | mutate | `part_paint_variant` | `pf part paint-variant` | Paint a text grid into a part variant's own image. |
-| [`part.split`](#partsplit) | mutate | `part_split` | `pf part split` | Split a region (rect, lasso or flood) of a flat layer's cel into a new layer bound to a bone. |
-| [`pixels.readGrid`](#pixelsreadgrid) | read | `pixels_read_grid` | `pf pixels read-grid` | Read a region (at most 64x64 px) of a frame as a text grid: one symbol per pixel, "." transparent, with a legend of the colours present. |
-| [`pixels.writeGrid`](#pixelswritegrid) | mutate | `pixels_write_grid` | `pf pixels write-grid` | Paint a text grid (at most 32x32 px) at (x, y) of a frame; symbols come from "legend". |
-| [`pxf.pack`](#pxfpack) | io | `pxf_pack` | `pf pack` | Build a .pxf from a .pxfd folder (the inverse of pxf_unpack). |
-| [`pxf.unpack`](#pxfunpack) | io | `pxf_unpack` | `pf unpack` | Expand a .pxf into a .pxfd folder (manifest, document, images, render cache). |
-| [`render.contactSheet`](#rendercontactsheet) | read | `render_contact_sheet` | `pf render contact-sheet` | Render the frames of some or all animations as one labelled PNG contact sheet (long edge at most 1568 px), optionally with bone lines and pivot markers. |
-| [`render.frame`](#renderframe) | read | `render_frame` | `pf render frame` | Render one frame to an upscaled PNG on a checkerboard (long edge at most 1568 px), optionally with bone lines and pivot markers. |
-| [`rig.applyPreset`](#rigapplypreset) | mutate | `rig_apply_preset` | `pf rig apply-preset` | Generate a motion preset (walk, run, jump, idle-breathe, swing) as an animation. |
-| [`rig.applyTemplate`](#rigapplytemplate) | mutate | `rig_apply_template` | `pf rig apply-template` | Apply a humanoid skeleton template: bones matched by name are reused, missing ones are created. |
-| [`rig.bake`](#rigbake) | destructive | `rig_bake` | `pf rig bake` | Bake a rig animation into one plain pixel layer: as a new animation, or in place. |
-| [`rig.bindParts`](#rigbindparts) | mutate | `rig_bind_parts` | `pf rig bind-parts` | Bind pixel layers to bones as parts, by layer name ("part:<bone>[.<part>][@variant][#view]") or by overlap. |
-| [`rig.editBones`](#rigeditbones) | mutate | `rig_edit_bones` | `pf rig edit-bones` | Edit the skeleton: add/delete/reparent/rename bones, set length and rest pose per view, add/rename/delete views. |
-| [`rig.fitPose`](#rigfitpose) | io | `rig_fit_pose` | `pf rig fit-pose` | Find the bone angles (deg, relative to rest) and part variants whose render of one frame matches a target image. |
-| [`rig.fitTemplate`](#rigfittemplate) | mutate | `rig_fit_template` | `pf rig fit-template` | Fit a humanoid template to landmark points: lengths and rest pose in one call. |
-| [`rig.jointCheck`](#rigjointcheck) | read | `rig_joint_check` | `pf rig joint-check` | Sweep each joint of one rig view and report the pixel gaps that open on the outer side of a bend. |
-| [`rig.mirrorAnimation`](#rigmirroranimation) | mutate | `rig_mirror_animation` | `pf rig mirror-animation` | Add a mirror of an animation under a new direction: same group, flipped around the origin. |
-| [`rig.readPose`](#rigreadpose) | read | `rig_read_pose` | `pf rig read-pose` | Read one frame: bone and part values, and which are real keys (the rest are interpolated or held). |
-| [`rig.setPartZ`](#rigsetpartz) | mutate | `rig_set_part_z` | `pf rig set-part-z` | Set a part's default z (draw order) after creation. |
-| [`rig.setPivot`](#rigsetpivot) | mutate | `rig_set_pivot` | `pf rig set-pivot` | Set a part variant's pivot: the pixel (int px, in the variant image) that sits on the bone pivot. |
-| [`rig.setPose`](#rigsetpose) | mutate | `rig_set_pose` | `pf rig set-pose` | Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z, visible) on one frame or many. |
+| Op | Group | Safety | MCP tool | CLI | Summary |
+| --- | --- | --- | --- | --- | --- |
+| [`anim.create`](#animcreate) | core | mutate | `anim_create` | `pf anim create` | Create an animation (group + optional direction) with empty frames of equal duration. |
+| [`anim.update`](#animupdate) | core | mutate | `anim_update` | `pf anim update` | Rename an animation (group, direction), set its loop mode, angle quantum or post-passes. |
+| [`cel.link`](#cellink) | core | mutate | `cel_link` | `pf cel link` | Link a layer's cel to another frame's cel (mode "link"), make a linked cel independent ("unlink"), or link all identical cels ("linkIdentical"). |
+| [`doc.create`](#doccreate) | core | io | `doc_create` | `pf doc create` | Create a new empty RGBA document (no layers, no animations) and open it. Save it with doc_save. |
+| [`doc.open`](#docopen) | core | io | `doc_open` | `pf doc open` | Open a .pxf file and return its document id, which every other op takes as "doc". |
+| [`doc.redo`](#docredo) | core | mutate | `redo` | `pf doc redo` | Redo the newest undone change of the document (one history entry). |
+| [`doc.save`](#docsave) | core | io | `doc_save` | `pf doc save` | Save the document to its .pxf file, or to a new path (first save, save as). |
+| [`doc.setColorMode`](#docsetcolormode) | core | mutate | `doc_set_color_mode` | `pf doc set-color-mode` | Switch the document between "rgba" and "indexed" pixels, and/or lock it to its palette. |
+| [`doc.summary`](#docsummary) | core | read | `doc_summary` | `pf doc summary` | Summarise an open document: canvas, palette, layers, rig (bones, parts, views) and animations. |
+| [`doc.undo`](#docundo) | core | mutate | `undo` | `pf doc undo` | Undo the newest applied change of the document (one history entry). |
+| [`frame.add`](#frameadd) | core | mutate | `frame_add` | `pf frame add` | Insert an empty frame before or after a frame; the new frame gets no bone or part keys. |
+| [`frame.delete`](#framedelete) | core | mutate | `frame_delete` | `pf frame delete` | Delete one frame with its bone and part keys, cels and overrides; the last frame cannot go. |
+| [`frame.duplicate`](#frameduplicate) | core | mutate | `frame_duplicate` | `pf frame duplicate` | Duplicate one frame; the copy goes right after it, with linked cels and copied keys. |
+| [`frame.setMeta`](#framesetmeta) | core | mutate | `frame_set_meta` | `pf frame set-meta` | Set one frame's duration (ms), markers (name -> int px), events (names) and root motion (int px). |
+| [`io.export`](#ioexport) | core | io | `export` | `pf export` | Export animations as a spritesheet PNG plus a JSON description (Aseprite hash format). |
+| [`io.import`](#ioimport) | core | io | `import_file` | `pf import` | Import a PNG spritesheet (cells per animation) or an .aseprite file into a document. |
+| [`layer.update`](#layerupdate) | core | mutate | `layer_update` | `pf layer update` | Rename a layer, or set its visible flag, opacity (0..255) or export flag. |
+| [`lint.run`](#lintrun) | core | read | `lint` | `pf lint` | Lint the document: palette, orphan pixels, joint gaps, stale overrides, empty frames, clipping, holes. |
+| [`override.import`](#overrideimport) | rig | io | `override_import` | `pf override import` | Import an edited PNG of a rig frame: the pixels that differ from the render become overrides. |
+| [`override.list`](#overridelist) | rig | read | `override_list` | `pf override list` | List overrides: stale ones (art under them changed) and ones that fail to render, apart. |
+| [`override.resolve`](#overrideresolve) | rig | mutate | `override_resolve` | `pf override resolve` | Resolve overrides: "keep" them, "rebase" onto the current art, or "discard" them. |
+| [`part.paintOverlap`](#partpaintoverlap) | rig | mutate | `part_paint_overlap` | `pf part paint-overlap` | Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite stays the same. |
+| [`part.paintVariant`](#partpaintvariant) | rig | mutate | `part_paint_variant` | `pf part paint-variant` | Paint a text grid into a part variant's own image. |
+| [`part.split`](#partsplit) | rig | mutate | `part_split` | `pf part split` | Split a region (rect, lasso or flood) of a flat layer's cel into a new layer bound to a bone. |
+| [`pixels.readGrid`](#pixelsreadgrid) | core | read | `pixels_read_grid` | `pf pixels read-grid` | Read a region (at most 64x64 px) of a frame as a text grid: one symbol per pixel, "." transparent, with a legend of the colours present. |
+| [`pixels.writeGrid`](#pixelswritegrid) | core | mutate | `pixels_write_grid` | `pf pixels write-grid` | Paint a text grid (at most 32x32 px) at (x, y) of a frame; symbols come from "legend". |
+| [`pxf.pack`](#pxfpack) | core | io | `pxf_pack` | `pf pack` | Build a .pxf from a .pxfd folder (the inverse of pxf_unpack). |
+| [`pxf.unpack`](#pxfunpack) | core | io | `pxf_unpack` | `pf unpack` | Expand a .pxf into a .pxfd folder (manifest, document, images, render cache). |
+| [`render.contactSheet`](#rendercontactsheet) | core | read | `render_contact_sheet` | `pf render contact-sheet` | Render the frames of some or all animations as one labelled PNG contact sheet (long edge at most 1568 px), optionally with bone lines and pivot markers. |
+| [`render.frame`](#renderframe) | core | read | `render_frame` | `pf render frame` | Render one frame to an upscaled PNG on a checkerboard (long edge at most 1568 px), optionally with bone lines and pivot markers. |
+| [`rig.applyPreset`](#rigapplypreset) | rig | mutate | `rig_apply_preset` | `pf rig apply-preset` | Generate a motion preset (walk, run, jump, idle-breathe, swing) as an animation. |
+| [`rig.applyTemplate`](#rigapplytemplate) | rig | mutate | `rig_apply_template` | `pf rig apply-template` | Apply a humanoid skeleton template: bones matched by name are reused, missing ones are created. |
+| [`rig.bake`](#rigbake) | rig | destructive | `rig_bake` | `pf rig bake` | Bake a rig animation into one plain pixel layer: as a new animation, or in place. |
+| [`rig.bindParts`](#rigbindparts) | rig | mutate | `rig_bind_parts` | `pf rig bind-parts` | Bind pixel layers to bones as parts, by layer name ("part:<bone>[.<part>][@variant][#view]") or by overlap. |
+| [`rig.editBones`](#rigeditbones) | rig | mutate | `rig_edit_bones` | `pf rig edit-bones` | Edit the skeleton: add/delete/reparent/rename bones, set length and rest pose per view, add/rename/delete views. |
+| [`rig.fitPose`](#rigfitpose) | rig | io | `rig_fit_pose` | `pf rig fit-pose` | Find the bone angles (deg, relative to rest) and part variants whose render of one frame matches a target image. |
+| [`rig.fitTemplate`](#rigfittemplate) | rig | mutate | `rig_fit_template` | `pf rig fit-template` | Fit a humanoid template to landmark points: lengths and rest pose in one call. |
+| [`rig.jointCheck`](#rigjointcheck) | rig | read | `rig_joint_check` | `pf rig joint-check` | Sweep each joint of one rig view and report the pixel gaps that open on the outer side of a bend. |
+| [`rig.mirrorAnimation`](#rigmirroranimation) | rig | mutate | `rig_mirror_animation` | `pf rig mirror-animation` | Add a mirror of an animation under a new direction: same group, flipped around the origin. |
+| [`rig.readPose`](#rigreadpose) | rig | read | `rig_read_pose` | `pf rig read-pose` | Read one frame: bone and part values, and which are real keys (the rest are interpolated or held). |
+| [`rig.setPartZ`](#rigsetpartz) | rig | mutate | `rig_set_part_z` | `pf rig set-part-z` | Set a part's default z (draw order) after creation. |
+| [`rig.setPivot`](#rigsetpivot) | rig | mutate | `rig_set_pivot` | `pf rig set-pivot` | Set a part variant's pivot: the pixel (int px, in the variant image) that sits on the bone pivot. |
+| [`rig.setPose`](#rigsetpose) | rig | mutate | `rig_set_pose` | `pf rig set-pose` | Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z, visible) on one frame or many. |
 
 ## anim.create
 
@@ -96,6 +105,7 @@ Create an animation (group + optional direction) with empty frames of equal dura
 
 (group, direction) must be unique. Names: lower-case a-z 0-9 _ - up to 48 characters; omit direction for an undirected animation. Frames start empty: pose them with rig_set_pose, draw into them, or add more with frame_add. Use loop "once" for a one-shot such as a jump: in a "loop" the keys interpolate across the wrap, from the last frame to the first. For a flipped copy of a side animation use rig_mirror_animation.
 
+- Group: `core`
 - Safety: `mutate`
 - MCP tool: `anim_create`
 - CLI: `pf anim create`
@@ -134,6 +144,7 @@ Rename an animation (group, direction), set its loop mode, angle quantum or post
 
 (group, direction) must stay unique. Renaming the group of a source animation renames its mirrors too; a mirror's group cannot change on its own. Loop, angleQuantum and postPasses belong to the source: a mirror has none. null clears direction, angleQuantum or postPasses. The loop mode changes how keys interpolate at the ends: "loop" wraps from the last frame to the first, "once" and "pingpong" hold. Frame durations, markers, events: frame_set_meta.
 
+- Group: `core`
 - Safety: `mutate`
 - MCP tool: `anim_update`
 - CLI: `pf anim update`
@@ -179,6 +190,7 @@ Link a layer's cel to another frame's cel (mode "link"), make a linked cel indep
 
 A linked cel shows the same pixels as its target; links cross animations, one hop (a link to a link goes to its target). "link": animation, frame (the cel that becomes the link), source.frame (source.animation defaults to animation). "unlink" copies the pixels into the cel. "linkIdentical" links, per layer, every cel with identical pixels, offset and opacity to the first in document order. Pixel layers only: part layers have no cels.
 
+- Group: `core`
 - Safety: `mutate`
 - MCP tool: `cel_link`
 - CLI: `pf cel link`
@@ -216,6 +228,7 @@ Create a new empty RGBA document (no layers, no animations) and open it. Save it
 
 The origin defaults to the bottom-centre pixel of the canvas (where the feet go). For a sprite sheet make the canvas the size of one cell. Import art with import_file, apply a skeleton with rig_apply_template, add animations with anim_create. Use doc_set_color_mode for indexed colour. Nothing is on disk until doc_save with a path.
 
+- Group: `core`
 - Safety: `io`
 - MCP tool: `doc_create`
 - CLI: `pf doc create`
@@ -254,6 +267,7 @@ Open a .pxf file and return its document id, which every other op takes as "doc"
 
 Opening a file that is already open returns the same id (alreadyOpen: true) without re-reading it. Returns the id only: read layers, rig and animations with doc_summary next.
 
+- Group: `core`
 - Safety: `io`
 - MCP tool: `doc_open`
 - CLI: `pf doc open`
@@ -294,6 +308,7 @@ Redo the newest undone change of the document (one history entry).
 
 Re-applies the entry that the last undo reverted. A new change clears the redo entries. Nothing to redo is not an error: redone is false.
 
+- Group: `core`
 - Safety: `mutate` (manages the history itself, no transaction)
 - MCP tool: `redo`
 - CLI: `pf doc redo`
@@ -331,6 +346,7 @@ Save the document to its .pxf file, or to a new path (first save, save as).
 
 Nothing reaches disk before this call. With doc alone it saves to the file the document came from; a document from doc_create needs path (absolute, inside the workspace roots). Writes a temp file and renames it over the target, so a crash never leaves a torn file. A new path takes the document's lock first (DOC_LOCKED if another process owns it). An existing file at a new path is refused unless overwrite is true. An unchanged document writes nothing, unless its file lacks a current render cache or has an older schema version.
 
+- Group: `core`
 - Safety: `io`
 - MCP tool: `doc_save`
 - CLI: `pf doc save`
@@ -366,6 +382,7 @@ Switch the document between "rgba" and "indexed" pixels, and/or lock it to its p
 
 Converting is exact: to "indexed" every colour must be an entry of the active palette (the first alpha-0 entry is the transparent index), else the call is refused and nothing changes; to "rgba" indices resolve through the palette. Both need an active palette. The lock does not recolour: run lint next (palette.offPalette judges the render).
 
+- Group: `core`
 - Safety: `mutate`
 - MCP tool: `doc_set_color_mode`
 - CLI: `pf doc set-color-mode`
@@ -400,6 +417,7 @@ Summarise an open document: canvas, palette, layers, rig (bones, parts, views) a
 
 Names in the result (bones, parts, layers, animation group/direction) are what the other tools take as references. It shows no rest angles and no pose keys: for pivots and tips as numbers use render_frame with bones: true.
 
+- Group: `core`
 - Safety: `read`
 - MCP tool: `doc_summary`
 - CLI: `pf doc summary`
@@ -446,6 +464,7 @@ Undo the newest applied change of the document (one history entry).
 
 Reverts the last applied history entry, whatever tool made it. Nothing to undo is not an error: undone is false. Re-apply with redo.
 
+- Group: `core`
 - Safety: `mutate` (manages the history itself, no transaction)
 - MCP tool: `undo`
 - CLI: `pf doc undo`
@@ -483,6 +502,7 @@ Insert an empty frame before or after a frame; the new frame gets no bone or par
 
 The new frame has no keys, so bones and parts interpolate into it from the neighbouring keys. Cels and overrides are not copied (frame_duplicate copies them). Set its keys with rig_set_pose.
 
+- Group: `core`
 - Safety: `mutate`
 - MCP tool: `frame_add`
 - CLI: `pf frame add`
@@ -525,6 +545,7 @@ Delete one frame with its bone and part keys, cels and overrides; the last frame
 
 Links to the frame's cels are materialised first: the other linked frames keep their picture as their own copy. Images nothing references any more are removed. Later frames move down one index. An animation keeps at least one frame.
 
+- Group: `core`
 - Safety: `mutate`
 - MCP tool: `frame_delete`
 - CLI: `pf frame delete`
@@ -564,6 +585,7 @@ Duplicate one frame; the copy goes right after it, with linked cels and copied k
 
 Cels of the copy link to the source frame (edit one, both change). Bone keys, part keys, markers, events, root motion, duration and overrides are copied, so the copy starts from the same pose: change it with rig_set_pose.
 
+- Group: `core`
 - Safety: `mutate`
 - MCP tool: `frame_duplicate`
 - CLI: `pf frame duplicate`
@@ -604,6 +626,7 @@ Set one frame's duration (ms), markers (name -> int px), events (names) and root
 
 Only the fields you give change, on this one frame. markers merge by name (null removes one); events replace the whole list; rootMotion is the move the game applies when this frame plays (int px, y down). New marker and event names join the document's markerDefs / eventDefs. Mirror animations have no frames: edit the source.
 
+- Group: `core`
 - Safety: `mutate`
 - MCP tool: `frame_set_meta`
 - CLI: `pf frame set-meta`
@@ -643,6 +666,7 @@ Export animations as a spritesheet PNG plus a JSON description (Aseprite hash fo
 
 Renders every frame like the game would see it (export layers only; rig, overrides and post-passes applied; mirrors flipped) and writes <name>.png and <name>.json side by side, atomically. layout "rows" puts one animation per row; "packed" fills a near-square grid. scale is an integer 1..16. The JSON lists a frame per cell with its duration, and one tag per animation. To look at art use render_contact_sheet instead; a scale 1 export of one animation is the base for override_import.
 
+- Group: `core`
 - Safety: `io`
 - MCP tool: `export`
 - CLI: `pf export`
@@ -689,6 +713,7 @@ Import a PNG spritesheet (cells per animation) or an .aseprite file into a docum
 
 Spritesheet: animations maps cells to animations; repeated cells become linked cels; the cell's bottom-centre lands on the document origin. To keep the sheet as a reference, import the frame to cut again as its own animation and layer. Aseprite: run rig_apply_template first or part layers stay unbound; adds layers, tags (as animations) and the palette; the canvas must equal the document's.
 
+- Group: `core`
 - Safety: `io`
 - MCP tool: `import_file`
 - CLI: `pf import`
@@ -736,6 +761,7 @@ Rename a layer, or set its visible flag, opacity (0..255) or export flag.
 
 Only the fields you give change. Names are lower-case a-z 0-9 _ - up to 48 characters and unique among siblings; a part layer's name is the part's name and must be unique in the document. A reference layer is never exported. Hidden or non-exported layers are skipped by export, lint and rig_bake. To hide a part on some frames only, key visible with rig_set_pose.
 
+- Group: `core`
 - Safety: `mutate`
 - MCP tool: `layer_update`
 - CLI: `pf layer update`
@@ -773,6 +799,7 @@ Lint the document: palette, orphan pixels, joint gaps, stale overrides, empty fr
 
 Sorted by rule, then document order. Narrow with enable, disable, animations or skins. "error" means a broken invariant; fix warnings before delivery. pixels.clipped: part art cut off at the canvas edge. rig.partHole: 1 px holes in rotated parts. count 0 is not a visual pass (jointGap checks rest only): see render_contact_sheet.
 
+- Group: `core`
 - Safety: `read`
 - MCP tool: `lint`
 - CLI: `pf lint`
@@ -809,6 +836,7 @@ Import an edited PNG of a rig frame: the pixels that differ from the render beco
 
 Touch-up path: export the frame (export, scale 1, one animation), edit the PNG, import it. The PNG must be canvas-sized; it is compared with the exported render. Each changed stroke becomes a part override when one part owns it, else a final one, and survives re-posing. `newlyStale` lists earlier overrides it made stale: see override_list. Needs a rig; palette-locked and indexed documents only take palette colours.
 
+- Group: `rig`
 - Safety: `io`
 - MCP tool: `override_import`
 - CLI: `pf override import`
@@ -846,6 +874,7 @@ List overrides: stale ones (art under them changed) and ones that fail to render
 
 Renders the frames that have overrides. "stale" overrides are still applied; decide with override_resolve (keep, rebase = accept the current art, discard). "errors" cannot be judged because their frame does not render (missing image, no view for the direction...): fix the rig first, they cannot be rebased until it renders. Part overrides of mirror animations are never rendered and not listed.
 
+- Group: `rig`
 - Safety: `read`
 - MCP tool: `override_list`
 - CLI: `pf override list`
@@ -880,6 +909,7 @@ Resolve overrides: "keep" them, "rebase" onto the current art, or "discard" them
 
 Name overrides by id (from override_list) or pass allStale: true. "keep" changes nothing (a stale override is still applied) and just confirms the ids exist. "rebase" accepts the art under the override as the new base, so it stops being stale; the frame must render. "discard" deletes the override and its pixels. With allStale, overrides that fail to render or have no target are left out of a rebase and listed in skipped. Check the frame with render_frame after a discard.
 
+- Group: `rig`
 - Safety: `mutate`
 - MCP tool: `override_resolve`
 - CLI: `pf override resolve`
@@ -921,6 +951,7 @@ Close joint gaps by painting hidden overlap on the part drawn lower; the rest co
 
 For each joint with gaps (rig_joint_check), paints only pixels the upper part covers at rest, growing the variant image and shifting its pivot to keep the part in place. One flat colour: the variant's most frequent opaque one, or color. At big bends it shows as a patch with no outline, so check the pose. "uncovered" lists joints no hidden paint can close; "skipped" joints with several parts per bone or a part rotated at rest. Run rig_joint_check next.
 
+- Group: `rig`
 - Safety: `mutate`
 - MCP tool: `part_paint_overlap`
 - CLI: `pf part paint-overlap`
@@ -956,6 +987,7 @@ Paint a text grid into a part variant's own image.
 
 "." transparent, "_" keeps. x, y are in the variant image; negative grows it (the pivot moves, the part stays put). Fixes a cut for every pose. Frame overrides of the part go stale (override_list). Locked palettes: palette colours only.
 
+- Group: `rig`
 - Safety: `mutate`
 - MCP tool: `part_paint_variant`
 - CLI: `pf part paint-variant`
@@ -996,6 +1028,7 @@ Split a region (rect, lasso or flood) of a flat layer's cel into a new layer bou
 
 Fit the bones first: the part keeps the bone pivot of this moment. partName ("part:upper_arm_r") binds it, else overlap, else it stays a pixel layer. The part draws in every frame of every animation: key visible false (rig_set_pose) where other art shows. Refused: rig-block-order (a pixel layer covers the part), duplicate-variant (a second cut into one part: undo, recut it whole).
 
+- Group: `rig`
 - Safety: `mutate`
 - MCP tool: `part_split`
 - CLI: `pf part split`
@@ -1042,6 +1075,7 @@ Read a region (at most 64x64 px) of a frame as a text grid: one symbol per pixel
 
 Without "layer" the region is the rendered frame (what pixels_write_grid edits on a rig frame); with a pixel "layer" it is that cel. Symbols 0-9A-Za-z are assigned by first appearance and valid for this call only; at most 62 colours (else read less). "rulers" adds column and row numbers, about 2 characters per pixel in all: read only the area you need. Feed `rows` and `legend` to pixels_write_grid.
 
+- Group: `core`
 - Safety: `read`
 - MCP tool: `pixels_read_grid`
 - CLI: `pf pixels read-grid`
@@ -1095,6 +1129,7 @@ Paint a text grid (at most 32x32 px) at (x, y) of a frame; symbols come from "le
 
 "." writes transparent, "_" keeps the pixel. On a rig omit layer: differences from the rendered frame become overrides of this frame only. They are for touch-ups of a few pixels: art pasted over a pose is not rig animation and goes stale when the pose changes. If the rig cannot show something, say so instead. A part layer is refused. On flat art name the pixel `layer`. Locked palettes only take palette colours.
 
+- Group: `core`
 - Safety: `mutate`
 - MCP tool: `pixels_write_grid`
 - CLI: `pf pixels write-grid`
@@ -1138,6 +1173,7 @@ Build a .pxf from a .pxfd folder (the inverse of pxf_unpack).
 
 Packs manifest.json, document.json, images/ and render/ of the folder; .gdignore and other files are ignored. The archive is built by the same deterministic writer as a save, atomically, replacing an existing file. file defaults to the folder name with .pxf. Works on files, not on open documents: doc_open the result to validate it.
 
+- Group: `core`
 - Safety: `io`
 - MCP tool: `pxf_pack`
 - CLI: `pf pack`
@@ -1176,6 +1212,7 @@ Expand a .pxf into a .pxfd folder (manifest, document, images, render cache).
 
 Writes one file per archive entry (bytes verbatim) plus an empty .gdignore so Godot ignores the PNGs; the folder diffs well in git. dir defaults to the file name with .pxfd. An existing folder is refused unless overwrite is true (only a folder named *.pxfd is ever replaced). Works on the file, not on an open document: doc_save first. pxf_pack is the inverse.
 
+- Group: `core`
 - Safety: `io`
 - MCP tool: `pxf_unpack`
 - CLI: `pf unpack`
@@ -1215,6 +1252,7 @@ Render the frames of some or all animations as one labelled PNG contact sheet (l
 
 Judge motion across frames (before/after a re-pose, a walk cycle): vision judges gesture and readability, lint owns precision (1 px gaps, off-palette pixels). Check the tile edges: art past the canvas is cut off and lint does not report it. Tiles are labelled "GROUP/DIRECTION #n" (n = frame index). The scale is the largest that fits 1568 px, or lower than `scale`. `bones` draws yellow bone lines and `pivots` red pivot squares (need a rig).
 
+- Group: `core`
 - Safety: `read`
 - MCP tool: `render_contact_sheet`
 - CLI: `pf render contact-sheet`
@@ -1255,6 +1293,7 @@ Render one frame to an upscaled PNG on a checkerboard (long edge at most 1568 px
 
 Look at the result of an edit: vision judges gesture, proportions and readability, lint owns precision (1 px gaps, off-palette pixels). `bones` draws a yellow line from each bone pivot to its tip, `pivots` a red square on each pivot pixel (both need a rig). With either, `output.bones` lists pivots and tips as canvas numbers: how to read a posed skeleton. Transparent pixels show a grey checkerboard.
 
+- Group: `core`
 - Safety: `read`
 - MCP tool: `render_frame`
 - CLI: `pf render frame`
@@ -1295,6 +1334,7 @@ Generate a motion preset (walk, run, jump, idle-breathe, swing) as an animation.
 
 Needs the humanoid template bone names. Writes animation <group>/side (group defaults to the preset); an existing one needs replace:true and loses its bone keys. Output: the resolved params, rootMotion and labels per frame. Next: render_contact_sheet.
 
+- Group: `rig`
 - Safety: `mutate`
 - MCP tool: `rig_apply_preset`
 - CLI: `pf rig apply-preset`
@@ -1342,6 +1382,7 @@ Apply a humanoid skeleton template: bones matched by name are reused, missing on
 
 Templates: humanoid-side (view "side"), humanoid-front ("front"), humanoid-back ("back"). Without view a new view is created (named after the template, or viewName); with view the rest pose is set there. The template origin is the document origin. Rest: pelvis -90 (up), limbs 180 relative to it (down). Proportions are generic: compare with render_frame (bones) and refit with rig_edit_bones before any part_split. Bones that exist with another parent are refused.
 
+- Group: `rig`
 - Safety: `mutate`
 - MCP tool: `rig_apply_template`
 - CLI: `pf rig apply-template`
@@ -1378,6 +1419,7 @@ Bake a rig animation into one plain pixel layer: as a new animation, or in place
 
 Renders every frame (parts, overrides, post-passes, exported layers) into a pixel layer "baked" and hides the parts. mode "new" adds animation <group>_baked; "replace" bakes in place. A mirror cannot be baked: bake its source. Baked pixels no longer follow the rig.
 
+- Group: `rig`
 - Safety: `destructive`
 - MCP tool: `rig_bake`
 - CLI: `pf rig bake`
@@ -1415,6 +1457,7 @@ Bind pixel layers to bones as parts, by layer name ("part:<bone>[.<part>][@varia
 
 By name: a layer called part:upper_arm_r (or just a bone name) becomes that bone's part; @variant adds a variant of the same part, #view another view. By overlap: remaining layers bind to the bone their opaque pixels cover, only with a clear winner (ties are listed as ambiguous). The part keeps the bone pivot of this moment: fit the bones first. Animated and translucent layers are skipped. Running it again changes nothing. Cut flat art with part_split.
 
+- Group: `rig`
 - Safety: `mutate`
 - MCP tool: `rig_bind_parts`
 - CLI: `pf rig bind-parts`
@@ -1453,6 +1496,7 @@ Edit the skeleton: add/delete/reparent/rename bones, set length and rest pose pe
 
 Edits run in order; one failure undoes all. A bone with parts or (without cascade) children cannot be deleted. Rest x/y: root = canvas pivot, child = canvas offset from the parent pivot. Rest angle adds to the parent's: world 0 = +x, 90 = down, so a thigh pointing down under a pelvis at -90 is 180. Returns no geometry: check with render_frame (bones).
 
+- Group: `rig`
 - Safety: `mutate`
 - MCP tool: `rig_edit_bones`
 - CLI: `pf rig edit-bones`
@@ -1491,6 +1535,7 @@ Find the bone angles (deg, relative to rest) and part variants whose render of o
 
 Target: file (PNG, canvas size) or targetFrame. Searches each bone angle within ±range and each listed part variant. Pass the output bones and parts to rig_set_pose to apply them. exact: no pixel differs; else error counts them. Seeded: the same input gives the same result. A miss is not proof that no pose fits: raise maxRenders or narrow range.
 
+- Group: `rig`
 - Safety: `io`
 - MCP tool: `rig_fit_pose`
 - CLI: `pf rig fit-pose`
@@ -1536,6 +1581,7 @@ Fit a humanoid template to landmark points: lengths and rest pose in one call.
 
 Like rig_apply_template, but sizes the bones from landmarks (canvas px, arms hanging): headTop, hips, feet (between the soles; becomes the root), optional handL/handR fingertips. Existing bones are resized. Check with render_frame (bones), then touch up with rig_edit_bones.
 
+- Group: `rig`
 - Safety: `mutate`
 - MCP tool: `rig_fit_template`
 - CLI: `pf rig fit-template`
@@ -1573,6 +1619,7 @@ Sweep each joint of one rig view and report the pixel gaps that open on the oute
 
 A rig passes when summary.gapCount is 0. The full output is about 400 characters per joint: pass compact for a short form, or use lint with enable ["rig.jointGap"] for pass or fail. The sweep moves one joint at a time, rangeDeg around rest (default 30): a pose beyond that is not checked, so look at the render. Fix gaps with part_paint_overlap, or by moving part pivots, then check again. Checks the view that draws the first direction of the given view (default: the first view).
 
+- Group: `rig`
 - Safety: `read`
 - MCP tool: `rig_joint_check`
 - CLI: `pf rig joint-check`
@@ -1612,6 +1659,7 @@ Add a mirror of an animation under a new direction: same group, flipped around t
 
 The mirror stores no frames or pixels: it plays the source flipped horizontally about the document origin (markers flip too, names stay), so later edits of the source carry over: pose the source, not the mirror. Asymmetric art needs a separate animation. The mirror takes the source's group and loop; the direction must be new for that group. A source cannot be a mirror itself. Final overrides of the mirror can be added with pixels_write_grid on it.
 
+- Group: `rig`
 - Safety: `mutate`
 - MCP tool: `rig_mirror_animation`
 - CLI: `pf rig mirror-animation`
@@ -1646,6 +1694,7 @@ Read one frame: bone and part values, and which are real keys (the rest are inte
 
 Output matches rig_set_pose input: pass bones and parts back unchanged. Lists only bones and channels that some frame keys; the rest are at rest. keyed names the real keys on this frame ("bones.<name>.<channel>"); other values are interpolated or held. Writing a value back makes it a key: this frame renders the same, other frames may change, so write back only what you mean to key. Mirror animations: read the source.
 
+- Group: `rig`
 - Safety: `read`
 - MCP tool: `rig_read_pose`
 - CLI: `pf rig read-pose`
@@ -1683,6 +1732,7 @@ Set a part's default z (draw order) after creation.
 
 Higher z draws on top (default 0). Replaces per-frame z keys of rig_set_pose. A frame z key still wins: keyedFrames counts them. rig_joint_check and part_paint_overlap use the new order.
 
+- Group: `rig`
 - Safety: `mutate`
 - MCP tool: `rig_set_part_z`
 - CLI: `pf rig set-part-z`
@@ -1720,6 +1770,7 @@ Set a part variant's pivot: the pixel (int px, in the variant image) that sits o
 
 Binding already puts the pivot on the bone: use this to shift a part against its bone. Coordinates are in the variant image, origin top-left, pixel centre; the pivot may lie outside the image (a floating hand). It moves the part's art relative to the bone, so do not nudge it to clear joint gaps: use part_paint_overlap. Run rig_joint_check next. Variant names repeat across views: pass view when the name is ambiguous.
 
+- Group: `rig`
 - Safety: `mutate`
 - MCP tool: `rig_set_pivot`
 - CLI: `pf rig set-pivot`
@@ -1757,6 +1808,7 @@ Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z,
 
 Channels you pass replace the stored ones; null removes a bone or part key. A channel not keyed here interpolates between keys on other frames, not to rest: key offsets on every frame or none. Part keys hold both ways: set z or visible once. "frames" poses many frames as one undo step. targets {bone:{x,y}}: IK sets parent angles (wins over bones, earlier targets); reached: within 1 px. Output keyed: bones keyed; interpolated: keyed elsewhere, not on a posed frame (keyAll keys them at rest). Off-canvas art is cut. Next: render_contact_sheet.
 
+- Group: `rig`
 - Safety: `mutate`
 - MCP tool: `rig_set_pose`
 - CLI: `pf rig set-pose`

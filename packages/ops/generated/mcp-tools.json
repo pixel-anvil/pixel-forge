@@ -80,7 +80,8 @@
     },
     "_meta": {
       "pixel-forge/op": "anim.create",
-      "pixel-forge/safety": "mutate"
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "core"
     }
   },
   {
@@ -262,7 +263,8 @@
     },
     "_meta": {
       "pixel-forge/op": "anim.update",
-      "pixel-forge/safety": "mutate"
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "core"
     }
   },
   {
@@ -414,7 +416,8 @@
     },
     "_meta": {
       "pixel-forge/op": "cel.link",
-      "pixel-forge/safety": "mutate"
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "core"
     }
   },
   {
@@ -525,7 +528,8 @@
     },
     "_meta": {
       "pixel-forge/op": "doc.create",
-      "pixel-forge/safety": "io"
+      "pixel-forge/safety": "io",
+      "pixel-forge/group": "core"
     }
   },
   {
@@ -583,7 +587,8 @@
     },
     "_meta": {
       "pixel-forge/op": "doc.open",
-      "pixel-forge/safety": "io"
+      "pixel-forge/safety": "io",
+      "pixel-forge/group": "core"
     }
   },
   {
@@ -625,7 +630,8 @@
     },
     "_meta": {
       "pixel-forge/op": "doc.redo",
-      "pixel-forge/safety": "mutate"
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "core"
     }
   },
   {
@@ -685,7 +691,8 @@
     },
     "_meta": {
       "pixel-forge/op": "doc.save",
-      "pixel-forge/safety": "io"
+      "pixel-forge/safety": "io",
+      "pixel-forge/group": "core"
     }
   },
   {
@@ -741,7 +748,8 @@
     },
     "_meta": {
       "pixel-forge/op": "doc.setColorMode",
-      "pixel-forge/safety": "mutate"
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "core"
     }
   },
   {
@@ -1044,7 +1052,8 @@
     },
     "_meta": {
       "pixel-forge/op": "doc.summary",
-      "pixel-forge/safety": "read"
+      "pixel-forge/safety": "read",
+      "pixel-forge/group": "core"
     }
   },
   {
@@ -1086,7 +1095,8 @@
     },
     "_meta": {
       "pixel-forge/op": "doc.undo",
-      "pixel-forge/safety": "mutate"
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "core"
     }
   },
   {
@@ -1187,7 +1197,8 @@
     },
     "_meta": {
       "pixel-forge/op": "frame.add",
-      "pixel-forge/safety": "mutate"
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "core"
     }
   },
   {
@@ -1273,7 +1284,8 @@
     },
     "_meta": {
       "pixel-forge/op": "frame.delete",
-      "pixel-forge/safety": "mutate"
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "core"
     }
   },
   {
@@ -1363,7 +1375,8 @@
     },
     "_meta": {
       "pixel-forge/op": "frame.duplicate",
-      "pixel-forge/safety": "mutate"
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "core"
     }
   },
   {
@@ -1513,7 +1526,8 @@
     },
     "_meta": {
       "pixel-forge/op": "frame.setMeta",
-      "pixel-forge/safety": "mutate"
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "core"
     }
   },
   {
@@ -1645,7 +1659,8 @@
     },
     "_meta": {
       "pixel-forge/op": "io.export",
-      "pixel-forge/safety": "io"
+      "pixel-forge/safety": "io",
+      "pixel-forge/group": "core"
     }
   },
   {
@@ -1886,7 +1901,8 @@
     },
     "_meta": {
       "pixel-forge/op": "io.import",
-      "pixel-forge/safety": "io"
+      "pixel-forge/safety": "io",
+      "pixel-forge/group": "core"
     }
   },
   {
@@ -1959,7 +1975,8 @@
     },
     "_meta": {
       "pixel-forge/op": "layer.update",
-      "pixel-forge/safety": "mutate"
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "core"
     }
   },
   {
@@ -2218,7 +2235,8 @@
     },
     "_meta": {
       "pixel-forge/op": "lint.run",
-      "pixel-forge/safety": "read"
+      "pixel-forge/safety": "read",
+      "pixel-forge/group": "core"
     }
   },
   {
@@ -2327,7 +2345,8 @@
     },
     "_meta": {
       "pixel-forge/op": "override.import",
-      "pixel-forge/safety": "io"
+      "pixel-forge/safety": "io",
+      "pixel-forge/group": "rig"
     }
   },
   {
@@ -2518,7 +2537,8 @@
     },
     "_meta": {
       "pixel-forge/op": "override.list",
-      "pixel-forge/safety": "read"
+      "pixel-forge/safety": "read",
+      "pixel-forge/group": "rig"
     }
   },
   {
@@ -2588,7 +2608,8 @@
     },
     "_meta": {
       "pixel-forge/op": "override.resolve",
-      "pixel-forge/safety": "mutate"
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "rig"
     }
   },
   {
@@ -2776,7 +2797,8 @@
     },
     "_meta": {
       "pixel-forge/op": "part.paintOverlap",
-      "pixel-forge/safety": "mutate"
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "rig"
     }
   },
   {
@@ -2897,7 +2919,8 @@
     },
     "_meta": {
       "pixel-forge/op": "part.paintVariant",
-      "pixel-forge/safety": "mutate"
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "rig"
     }
   },
   {
@@ -3232,7 +3255,8 @@
     },
     "_meta": {
       "pixel-forge/op": "part.split",
-      "pixel-forge/safety": "mutate"
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "rig"
     }
   },
   {
@@ -3404,7 +3428,8 @@
     },
     "_meta": {
       "pixel-forge/op": "pixels.readGrid",
-      "pixel-forge/safety": "read"
+      "pixel-forge/safety": "read",
+      "pixel-forge/group": "core"
     }
   },
   {
@@ -3554,7 +3579,8 @@
     },
     "_meta": {
       "pixel-forge/op": "pixels.writeGrid",
-      "pixel-forge/safety": "mutate"
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "core"
     }
   },
   {
@@ -3601,7 +3627,8 @@
     },
     "_meta": {
       "pixel-forge/op": "pxf.pack",
-      "pixel-forge/safety": "io"
+      "pixel-forge/safety": "io",
+      "pixel-forge/group": "core"
     }
   },
   {
@@ -3653,7 +3680,8 @@
     },
     "_meta": {
       "pixel-forge/op": "pxf.unpack",
-      "pixel-forge/safety": "io"
+      "pixel-forge/safety": "io",
+      "pixel-forge/group": "core"
     }
   },
   {
@@ -3787,7 +3815,8 @@
     },
     "_meta": {
       "pixel-forge/op": "render.contactSheet",
-      "pixel-forge/safety": "read"
+      "pixel-forge/safety": "read",
+      "pixel-forge/group": "core"
     }
   },
   {
@@ -3970,7 +3999,8 @@
     },
     "_meta": {
       "pixel-forge/op": "render.frame",
-      "pixel-forge/safety": "read"
+      "pixel-forge/safety": "read",
+      "pixel-forge/group": "core"
     }
   },
   {
@@ -4128,7 +4158,8 @@
     },
     "_meta": {
       "pixel-forge/op": "rig.applyPreset",
-      "pixel-forge/safety": "mutate"
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "rig"
     }
   },
   {
@@ -4204,7 +4235,8 @@
     },
     "_meta": {
       "pixel-forge/op": "rig.applyTemplate",
-      "pixel-forge/safety": "mutate"
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "rig"
     }
   },
   {
@@ -4329,7 +4361,8 @@
     },
     "_meta": {
       "pixel-forge/op": "rig.bake",
-      "pixel-forge/safety": "destructive"
+      "pixel-forge/safety": "destructive",
+      "pixel-forge/group": "rig"
     }
   },
   {
@@ -4488,7 +4521,8 @@
     },
     "_meta": {
       "pixel-forge/op": "rig.bindParts",
-      "pixel-forge/safety": "mutate"
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "rig"
     }
   },
   {
@@ -4793,7 +4827,8 @@
     },
     "_meta": {
       "pixel-forge/op": "rig.editBones",
-      "pixel-forge/safety": "mutate"
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "rig"
     }
   },
   {
@@ -4975,7 +5010,8 @@
     },
     "_meta": {
       "pixel-forge/op": "rig.fitPose",
-      "pixel-forge/safety": "io"
+      "pixel-forge/safety": "io",
+      "pixel-forge/group": "rig"
     }
   },
   {
@@ -5124,7 +5160,8 @@
     },
     "_meta": {
       "pixel-forge/op": "rig.fitTemplate",
-      "pixel-forge/safety": "mutate"
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "rig"
     }
   },
   {
@@ -5344,7 +5381,8 @@
     },
     "_meta": {
       "pixel-forge/op": "rig.jointCheck",
-      "pixel-forge/safety": "read"
+      "pixel-forge/safety": "read",
+      "pixel-forge/group": "rig"
     }
   },
   {
@@ -5426,7 +5464,8 @@
     },
     "_meta": {
       "pixel-forge/op": "rig.mirrorAnimation",
-      "pixel-forge/safety": "mutate"
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "rig"
     }
   },
   {
@@ -5547,7 +5586,8 @@
     },
     "_meta": {
       "pixel-forge/op": "rig.readPose",
-      "pixel-forge/safety": "read"
+      "pixel-forge/safety": "read",
+      "pixel-forge/group": "rig"
     }
   },
   {
@@ -5615,7 +5655,8 @@
     },
     "_meta": {
       "pixel-forge/op": "rig.setPartZ",
-      "pixel-forge/safety": "mutate"
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "rig"
     }
   },
   {
@@ -5715,7 +5756,8 @@
     },
     "_meta": {
       "pixel-forge/op": "rig.setPivot",
-      "pixel-forge/safety": "mutate"
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "rig"
     }
   },
   {
@@ -6052,7 +6094,8 @@
     },
     "_meta": {
       "pixel-forge/op": "rig.setPose",
-      "pixel-forge/safety": "mutate"
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "rig"
     }
   }
 ]

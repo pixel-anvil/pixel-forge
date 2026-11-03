@@ -26,6 +26,7 @@ import { checkPalette, parseGrid } from './pixels-write-grid.js';
 export const partPaintVariant = defineOp({
   name: 'part.paintVariant',
   safety: 'mutate',
+  group: 'rig',
   summary: "Paint a text grid into a part variant's own image.",
   description:
     '"." transparent, "_" keeps. x, y are in the variant image; negative grows it (the pivot moves, the part stays put). Fixes a cut for every pose. Frame overrides of the part go stale (override_list). Locked palettes: palette colours only.',

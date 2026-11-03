@@ -27,6 +27,7 @@ function locate(layers: Layer[], id: string): { siblings: Layer[]; index: number
 export const layerUpdate = defineOp({
   name: 'layer.update',
   safety: 'mutate',
+  group: 'core',
   summary: 'Rename a layer, or set its visible flag, opacity (0..255) or export flag.',
   description:
     "Only the fields you give change. Names are lower-case a-z 0-9 _ - up to 48 characters and unique among siblings; a part layer's name is the part's name and must be unique in the document. A reference layer is never exported. Hidden or non-exported layers are skipped by export, lint and rig_bake. To hide a part on some frames only, key visible with rig_set_pose.",

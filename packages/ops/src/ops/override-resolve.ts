@@ -14,6 +14,7 @@ import { DocRef } from '../refs.js';
 export const overrideResolve = defineOp({
   name: 'override.resolve',
   safety: 'mutate',
+  group: 'rig',
   summary: 'Resolve overrides: "keep" them, "rebase" onto the current art, or "discard" them.',
   description:
     'Name overrides by id (from override_list) or pass allStale: true. "keep" changes nothing (a stale override is still applied) and just confirms the ids exist. "rebase" accepts the art under the override as the new base, so it stops being stale; the frame must render. "discard" deletes the override and its pixels. With allStale, overrides that fail to render or have no target are left out of a rebase and listed in skipped. Check the frame with render_frame after a discard.',

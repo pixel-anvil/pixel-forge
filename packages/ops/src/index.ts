@@ -29,6 +29,8 @@ export type {
   OpSpec,
   Safety,
 } from './define.js';
+export { TOOL_GROUPS, TOOL_GROUP_INFO, isToolGroup, parseToolGroups } from './groups.js';
+export type { ToolGroup } from './groups.js';
 export { OP_ERROR_CODES, OpError, inputError, toOpError } from './errors.js';
 export type { InputIssue, OpErrorCode, OpErrorDetails, OpErrorJson } from './errors.js';
 export { silentLogger } from './context.js';

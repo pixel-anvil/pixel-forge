@@ -23,6 +23,7 @@ const KINDS = {
 export const rigFitTemplate = defineOp({
   name: 'rig.fitTemplate',
   safety: 'mutate',
+  group: 'rig',
   summary: 'Fit a humanoid template to landmark points: lengths and rest pose in one call.',
   description:
     'Like rig_apply_template, but sizes the bones from landmarks (canvas px, arms hanging): headTop, hips, feet (between the soles; becomes the root), optional handL/handR fingertips. Existing bones are resized. Check with render_frame (bones), then touch up with rig_edit_bones.',

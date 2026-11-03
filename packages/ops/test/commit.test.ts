@@ -16,6 +16,7 @@ const docInput = z.strictObject({ doc: DocRef });
 const poke = defineOp({
   name: 'test.poke',
   safety: 'mutate',
+  group: 'core',
   summary: 'Write palette index `value` at (0, 0) of the first image.',
   input: z.strictObject({ doc: DocRef, value: z.int() }),
   output: z.strictObject({ ok: z.boolean() }),
@@ -31,6 +32,7 @@ const poke = defineOp({
 const rename = defineOp({
   name: 'test.rename',
   safety: 'mutate',
+  group: 'core',
   summary: 'Rename the document.',
   input: z.strictObject({ doc: DocRef, name: z.string() }),
   output: z.strictObject({ ok: z.boolean() }),
@@ -45,6 +47,7 @@ const rename = defineOp({
 const rejecting = defineOp({
   name: 'test.rejecting',
   safety: 'mutate',
+  group: 'core',
   summary: 'Broken: returns a rejecting promise.',
   input: docInput,
   output: z.unknown(),
@@ -54,6 +57,7 @@ const rejecting = defineOp({
 const rejectingTransact = defineOp({
   name: 'test.rejectingTransact',
   safety: 'io',
+  group: 'core',
   summary: 'Broken: the transact callback returns a rejecting promise.',
   input: docInput,
   output: z.unknown(),
@@ -66,6 +70,7 @@ const rejectingTransact = defineOp({
 const ioRename = defineOp({
   name: 'test.ioRename',
   safety: 'io',
+  group: 'core',
   summary: 'Renames the document through ctx.transact.',
   input: z.strictObject({ doc: DocRef, name: z.string() }),
   output: z.strictObject({ ok: z.boolean() }),

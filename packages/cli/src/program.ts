@@ -47,6 +47,12 @@ export function createProgram(ctx: WiringContext, registry: OpRegistry = builtin
         'Trace every tool call as a JSON line: to the file, or to stderr when none is given.',
       ),
     )
+    .addOption(
+      new Option(
+        '--tools <groups>',
+        'Tool groups to list, comma-separated: core, rig, or all (default: all; env PF_TOOLS).',
+      ),
+    )
     .action(async (flags: McpFlags) => {
       ctx.exitCode = await runMcp(env, flags);
     });

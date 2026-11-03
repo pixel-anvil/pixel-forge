@@ -30,6 +30,7 @@ const Entry = z.strictObject({
 export const overrideList = defineOp({
   name: 'override.list',
   safety: 'read',
+  group: 'rig',
   summary:
     'List overrides: stale ones (art under them changed) and ones that fail to render, apart.',
   description:

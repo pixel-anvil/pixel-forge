@@ -20,6 +20,7 @@ const SUPPORTED_VIEW = 'side';
 export const rigApplyPreset = defineOp({
   name: 'rig.applyPreset',
   safety: 'mutate',
+  group: 'rig',
   summary: 'Generate a motion preset (walk, run, jump, idle-breathe, swing) as an animation.',
   description:
     'Needs the humanoid template bone names. Writes animation <group>/side (group defaults to the preset); an existing one needs replace:true and loses its bone keys. Output: the resolved params, rootMotion and labels per frame. Next: render_contact_sheet.',

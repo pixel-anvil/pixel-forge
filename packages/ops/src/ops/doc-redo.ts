@@ -10,6 +10,7 @@ import { DocRef } from '../refs.js';
 export const docRedo = defineOp({
   name: 'doc.redo',
   safety: 'mutate',
+  group: 'core',
   transaction: false,
   summary: 'Redo the newest undone change of the document (one history entry).',
   description:

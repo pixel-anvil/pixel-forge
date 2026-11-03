@@ -13,6 +13,7 @@ import { DocRef } from '../refs.js';
 export const docSetColorMode = defineOp({
   name: 'doc.setColorMode',
   safety: 'mutate',
+  group: 'core',
   summary:
     'Switch the document between "rgba" and "indexed" pixels, and/or lock it to its palette.',
   description:

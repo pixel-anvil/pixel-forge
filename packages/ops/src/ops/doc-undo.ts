@@ -10,6 +10,7 @@ import { DocRef } from '../refs.js';
 export const docUndo = defineOp({
   name: 'doc.undo',
   safety: 'mutate',
+  group: 'core',
   transaction: false,
   summary: 'Undo the newest applied change of the document (one history entry).',
   description:

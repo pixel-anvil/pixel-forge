@@ -16,6 +16,7 @@ import { SkinArg, resolveSkin } from '../skin.js';
 export const renderContactSheet = defineOp({
   name: 'render.contactSheet',
   safety: 'read',
+  group: 'core',
   summary:
     'Render the frames of some or all animations as one labelled PNG contact sheet (long edge at most 1568 px), optionally with bone lines and pivot markers.',
   description:

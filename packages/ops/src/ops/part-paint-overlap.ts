@@ -11,6 +11,7 @@ import { BoneRef, DocRef, ViewRef, partNamer, resolveBone, resolveView } from '.
 export const partPaintOverlap = defineOp({
   name: 'part.paintOverlap',
   safety: 'mutate',
+  group: 'rig',
   summary:
     'Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite stays the same.',
   description:

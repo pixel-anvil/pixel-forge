@@ -90,6 +90,7 @@ export const BoneEdit = z.discriminatedUnion('action', [
 export const rigEditBones = defineOp({
   name: 'rig.editBones',
   safety: 'mutate',
+  group: 'rig',
   summary:
     'Edit the skeleton: add/delete/reparent/rename bones, set length and rest pose per view, add/rename/delete views.',
   description:

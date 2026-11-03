@@ -52,6 +52,7 @@ const LintFindingOutput = z.strictObject({
 export const lintRun = defineOp({
   name: 'lint.run',
   safety: 'read',
+  group: 'core',
   summary:
     'Lint the document: palette, orphan pixels, joint gaps, stale overrides, empty frames, clipping, holes.',
   description:

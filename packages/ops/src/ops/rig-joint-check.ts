@@ -19,6 +19,7 @@ const AngleGaps = z.strictObject({
 export const rigJointCheck = defineOp({
   name: 'rig.jointCheck',
   safety: 'read',
+  group: 'rig',
   summary:
     'Sweep each joint of one rig view and report the pixel gaps that open on the outer side of a bend.',
   description:

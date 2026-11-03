@@ -21,6 +21,7 @@ const ex = [{ title: 'on the hero', input: { doc: 'doc_g1ed5q' } }] as const;
 const setDuration = defineOp({
   name: 'test.setDuration',
   safety: 'mutate',
+  group: 'core',
   summary: 'Set the duration of frame 0.',
   input: z.strictObject({ doc: DocRef, ms: z.int() }),
   output: z.strictObject({ ok: z.boolean() }),
@@ -39,6 +40,7 @@ const mutateThen = (name: string, after: (ctx: OpContext) => unknown): AnyOp =>
   defineOp({
     name,
     safety: 'mutate',
+    group: 'core',
     summary: 'Test op.',
     input: docInput,
     output: z.unknown(),
@@ -57,6 +59,7 @@ const throwing = mutateThen('test.throws', () => {
 const asyncMutate = defineOp({
   name: 'test.asyncMutate',
   safety: 'mutate',
+  group: 'core',
   summary: 'Broken: async.',
   input: docInput,
   output: z.strictObject({ n: z.int() }),
@@ -72,6 +75,7 @@ const asyncMutate = defineOp({
 const badOutput = defineOp({
   name: 'test.badOutput',
   safety: 'mutate',
+  group: 'core',
   summary: 'Broken: output.',
   input: docInput,
   output: z.strictObject({ n: z.int() }),
@@ -93,6 +97,7 @@ const breaksDoc = mutateThen('test.breaksDoc', (ctx) => {
 const wipe = defineOp({
   name: 'test.wipe',
   safety: 'destructive',
+  group: 'core',
   summary: 'Destructive test op.',
   input: docInput,
   output: z.strictObject({ wiped: z.boolean() }),
@@ -107,6 +112,7 @@ const wipe = defineOp({
 const undo = defineOp({
   name: 'test.undo',
   safety: 'mutate',
+  group: 'core',
   summary: 'Undo without a transaction.',
   input: docInput,
   output: z.strictObject({ undone: z.boolean() }),
@@ -117,6 +123,7 @@ const undo = defineOp({
 const ioRename = defineOp({
   name: 'test.ioRename',
   safety: 'io',
+  group: 'core',
   summary: 'Reads a file, then renames the document once.',
   input: z.strictObject({ doc: DocRef, path: z.string(), twice: z.boolean().optional() }),
   output: z.strictObject({ bytes: z.int() }),
@@ -135,6 +142,7 @@ const ioRename = defineOp({
 const hostRead = defineOp({
   name: 'test.hostRead',
   safety: 'read',
+  group: 'core',
   summary: 'A host-level read.',
   input: z.strictObject({ field: z.enum(['docs', 'tx', 'document', 'transact', 'view']) }),
   output: z.unknown(),
@@ -157,6 +165,7 @@ const hostRead = defineOp({
 const readFrame = defineOp({
   name: 'test.readFrame',
   safety: 'read',
+  group: 'core',
   summary: 'Reads through ctx.view and ctx.renderFrame.',
   input: docInput,
   output: z.strictObject({ w: z.int(), frames: z.int() }),
@@ -360,6 +369,7 @@ describe('OpRegistry', () => {
     const boom = defineOp({
       name: 'test.boom',
       safety: 'read',
+      group: 'core',
       summary: 'Throws.',
       input: z.strictObject({ kind: z.enum(['error', 'op', 'string']) }),
       output: z.unknown(),

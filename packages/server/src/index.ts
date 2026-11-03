@@ -23,7 +23,8 @@ export {
 export type { DiscoverOptions, ServerInfo } from './discovery.js';
 export { WORKSPACE_ROOTS_ENV, canonicalPath, isInside, resolveWorkspaceRoots } from './roots.js';
 export type { WorkspaceRootsOptions } from './roots.js';
-export { createMcpServer, serveStdio } from './mcp-server.js';
+export { INSTRUCTIONS, createMcpServer, instructionsFor, serveStdio } from './mcp-server.js';
+export { FIND_TOOL_TOOL, META_TOOLS, TOOL_GROUPS_TOOL } from './mcp-groups.js';
 export type {
   McpHost,
   McpServerHandle,

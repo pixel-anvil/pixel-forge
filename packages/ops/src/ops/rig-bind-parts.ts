@@ -11,6 +11,7 @@ import { DocRef, LayerRef, ViewRef, requireRig, resolveLayer, resolveView } from
 export const rigBindParts = defineOp({
   name: 'rig.bindParts',
   safety: 'mutate',
+  group: 'rig',
   summary:
     'Bind pixel layers to bones as parts, by layer name ("part:<bone>[.<part>][@variant][#view]") or by overlap.',
   description:

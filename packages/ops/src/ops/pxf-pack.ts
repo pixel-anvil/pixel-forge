@@ -25,6 +25,7 @@ function stem(path: string, ext: string, field: string): string {
 export const pxfUnpack = defineOp({
   name: 'pxf.unpack',
   safety: 'io',
+  group: 'core',
   cli: { command: ['unpack'] },
   summary: 'Expand a .pxf into a .pxfd folder (manifest, document, images, render cache).',
   description: `Writes one file per archive entry (bytes verbatim) plus an empty ${GDIGNORE} so Godot ignores the PNGs; the folder diffs well in git. dir defaults to the file name with .pxfd. An existing folder is refused unless overwrite is true (only a folder named *.pxfd is ever replaced). Works on the file, not on an open document: doc_save first. pxf_pack is the inverse.`,
@@ -62,6 +63,7 @@ export const pxfUnpack = defineOp({
 export const pxfPack = defineOp({
   name: 'pxf.pack',
   safety: 'io',
+  group: 'core',
   cli: { command: ['pack'] },
   summary: 'Build a .pxf from a .pxfd folder (the inverse of pxf_unpack).',
   description: `Packs manifest.json, document.json, images/ and render/ of the folder; ${GDIGNORE} and other files are ignored. The archive is built by the same deterministic writer as a save, atomically, replacing an existing file. file defaults to the folder name with .pxf. Works on files, not on open documents: doc_open the result to validate it.`,

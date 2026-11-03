@@ -51,6 +51,7 @@ function dropOrphans(ctx: OpContext, candidates: Iterable<ImageId>): void {
 export const celLink = defineOp({
   name: 'cel.link',
   safety: 'mutate',
+  group: 'core',
   summary:
     'Link a layer\'s cel to another frame\'s cel (mode "link"), make a linked cel independent ("unlink"), or link all identical cels ("linkIdentical").',
   description:

@@ -13,6 +13,7 @@ import { AnimRef, DocRef, animationLabel, resolveAnimation } from '../refs.js';
 export const animUpdate = defineOp({
   name: 'anim.update',
   safety: 'mutate',
+  group: 'core',
   summary:
     'Rename an animation (group, direction), set its loop mode, angle quantum or post-passes.',
   description:

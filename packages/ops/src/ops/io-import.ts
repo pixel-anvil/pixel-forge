@@ -89,6 +89,7 @@ const FORMATS = ['spritesheet', 'aseprite'] as const;
 export const ioImport = defineOp({
   name: 'io.import',
   safety: 'io',
+  group: 'core',
   summary: 'Import a PNG spritesheet (cells per animation) or an .aseprite file into a document.',
   description:
     "Spritesheet: animations maps cells to animations; repeated cells become linked cels; the cell's bottom-centre lands on the document origin. To keep the sheet as a reference, import the frame to cut again as its own animation and layer. Aseprite: run rig_apply_template first or part layers stay unbound; adds layers, tags (as animations) and the palette; the canvas must equal the document's.",

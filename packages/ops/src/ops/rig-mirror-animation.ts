@@ -13,6 +13,7 @@ import { AnimRef, DocRef, animationLabel, resolveAnimation } from '../refs.js';
 export const rigMirrorAnimation = defineOp({
   name: 'rig.mirrorAnimation',
   safety: 'mutate',
+  group: 'rig',
   summary:
     'Add a mirror of an animation under a new direction: same group, flipped around the origin.',
   description:

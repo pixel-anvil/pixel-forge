@@ -24,6 +24,7 @@ import { frameIndexOf } from '../overlay.js';
 export const pixelsReadGrid = defineOp({
   name: 'pixels.readGrid',
   safety: 'read',
+  group: 'core',
   summary:
     'Read a region (at most 64x64 px) of a frame as a text grid: one symbol per pixel, "." transparent, with a legend of the colours present.',
   description:

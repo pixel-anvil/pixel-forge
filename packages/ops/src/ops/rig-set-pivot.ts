@@ -19,6 +19,7 @@ import {
 export const rigSetPivot = defineOp({
   name: 'rig.setPivot',
   safety: 'mutate',
+  group: 'rig',
   summary:
     "Set a part variant's pivot: the pixel (int px, in the variant image) that sits on the bone pivot.",
   description:

@@ -25,6 +25,7 @@ import {
 export const overrideImport = defineOp({
   name: 'override.import',
   safety: 'io',
+  group: 'rig',
   summary:
     'Import an edited PNG of a rig frame: the pixels that differ from the render become overrides.',
   description:

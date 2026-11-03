@@ -14,8 +14,13 @@ import { CONVENTIONS, MUTATE_NOTE } from '@pixel-forge/ops';
 import type { McpToolDefinition, OpCallResult, OpErrorJson } from '@pixel-forge/ops';
 
 /** A tool as `tools/list` returns it: a {@link McpToolDefinition} without `outputSchema`. */
-export type ListedTool = Omit<McpToolDefinition, 'outputSchema' | 'inputSchema' | 'annotations'> & {
+export type ListedTool = Omit<
+  McpToolDefinition,
+  'outputSchema' | 'inputSchema' | 'annotations' | '_meta'
+> & {
   readonly annotations: Omit<McpToolDefinition['annotations'], 'title'>;
+  /** Without the group: the instructions and `find_tool` carry it, and 43 copies cost 1.3 KB. */
+  readonly _meta: Omit<McpToolDefinition['_meta'], 'pixel-forge/group'>;
   readonly inputSchema: { readonly type: 'object' } & Readonly<Record<string, unknown>>;
 };
 
@@ -57,7 +62,8 @@ export function openSchema<T>(node: T): T {
 
 /**
  * The `tools/list` entries: every definition of `mcpTools(registry)` with `outputSchema` removed
- * (ADR-003 keeps it in `generated/mcp-tools.json` for the contract; the wire does not need it).
+ * (ADR-003 keeps it in `generated/mcp-tools.json` for the contract; the wire does not need it) and
+ * without `_meta['pixel-forge/group']` (same reason). The result has the order of `definitions`.
  */
 export function listedTools(definitions: readonly McpToolDefinition[]): ListedTool[] {
   return definitions.map((def) => ({
@@ -70,7 +76,10 @@ export function listedTools(definitions: readonly McpToolDefinition[]): ListedTo
       destructiveHint: def.annotations.destructiveHint,
       openWorldHint: def.annotations.openWorldHint,
     },
-    _meta: def._meta,
+    _meta: {
+      'pixel-forge/op': def._meta['pixel-forge/op'],
+      'pixel-forge/safety': def._meta['pixel-forge/safety'],
+    },
   }));
 }
 

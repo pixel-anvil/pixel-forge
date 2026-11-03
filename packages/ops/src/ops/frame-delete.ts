@@ -15,6 +15,7 @@ import { AnimRef, DocRef, FrameRef, resolveAuthoredAnimation, resolveFrame } fro
 export const frameDelete = defineOp({
   name: 'frame.delete',
   safety: 'mutate',
+  group: 'core',
   summary:
     'Delete one frame with its bone and part keys, cels and overrides; the last frame cannot go.',
   description:

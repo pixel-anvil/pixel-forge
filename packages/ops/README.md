@@ -28,7 +28,7 @@ const r = await registry.call('doc.summary', { doc }, run); // envelope, never t
 
 ## Ops
 
-`defineOp({ name, safety, summary, description?, input, output, examples, transaction?, mcp?, cli?, handler })` checks the definition when the module loads (name grammar `area.verbNoun`, one-line summary of at most 200 characters, object input, a `doc` field on mutate/destructive ops, no `confirm` field, at least one example whose input (and output, if given) parse) and derives `mcpName` (`rig_set_pose`), `cliCommand` (`['rig', 'set-pose']`), `targetsDocument` (the input has `doc`) and `transactional`.
+`defineOp({ name, safety, group, summary, description?, input, output, examples, transaction?, mcp?, cli?, handler })` checks the definition when the module loads (`group` is one of `TOOL_GROUPS`, a required field, see "Tool groups" below; name grammar `area.verbNoun`, one-line summary of at most 200 characters, object input, a `doc` field on mutate/destructive ops, no `confirm` field, at least one example whose input (and output, if given) parse) and derives `mcpName` (`rig_set_pose`), `cliCommand` (`['rig', 'set-pose']`), `targetsDocument` (the input has `doc`) and `transactional`.
 
 | Safety        | Handler | Transaction                                                                      |
 | ------------- | ------- | -------------------------------------------------------------------------------- |
@@ -38,6 +38,10 @@ const r = await registry.call('doc.summary', { doc }, run); // envelope, never t
 | `io`          | async   | none, or one via `ctx.transact(fn)` (at most once per call)                      |
 
 `transaction: false` (mutate/destructive only) skips the transaction for the history ops (`doc.undo`/`doc.redo` call `ctx.document.store.undo()`).
+
+## Tool groups
+
+Every op has a required `group` (`TOOL_GROUPS` in `src/groups.ts`: `core`, `rig`; `TOOL_GROUP_INFO` says what each holds; `parseToolGroups` reads a `--tools` list). A transport lists only some groups to keep the tool list small: `pf mcp --tools core,rig` (TG.1). `core`: doc, frame, anim, layer, cel, io, render, pixels, lint, pxf. `rig`: rig, part, override. Add a group by extending both constants; the compiler fails until `TOOL_GROUP_INFO` has the new entry.
 
 ## Registry
 
@@ -72,7 +76,7 @@ Schemas for inputs: `DocRef`, `AnimRef` (`{group, direction?}` or `{id}`), `Fram
 
 ## Generators
 
-`mcpTools(registry)` (MCP `Tool` objects: `name`, `title`, `description` = summary + description + safety note + conventions + first example, `inputSchema` with `confirm` for destructive ops, `outputSchema` when the output is an object, `annotations` `readOnlyHint`/`destructiveHint`/`openWorldHint: false`, `_meta` with the op name and safety), `cliMetadata(registry)` (per command: words, summary, safety, one option per top-level input field with `kind` `string`/`integer`/`number`/`boolean`/`json` and string-enum `choices`), `operationsMarkdown(registry)`, `generatedFiles(registry)`. JSON Schemas come from `toJsonSchema` (zod `toJSONSchema`, draft 2020-12, `io: 'input'` for inputs; no `$schema`, no safe-integer bounds, no reserved-name lookahead in name patterns: zod stays the authority). Ops hidden with `mcp.hidden` / `cli.hidden` are left out of that transport.
+`mcpTools(registry)` (MCP `Tool` objects: `name`, `title`, `description` = summary + description + safety note + conventions + first example, `inputSchema` with `confirm` for destructive ops, `outputSchema` when the output is an object, `annotations` `readOnlyHint`/`destructiveHint`/`openWorldHint: false`, `_meta` with the op name, safety and `pixel-forge/group`), `cliMetadata(registry)` (per command: words, summary, safety, one option per top-level input field with `kind` `string`/`integer`/`number`/`boolean`/`json` and string-enum `choices`), `operationsMarkdown(registry)`, `generatedFiles(registry)`. JSON Schemas come from `toJsonSchema` (zod `toJSONSchema`, draft 2020-12, `io: 'input'` for inputs; no `$schema`, no safe-integer bounds, no reserved-name lookahead in name patterns: zod stays the authority). Ops hidden with `mcp.hidden` / `cli.hidden` are left out of that transport.
 
 `packages/ops/scripts/gen-ops.mjs` (run by `pnpm gen`; `pnpm gen:check` in `pnpm verify` fails on a stale copy) builds the package incrementally and writes `packages/ops/generated/mcp-tools.json`, `packages/ops/generated/cli.json` (prettier-formatted) and `docs/contracts/OPERATIONS.md`. The committed copies are review snapshots of the contract; the MCP server (`@pixel-forge/server`, T5.5; it drops `outputSchema` from `tools/list`) and the CLI (T5.6a) build from the registry at run time. Every MCP tool description (summary, description, `confirmText`, safety note, conventions, first example) is held to 800 characters by a server test.
 

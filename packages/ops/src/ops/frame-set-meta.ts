@@ -20,6 +20,7 @@ import {
 export const frameSetMeta = defineOp({
   name: 'frame.setMeta',
   safety: 'mutate',
+  group: 'core',
   summary:
     "Set one frame's duration (ms), markers (name -> int px), events (names) and root motion (int px).",
   description:

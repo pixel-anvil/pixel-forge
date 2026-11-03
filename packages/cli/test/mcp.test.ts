@@ -6,7 +6,7 @@ import { PassThrough } from 'node:stream';
 import { lockFilePath } from '@pixel-forge/server';
 import { execa } from 'execa';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { resolveEnv, runMcp } from '../src/index.js';
+import { resolveEnv, runCli, runMcp } from '../src/index.js';
 import type { ShutdownSignal } from '../src/index.js';
 import { ensureBundle, later, tempDir, workspace } from './helpers.js';
 
@@ -150,6 +150,77 @@ describe('pf mcp as a real process', () => {
         .map((l) => JSON.parse(l) as { tool: string }),
     ).toMatchObject([{ tool: 'doc_open' }]);
     for (const line of out.lines) expect((JSON.parse(line) as Message).jsonrpc).toBe('2.0');
+  });
+});
+
+/** Starts `pf mcp` with `args` and `env`, asks `tools/list`, and stops it. */
+async function listTools(args: string[], env: Record<string, string>): Promise<string[]> {
+  const w = workspace();
+  const proc = execa('node', [bundle, 'mcp', '--root', w.work, '--home', w.home, ...args], {
+    cwd: tempDir(),
+    env,
+    extendEnv: false,
+    stdin: 'pipe',
+    stdout: 'pipe',
+    stderr: 'pipe',
+    reject: false,
+  });
+  later(async () => {
+    proc.kill('SIGKILL');
+    await proc;
+  });
+  const out = lineReader(proc.stdout);
+  proc.stdin.write(`${JSON.stringify(initialize)}\n${JSON.stringify(initialized)}\n`);
+  await out.response(1);
+  proc.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list' })}\n`);
+  const reply = await out.response(2);
+  proc.stdin.end();
+  await proc;
+  return (reply.result?.tools as { name: string }[]).map((t) => t.name);
+}
+
+describe('pf mcp --tools / PF_TOOLS (real process)', () => {
+  const nodeEnv = { PATH: process.env.PATH ?? '' };
+
+  it('lists every group by default, only the chosen groups with --tools or PF_TOOLS', async () => {
+    const all = await listTools([], nodeEnv);
+    expect(all).toContain('rig_set_pose');
+    expect(all).not.toContain('find_tool');
+
+    const core = await listTools(['--tools', 'core'], nodeEnv);
+    expect(core).toContain('doc_open');
+    expect(core).toContain('find_tool');
+    expect(core).toContain('tool_groups');
+    expect(core.some((n) => n.startsWith('rig_'))).toBe(false);
+
+    const fromEnv = await listTools([], { ...nodeEnv, PF_TOOLS: 'core' });
+    expect(fromEnv).toEqual(core);
+    // the flag wins over the variable
+    const flagWins = await listTools(['--tools', 'core,rig'], { ...nodeEnv, PF_TOOLS: 'core' });
+    expect(flagWins).toEqual(all);
+  });
+});
+
+describe('resolveTools', () => {
+  it('prefers the flag, then PF_TOOLS, blank means all, and a bad group is a usage error', async () => {
+    const run = async (argv: string[], env: Record<string, string>): Promise<[number, string]> => {
+      const stderr = new PassThrough();
+      let text = '';
+      stderr.on('data', (c: Buffer) => (text += c.toString()));
+      const code = await runCli(argv, {
+        stderr,
+        env,
+        stdin: new PassThrough(),
+        stdout: new PassThrough(),
+      });
+      return [code, text];
+    };
+    const [flagCode, flagText] = await run(['mcp', '--tools', 'core,nope'], {});
+    expect(flagCode).toBe(2);
+    expect(flagText).toContain('--tools: unknown tool group "nope"');
+    const [envCode, envText] = await run(['mcp'], { PF_TOOLS: 'bogus' });
+    expect(envCode).toBe(2);
+    expect(envText).toContain('PF_TOOLS: unknown tool group "bogus"');
   });
 });
 

@@ -5,6 +5,8 @@
  */
 import { z } from 'zod';
 import type { OpContext } from './context.js';
+import { isToolGroup, TOOL_GROUPS } from './groups.js';
+import type { ToolGroup } from './groups.js';
 import { SAFETY_CLASSES } from './safety.js';
 import type { Safety } from './safety.js';
 
@@ -41,6 +43,11 @@ export interface OpSpec<S extends Safety, I extends OpInputSchema, O extends z.Z
    */
   readonly name: string;
   readonly safety: S;
+  /**
+   * The tool group this op belongs to (TG.1): required, so an op without one does not compile.
+   * `pf mcp --tools` lists only the chosen groups. See `groups.ts`.
+   */
+  readonly group: ToolGroup;
   /**
    * One line for LLMs and `--help`: what the op does, in the imperative, with units
    * ("angle deg clockwise, offset int px"). At most 200 characters.
@@ -99,6 +106,7 @@ export interface OpDefinition<
 export interface AnyOp {
   readonly name: string;
   readonly safety: Safety;
+  readonly group: ToolGroup;
   readonly summary: string;
   readonly description?: string;
   readonly confirmText?: string;
@@ -164,6 +172,7 @@ function checkExample(
  * Defines an op. Checks the definition at once (it runs at import time, so a broken definition
  * fails every test that loads the registry):
  *
+ * - `group` is one of {@link TOOL_GROUPS};
  * - the name matches {@link OP_NAME_REGEX}, the MCP name {@link MCP_NAME_REGEX}, the CLI words
  *   {@link CLI_WORD_REGEX};
  * - the summary is one non-empty line of at most {@link MAX_SUMMARY} characters;
@@ -182,6 +191,12 @@ export function defineOp<S extends Safety, I extends OpInputSchema, O extends z.
     fail(name, 'name must look like "area.verbNoun" (lower camel case)');
   if (!(SAFETY_CLASSES as readonly string[]).includes(spec.safety)) {
     fail(name, `unknown safety class "${spec.safety}"`);
+  }
+  if (!isToolGroup(spec.group)) {
+    fail(
+      name,
+      `unknown tool group ${JSON.stringify(spec.group)}; valid: ${TOOL_GROUPS.join(', ')}`,
+    );
   }
   const summary = spec.summary.trim();
   if (summary === '' || summary.includes('\n') || summary.length > MAX_SUMMARY) {

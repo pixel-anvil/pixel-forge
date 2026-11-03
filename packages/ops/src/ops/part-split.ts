@@ -66,6 +66,7 @@ export const SplitSelectionInput = z.discriminatedUnion('kind', [
 export const partSplit = defineOp({
   name: 'part.split',
   safety: 'mutate',
+  group: 'rig',
   summary:
     "Split a region (rect, lasso or flood) of a flat layer's cel into a new layer bound to a bone.",
   description:

@@ -12,6 +12,7 @@ import { DocRef } from '../refs.js';
 export const docSave = defineOp({
   name: 'doc.save',
   safety: 'io',
+  group: 'core',
   summary: 'Save the document to its .pxf file, or to a new path (first save, save as).',
   description:
     "Nothing reaches disk before this call. With doc alone it saves to the file the document came from; a document from doc_create needs path (absolute, inside the workspace roots). Writes a temp file and renames it over the target, so a crash never leaves a torn file. A new path takes the document's lock first (DOC_LOCKED if another process owns it). An existing file at a new path is refused unless overwrite is true. An unchanged document writes nothing, unless its file lacks a current render cache or has an older schema version.",

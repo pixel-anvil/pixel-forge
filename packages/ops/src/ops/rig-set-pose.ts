@@ -176,6 +176,7 @@ const hasChannel = (k: Readonly<BoneKey> | undefined): boolean =>
 export const rigSetPose = defineOp({
   name: 'rig.setPose',
   safety: 'mutate',
+  group: 'rig',
   summary:
     'Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z, visible) on one frame or many.',
   description:

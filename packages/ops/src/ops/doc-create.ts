@@ -14,6 +14,7 @@ import { OpError } from '../errors.js';
 export const docCreate = defineOp({
   name: 'doc.create',
   safety: 'io',
+  group: 'core',
   summary:
     'Create a new empty RGBA document (no layers, no animations) and open it. Save it with doc_save.',
   description:

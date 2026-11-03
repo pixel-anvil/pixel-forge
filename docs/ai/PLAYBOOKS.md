@@ -32,7 +32,9 @@ An op is one file in `packages/ops/src/ops/` that calls `defineOp`. The registry
 **Steps** (the worked example below is `frame.duplicate`; replace names, keep the shape):
 
 1. **Find the function the op wraps** (core frame ops, `rig-edit.ts`, overrides, lint, io) and read its README section. Most ops are a thin wrapper: they pass `ctx.tx` and the refs straight through. Never re-implement document logic in `ops`.
-2. **Choose the safety class**: `read` (changes nothing), `mutate` (changes one document; undoable), `destructive` (like mutate but drastic, e.g. bake: the registry adds `confirm` and refuses without `"confirm": true`; never declare `confirm` yourself), `io` (files through `ctx.host.fs`; may be `async`).
+2. **Choose the group** (TG.1): `group: 'core' | 'rig'` is a required field, so an op without one does not compile and `defineOp` refuses it. `core` holds documents, frames, animations, layers, cels, import/export, renders, pixel grids, lint and undo; `rig` holds bones, poses, presets, templates, parts and overrides. `pf mcp --tools core` lists only `core`, so put an op where a user of that group needs it. A new group (palette, convert, gif) is added to `TOOL_GROUPS` and `TOOL_GROUP_INFO` in `packages/ops/src/groups.ts` (the compiler forces both). Name the group in the card report. Adding an op to a group adds its bytes to `tools/list` for that group: check `core` stays under 45 KB (`packages/server/test/mcp-groups.test.ts`).
+
+   Then **choose the safety class**: `read` (changes nothing), `mutate` (changes one document; undoable), `destructive` (like mutate but drastic, e.g. bake: the registry adds `confirm` and refuses without `"confirm": true`; never declare `confirm` yourself), `io` (files through `ctx.host.fs`; may be `async`).
 3. **Create** `packages/ops/src/ops/<area>-<verb>.ts` (file name in kebab case; op name `area.verbNoun`, e.g. `frame.duplicate`, `rig.setPivot`). Use the template below:
    - `input`: `z.strictObject({...})`, first field `doc: DocRef` for any op on a document; take references with the shared schemas from `../refs.js` (`AnimRef`, `FrameRef`, `LayerRef`, `BoneRef`, `PartRef`, `ViewRef`, `VariantRef`); `.describe('...')` **every** field (a test enforces it); use `z.record(z.string(), X)` for maps, never schema's `record` helper or `z.custom` (no JSON Schema).
    - `output`: `z.strictObject({...})` of plain JSON (ids, indices, names, counts); describe the fields.
@@ -44,7 +46,7 @@ An op is one file in `packages/ops/src/ops/` that calls `defineOp`. The registry
    - resolve names with the resolvers in `../refs.js` (`resolveAuthoredAnimation`, `resolveFrame`, `resolveLayer`, `resolveBone`, `resolvePart`, `resolveView`, `resolveVariant`, `viewForAnimation`, `requireRig`); they throw `NOT_FOUND` / `AMBIGUOUS` / `REFUSED` with the right details;
    - let core, rig and io errors propagate: `toOpError` maps them (core `BAD_ARGUMENT` `unknown-*` -> `NOT_FOUND`, other reasons -> `REFUSED`, KNOWN_ISSUES CORE-02). Throw `new OpError('REFUSED', message, { reason: 'kebab-case' })` only for refusals of your own; `BAD_INPUT` for cross-field input rules zod cannot express;
    - return exactly the output shape (the registry rejects anything else as `INTERNAL`).
-5. **Register** it: import and append to `ALL_OPS` in `packages/ops/src/ops/index.ts`, add it to the `export { ... } from './<file>.js'` lines there, and to the `./ops/index.js` export list in `packages/ops/src/index.ts`.
+5. **Register** it (the group is already on the definition): import and append to `ALL_OPS` in `packages/ops/src/ops/index.ts`, add it to the `export { ... } from './<file>.js'` lines there, and to the `./ops/index.js` export list in `packages/ops/src/index.ts`.
 6. **Test** in `packages/ops/test/<area>-<verb>.test.ts` with the helpers in `test/helpers.ts` (`openHero`, `rejection`, `need`, `HERO_ID`): one **schema test** (bad input -> `BAD_INPUT` with the issue path) and one **example test** (run `examples[0]` on the hero; for mutate ops check the history has exactly one entry `AI: <op>` and that `store.undo()` restores `documentHash`). Add a test per refusal you throw yourself.
 7. **MCP scenario**: add one entry for the new tool to `SCENARIOS` in `packages/server/test/mcp-scenarios.ts` (how to set up a document, the call, and whether it records one `AI: <op>` undo entry or why not); `mcp-tools.test.ts` fails when a listed tool has none. `pf://` resources need nothing unless the op adds a new kind of document data.
 8. `pnpm gen` (rewrites `packages/ops/generated/*.json` and `docs/contracts/OPERATIONS.md`; commit them), `pnpm changeset`, then `pnpm vitest run --project ops`, `pnpm lint`, `pnpm typecheck`, `pnpm gen:check`.
@@ -65,6 +67,7 @@ import { AnimRef, DocRef, FrameRef, resolveAuthoredAnimation, resolveFrame } fro
 export const frameDuplicate = defineOp({
   name: 'frame.duplicate',
   safety: 'mutate',
+  group: 'core',
   summary: 'Duplicate one frame; the copy goes right after it, with linked cels and copied keys.',
   description:
     'Cels of the copy link to the source frame (edit one, both change). Bone keys, part keys, markers, events, root motion, duration and overrides are copied.',

@@ -32,6 +32,7 @@ const MAX_RENDERS_LIMIT = 20_000;
 export const rigFitPose = defineOp({
   name: 'rig.fitPose',
   safety: 'io',
+  group: 'rig',
   summary:
     'Find the bone angles (deg, relative to rest) and part variants whose render of one frame matches a target image.',
   description:

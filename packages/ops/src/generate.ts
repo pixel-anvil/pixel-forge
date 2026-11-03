@@ -8,6 +8,8 @@ import { z } from 'zod';
 import type { AnyOp, Safety } from './define.js';
 import { OP_ERROR_CODES } from './errors.js';
 import type { OpErrorCode } from './errors.js';
+import { TOOL_GROUP_INFO } from './groups.js';
+import type { ToolGroup } from './groups.js';
 import type { OpRegistry } from './registry.js';
 
 /** A JSON Schema object (draft 2020-12) as produced by zod. */
@@ -114,7 +116,12 @@ export interface McpToolDefinition {
     readonly openWorldHint: boolean;
   };
   /** Non-standard: the op name, so a transport can route without a second table. */
-  readonly _meta: { readonly 'pixel-forge/op': string; readonly 'pixel-forge/safety': Safety };
+  readonly _meta: {
+    readonly 'pixel-forge/op': string;
+    readonly 'pixel-forge/safety': Safety;
+    /** The tool group (TG.1). */
+    readonly 'pixel-forge/group': ToolGroup;
+  };
 }
 
 /** MCP tool definitions of every op not hidden from MCP, sorted by op name. */
@@ -136,7 +143,11 @@ export function mcpTools(registry: OpRegistry): McpToolDefinition[] {
           destructiveHint: op.safety === 'destructive',
           openWorldHint: false,
         },
-        _meta: { 'pixel-forge/op': op.name, 'pixel-forge/safety': op.safety },
+        _meta: {
+          'pixel-forge/op': op.name,
+          'pixel-forge/safety': op.safety,
+          'pixel-forge/group': op.group,
+        },
       };
     });
 }
@@ -317,6 +328,14 @@ export function operationsMarkdown(registry: OpRegistry): string {
       (s) => `| \`${s}\` | ${SAFETY_TEXT[s]} |`,
     ),
     '',
+    '## Tool groups',
+    '',
+    'Every op belongs to one group; `pf mcp --tools <groups>` (or `PF_TOOLS`) lists only the chosen ones (default: all).',
+    '',
+    '| Group | Holds |',
+    '| --- | --- |',
+    ...Object.entries(TOOL_GROUP_INFO).map(([g, text]) => `| \`${g}\` | ${text} |`),
+    '',
     '## Errors',
     '',
     'Every failure is `{"code", "message", "details"}`, identical on every transport.',
@@ -327,17 +346,18 @@ export function operationsMarkdown(registry: OpRegistry): string {
     '',
     '## Index',
     '',
-    '| Op | Safety | MCP tool | CLI | Summary |',
-    '| --- | --- | --- | --- | --- |',
+    '| Op | Group | Safety | MCP tool | CLI | Summary |',
+    '| --- | --- | --- | --- | --- | --- |',
     ...ops.map(
       (op) =>
-        `| [\`${op.name}\`](#${op.name.replace(/\./g, '').toLowerCase()}) | ${op.safety} | ${op.mcp?.hidden === true ? '-' : `\`${op.mcpName}\``} | ${op.cli?.hidden === true ? '-' : `\`pf ${op.cliCommand.join(' ')}\``} | ${cell(op.summary)} |`,
+        `| [\`${op.name}\`](#${op.name.replace(/\./g, '').toLowerCase()}) | ${op.group} | ${op.safety} | ${op.mcp?.hidden === true ? '-' : `\`${op.mcpName}\``} | ${op.cli?.hidden === true ? '-' : `\`pf ${op.cliCommand.join(' ')}\``} | ${cell(op.summary)} |`,
     ),
   ];
   for (const op of ops) {
     lines.push('', `## ${op.name}`, '', op.summary, '');
     if (op.description !== undefined) lines.push(op.description.trim(), '');
     lines.push(
+      `- Group: \`${op.group}\``,
       `- Safety: \`${op.safety}\`${op.transactional ? '' : op.safety === 'mutate' || op.safety === 'destructive' ? ' (manages the history itself, no transaction)' : ''}`,
       `- MCP tool: ${op.mcp?.hidden === true ? '(hidden)' : `\`${op.mcpName}\``}`,
       `- CLI: ${op.cli?.hidden === true ? '(hidden)' : `\`pf ${op.cliCommand.join(' ')}\``}`,

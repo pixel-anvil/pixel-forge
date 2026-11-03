@@ -26,6 +26,7 @@ export function emptyFrame(id: Frame['id'], durationMs: number): Frame {
 export const animCreate = defineOp({
   name: 'anim.create',
   safety: 'mutate',
+  group: 'core',
   summary: 'Create an animation (group + optional direction) with empty frames of equal duration.',
   description:
     '(group, direction) must be unique. Names: lower-case a-z 0-9 _ - up to 48 characters; omit direction for an undirected animation. Frames start empty: pose them with rig_set_pose, draw into them, or add more with frame_add. Use loop "once" for a one-shot such as a jump: in a "loop" the keys interpolate across the wrap, from the last frame to the first. For a flipped copy of a side animation use rig_mirror_animation.',

@@ -83,6 +83,7 @@ export const DocSummary = z.strictObject({
 export const docSummary = defineOp({
   name: 'doc.summary',
   safety: 'read',
+  group: 'core',
   summary:
     'Summarise an open document: canvas, palette, layers, rig (bones, parts, views) and animations.',
   description:

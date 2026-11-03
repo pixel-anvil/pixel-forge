@@ -168,6 +168,7 @@ function setCel(
 export const pixelsWriteGrid = defineOp({
   name: 'pixels.writeGrid',
   safety: 'mutate',
+  group: 'core',
   summary: 'Paint a text grid (at most 32x32 px) at (x, y) of a frame; symbols come from "legend".',
   description:
     '"." writes transparent, "_" keeps the pixel. On a rig omit layer: differences from the rendered frame become overrides of this frame only. They are for touch-ups of a few pixels: art pasted over a pose is not rig animation and goes stale when the pose changes. If the rig cannot show something, say so instead. A part layer is refused. On flat art name the pixel `layer`. Locked palettes only take palette colours.',

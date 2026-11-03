@@ -27,7 +27,7 @@ Exit codes everywhere: **0** ok, **1** an op, step or expectation failed, **2** 
 | Command                                               | What it does                                                    |
 | ----------------------------------------------------- | --------------------------------------------------------------- |
 | `pf --version`, `pf version`                          | Print the version.                                              |
-| `pf mcp`                                              | MCP server over stdio (FR-AI-10).                               |
+| `pf mcp`                                              | MCP server over stdio (FR-AI-10); `--tools` picks tool groups.  |
 | `pf check --script steps.json --out <dir>`            | Run a script headlessly (FR-HARN-01).                           |
 | `pf render\|export\|lint\|override\|pack\|unpack ...` | The hand-named commands; see "Hand-named commands".             |
 | `pf godot install <res-dir>`                          | Copy the Godot addon into a project.                            |
@@ -37,7 +37,7 @@ Flags shared by every command that opens documents: `--root <dir>` (repeatable; 
 
 ### `pf mcp`
 
-`pf mcp [--root <dir>]... [--trace [file]]`. stdout carries the protocol and nothing else. `--trace` writes one JSON line per tool call to the file, or to **stderr** when no file is given; never to stdout. SIGINT and SIGTERM close the server (the running call finishes, the documents close, the lockfiles are released) and exit 0. A second signal, or a close that fails, exits 1 at once. When the client closes stdin the process exits 0 by itself.
+`pf mcp [--root <dir>]... [--tools <groups>] [--trace [file]]`. `--tools core,rig` (or env `PF_TOOLS`; the flag wins; blank means unset) lists only those tool groups (`core`, `rig`, or `all`); the default is every group, so a client sees no change. With fewer groups the server also lists two small tools, `tool_groups` (enable or disable a group at run time and send `notifications/tools/list_changed`) and `find_tool` (search all tools by name and description, with their group), and a call to a hidden tool fails with `REFUSED` naming the group. An unknown group is a usage error (exit 2). stdout carries the protocol and nothing else. `--trace` writes one JSON line per tool call to the file, or to **stderr** when no file is given; never to stdout. SIGINT and SIGTERM close the server (the running call finishes, the documents close, the lockfiles are released) and exit 0. A second signal, or a close that fails, exits 1 at once. When the client closes stdin the process exits 0 by itself.
 
 ### `pf check`
 

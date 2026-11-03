@@ -32,6 +32,7 @@ type Entry = Record<string, unknown>;
 export const rigReadPose = defineOp({
   name: 'rig.readPose',
   safety: 'read',
+  group: 'rig',
   summary:
     'Read one frame: bone and part values, and which are real keys (the rest are interpolated or held).',
   description:

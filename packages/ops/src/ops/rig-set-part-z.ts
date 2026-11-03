@@ -18,6 +18,7 @@ import { DocRef, PartRef, ViewRef, resolvePart, resolveView } from '../refs.js';
 export const rigSetPartZ = defineOp({
   name: 'rig.setPartZ',
   safety: 'mutate',
+  group: 'rig',
   summary: "Set a part's default z (draw order) after creation.",
   description:
     'Higher z draws on top (default 0). Replaces per-frame z keys of rig_set_pose. A frame z key still wins: keyedFrames counts them. rig_joint_check and part_paint_overlap use the new order.',

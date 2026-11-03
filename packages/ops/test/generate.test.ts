@@ -25,6 +25,7 @@ import type { JsonSchema } from '../src/index.js';
 const wipe = defineOp({
   name: 'test.wipeAll',
   safety: 'destructive',
+  group: 'core',
   summary: 'Wipe everything.',
   input: z.strictObject({
     doc: DocRef,
@@ -40,6 +41,7 @@ const wipe = defineOp({
 const hidden = defineOp({
   name: 'test.hidden',
   safety: 'read',
+  group: 'core',
   summary: 'Hidden everywhere.',
   input: z.strictObject({}),
   output: z.strictObject({}),
@@ -157,6 +159,7 @@ describe('operationsMarkdown', () => {
     const undo = defineOp({
       name: 'test.undo',
       safety: 'mutate',
+      group: 'core',
       summary: 'Undo.',
       input: z.strictObject({ doc: DocRef }),
       output: z.strictObject({}),

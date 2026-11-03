@@ -12,6 +12,7 @@ import { AnimRef, DocRef, resolveAuthoredAnimation } from '../refs.js';
 export const rigBake = defineOp({
   name: 'rig.bake',
   safety: 'destructive',
+  group: 'rig',
   summary: 'Bake a rig animation into one plain pixel layer: as a new animation, or in place.',
   description:
     'Renders every frame (parts, overrides, post-passes, exported layers) into a pixel layer "baked" and hides the parts. mode "new" adds animation <group>_baked; "replace" bakes in place. A mirror cannot be baked: bake its source. Baked pixels no longer follow the rig.',

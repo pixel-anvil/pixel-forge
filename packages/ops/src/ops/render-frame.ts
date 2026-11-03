@@ -30,6 +30,7 @@ export const OverlayBone = z.strictObject({
 export const renderFrame = defineOp({
   name: 'render.frame',
   safety: 'read',
+  group: 'core',
   summary:
     'Render one frame to an upscaled PNG on a checkerboard (long edge at most 1568 px), optionally with bone lines and pivot markers.',
   description:

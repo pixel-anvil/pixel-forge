@@ -12,6 +12,7 @@ import { AnimRef, DocRef } from '../refs.js';
 export const ioExport = defineOp({
   name: 'io.export',
   safety: 'io',
+  group: 'core',
   summary: 'Export animations as a spritesheet PNG plus a JSON description (Aseprite hash format).',
   description:
     'Renders every frame like the game would see it (export layers only; rig, overrides and post-passes applied; mirrors flipped) and writes <name>.png and <name>.json side by side, atomically. layout "rows" puts one animation per row; "packed" fills a near-square grid. scale is an integer 1..16. The JSON lists a frame per cell with its duration, and one tag per animation. To look at art use render_contact_sheet instead; a scale 1 export of one animation is the base for override_import.',

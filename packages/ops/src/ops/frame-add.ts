@@ -11,6 +11,7 @@ import { AnimRef, DocRef, FrameRef, resolveAuthoredAnimation, resolveFrame } fro
 export const frameAdd = defineOp({
   name: 'frame.add',
   safety: 'mutate',
+  group: 'core',
   summary:
     'Insert an empty frame before or after a frame; the new frame gets no bone or part keys.',
   description:

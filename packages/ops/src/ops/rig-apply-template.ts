@@ -19,6 +19,7 @@ const TEMPLATES = {
 export const rigApplyTemplate = defineOp({
   name: 'rig.applyTemplate',
   safety: 'mutate',
+  group: 'rig',
   summary:
     'Apply a humanoid skeleton template: bones matched by name are reused, missing ones are created.',
   description:

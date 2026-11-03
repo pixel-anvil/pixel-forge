@@ -7,6 +7,7 @@ import type { OpSpec, Safety } from '../src/index.js';
 const base = {
   name: 'test.doThing',
   safety: 'read' as Safety,
+  group: 'core',
   summary: 'Do a thing.',
   input: z.strictObject({ doc: DocRef, n: z.int().optional() }),
   output: z.strictObject({ ok: z.boolean() }),
@@ -45,6 +46,8 @@ describe('defineOp', () => {
     [{ name: 'Test.thing' }, /area\.verbNoun/],
     [{ name: 'test' }, /area\.verbNoun/],
     [{ safety: 'write' }, /unknown safety/],
+    [{ group: 'nope' }, /unknown tool group "nope".*core, rig/],
+    [{ group: undefined }, /unknown tool group/],
     [{ summary: '' }, /summary/],
     [{ summary: 'two\nlines' }, /summary/],
     [{ summary: 'x'.repeat(201) }, /summary/],
@@ -52,6 +55,7 @@ describe('defineOp', () => {
     [
       {
         safety: 'mutate',
+        group: 'core',
         input: z.strictObject({ n: z.int() }),
         examples: [{ title: 't', input: { n: 1 } }],
       },
