@@ -16,6 +16,7 @@ Imports pixel-forge `.pxf` files into Godot 4.6 as a `PixelForgeAsset` resource.
 | `addons/pixel_forge/import_plugin.gd` | The `EditorImportPlugin` for `.pxf` (`_get_resource_type()` is `"Resource"`; textures are embedded in the `.res`). |
 | `addons/pixel_forge/pixel_forge_driver.gd` | `PixelForgeDriver`: the clock, `play`/`seek_ms`/`set_frame`/`advance`, signals `event`, `finished`, `frame_changed`, marker, event and root-motion queries, `mirror`, `direction`, `auto_direction`. |
 | `addons/pixel_forge/pixel_forge_adapter.gd`, `…_sprite2d_adapter.gd`, `…_sprite3d_adapter.gd` | `PixelForgeAdapter` (the duck-typed adapter and the base class) and the `Sprite2D` / `Sprite3D` adapters. |
+| `addons/pixel_forge/pixel_forge_sprite2d.gd`, `…_sprite3d.gd`, `…_sprite_common.gd` | `PixelForgeSprite2D`, `PixelForgeSprite3D` and their shared helpers (E8.2). |
 | `test/` | A Godot project with GUT 9.6.1 vendored, the fixture `.pxf` files and the tests. |
 
 ## Using it
@@ -77,6 +78,19 @@ $AnimatedSprite2D.flip_h = PixelForgeSpriteFrames.is_mirrored(frames, &"walk")
 ```
 
 One animation per group, following `direction_fallback`. See contract section 2.2 for timing, loop and mirror rules.
+
+## Sprite nodes
+
+`PixelForgeSprite2D` (an `AnimatedSprite2D`) and `PixelForgeSprite3D` (an `AnimatedSprite3D`) build the `SpriteFrames` for you and set `flip_h` from `PixelForgeSpriteFrames.is_mirrored()` (do not set `flip_h` by hand; use `mirror`). 2D: nearest filter. 3D: billboard, nearest filter, alpha cut `DISCARD` (scissor 0.5), `pixel_size = 1 / pixels_per_unit`. Both put the node origin on the asset's origin point.
+
+```gdscript
+var s := PixelForgeSprite2D.new()
+s.asset = load("res://hero.pxf") as PixelForgeAsset
+add_child(s)
+s.play_group(&"walk", &"side")   # animation = group; changing `direction` later keeps group, frame and progress
+```
+
+These nodes use Godot's own animation clock. For markers, events and root motion use `PixelForgeDriver`.
 
 ## Demo
 

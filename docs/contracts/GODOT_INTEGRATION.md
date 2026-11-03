@@ -99,7 +99,11 @@ Decisions the sections above leave open; the code is `godot/addons/pixel_forge/`
 - Timing: speed is `1000 / g` fps, `g` = gcd of the frame durations in ms; frame duration is `duration_ms / g`. One pass takes exactly `asset.duration_ms(...)`.
 - Loop: `loop` and `pingpong` give `loop = true`, `once` gives `false`. `pingpong` lists `0..n-1, n-2..1` (the driver's sequence).
 - Mirror: a `mirrorOf` direction lists its source frames; `PixelForgeSpriteFrames.is_mirrored(sprite_frames, animation)` says the node must set `flip_h`. Also in meta `pixel_forge_mirror`, `pixel_forge_direction`, `pixel_forge_skin`.
-- Not covered: markers, events and root motion (use the asset and the driver). The nodes that play these are E8.2.
+- Not covered: markers, events and root motion (use the asset and the driver). The nodes that play these are `PixelForgeSprite2D` / `PixelForgeSprite3D` (E8.2, section 2.3).
+
+### 2.3 `PixelForgeSprite2D`, `PixelForgeSprite3D` (E8.2, FR-GD-06)
+
+`AnimatedSprite2D` / `AnimatedSprite3D` subclasses with `asset`, `skin`, `direction`, `mirror`, `pixel_edge_origin` and `play_group(group, direction = "", restart = false)`. `sprite_frames` is `PixelForgeSpriteFrames.build` for the direction (cached per direction). `flip_h = mirror XOR is_mirrored(frames, animation)`, updated on direction, animation and `mirror` changes. `offset` puts the origin point (section 6.3) on the node origin; x is negated when flipped (section 8.1); 3D is y up. A direction switch keeps the animation, frame and progress. 2D: nearest filter. 3D: billboard enabled, nearest filter, `alpha_cut = DISCARD`, `alpha_scissor_threshold = 0.5`, `pixel_size = 1 / pixels_per_unit`. They use Godot's animation clock, not `PixelForgeDriver` (the driver sets `texture`/`region_rect`, which would fight `sprite_frames`).
 
 ## 3. `PixelForgeDriver` (T6.2)
 
