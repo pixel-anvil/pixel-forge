@@ -1533,7 +1533,7 @@
   {
     "name": "export",
     "title": "io.export",
-    "description": "Export animations as a spritesheet PNG plus a JSON description (Aseprite hash format).\n\nRenders every frame like the game would see it (export layers only; rig, overrides and post-passes applied; mirrors flipped) and writes <name>.png and <name>.json side by side, atomically. layout \"rows\" puts one animation per row; \"packed\" fills a near-square grid. scale is an integer 1..16. The JSON lists a frame per cell with its duration, and one tag per animation. To look at art use render_contact_sheet instead; a scale 1 export of one animation is the base for override_import.\n\nFile I/O. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Export the hero as a 2x sheet): {\"doc\":\"doc_g1ed5q\",\"path\":\"/work/out/hero.png\",\"scale\":2}",
+    "description": "Export animations as a spritesheet PNG plus a JSON description (Aseprite hash format).\n\nRenders every frame like the game would see it (export layers only; rig, overrides and post-passes applied; mirrors flipped) and writes <name>.png and <name>.json side by side, atomically. layout \"rows\" puts one animation per row; \"packed\" fills a near-square grid. scale is an integer 1..16. The JSON lists a frame per cell with its duration, and one tag per animation. skin renders one skin; allSkins writes one sheet per skin (base, then each skin) with the same layout: <name>.png, <name>.<skin>.png. To look at art use render_contact_sheet instead; a scale 1 export of one animation is the base for override_import.\n\nFile I/O. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Export the hero as a 2x sheet): {\"doc\":\"doc_g1ed5q\",\"path\":\"/work/out/hero.png\",\"scale\":2}",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1602,6 +1602,11 @@
           "type": "string",
           "minLength": 1
         },
+        "allSkins": {
+          "default": false,
+          "description": "One sheet per skin: base as <name>.png, each skin as <name>.<skin>.png.",
+          "type": "boolean"
+        },
         "exportOnly": {
           "default": true,
           "description": "Only layers with export: true (default true).",
@@ -1646,6 +1651,26 @@
             "type": "string"
           },
           "description": "Animation tags in sheet order."
+        },
+        "sheets": {
+          "description": "allSkins: every sheet written, base first.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "skin": {
+                "type": "string"
+              },
+              "png": {
+                "type": "string"
+              },
+              "json": {
+                "type": "string"
+              }
+            },
+            "required": ["skin", "png", "json"],
+            "additionalProperties": false
+          }
         }
       },
       "required": ["png", "json", "size", "frames", "animations"],
@@ -6800,6 +6825,134 @@
       "pixel-forge/op": "rig.setPose",
       "pixel-forge/safety": "mutate",
       "pixel-forge/group": "rig"
+    }
+  },
+  {
+    "name": "skin_set",
+    "title": "skin.set",
+    "description": "Create, replace or remove a skin (a recoloured render for team kits).\n\nName a skin and give exactly one of: map [{from,to}] (remap skin: palette index, or the exact colour of a palette entry), palette (id or name of another palette: palette skin), colors (new palette, same length as the active one), remove true. Same name replaces the skin. Skins never change pixels; render_frame, io.export (allSkins) and lint (palette.offPalette) apply them. Palette edits that move indices are refused while a palette skin exists.\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (A rival kit: swap the body colour (1) and the accent (4)): {\"doc\":\"doc_g1ed5q\",\"skin\":\"rival\",\"map\":[{\"from\":1,\"to\":4},{\"from\":4,\"to\":1}]}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id from doc_open or doc_create."
+        },
+        "skin": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Skin name (a-z, 0-9, \"-\", \"_\"; not \"base\") or id."
+        },
+        "map": {
+          "description": "Remap skin: index (or palette colour) from to to; applied at once.",
+          "maxItems": 256,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "from": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 255
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+                  }
+                ]
+              },
+              "to": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 255
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+                  }
+                ]
+              }
+            },
+            "required": ["from", "to"],
+            "additionalProperties": false
+          }
+        },
+        "palette": {
+          "description": "Palette skin: id or name of another palette.",
+          "type": "string",
+          "minLength": 1
+        },
+        "colors": {
+          "description": "Palette skin: a new palette, one colour per active palette entry.",
+          "minItems": 1,
+          "maxItems": 256,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+          }
+        },
+        "remove": {
+          "description": "Delete the skin.",
+          "type": "boolean",
+          "const": true
+        }
+      },
+      "required": ["doc", "skin"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "skin": {
+          "type": "string",
+          "description": "Skin name."
+        },
+        "id": {
+          "type": "string",
+          "description": "Skin id."
+        },
+        "action": {
+          "type": "string",
+          "enum": ["created", "updated", "removed"]
+        },
+        "kind": {
+          "description": "Absent when removed.",
+          "type": "string",
+          "enum": ["remap", "palette"]
+        },
+        "skins": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "All skin names afterwards."
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["skin", "id", "action", "skins"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "skin.set",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "skin.set",
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "palette"
     }
   }
 ]

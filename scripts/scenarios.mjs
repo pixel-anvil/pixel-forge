@@ -1,4 +1,4 @@
-// `pnpm scenarios`: the W-scenario suite (spec 2: W2, W2b, W3-manual, W4-CLI). Each scenario is a
+// `pnpm scenarios`: the W-scenario suite (spec 2: W2, W2b, W3-manual, W4-CLI, W7). Each scenario is a
 // `scenarios/*.steps.json` run by the real `pf` bundle (`pf check`); this file only prepares inputs in a
 // temp folder, runs `pf`, and checks what a step script cannot (counts, hand-written oracles, the CLI
 // round trip). Nothing is written into the repo. Run after `pnpm build`.
@@ -335,6 +335,76 @@ function w4() {
   return `3 px edited, 2 overrides; after +5 deg lean: head override valid, torso override stale, none lost`;
 }
 
+// ---- W7 (E5.5): palette-locked document + skins; lint over every skin; one sheet and one cache folder per skin ----
+
+/** The 8x8 sprite of the W7 sheet, two cells wide: frame 1 blinks (the eyes row turns to outline). */
+const W7_SPRITE = [
+  ['........', '.OOOO...', '.OBBO...', '.OSSO...', '..BB....', '..BB....', '..OO....', '........'],
+  ['........', '.OOOO...', '.OBBO...', '.OOOO...', '..BB....', '..BB....', '..OO....', '........'],
+];
+const W7_BASE = { O: [26, 28, 44, 255], B: [177, 62, 83, 255], S: [255, 205, 117, 255] };
+/** What the script's `rival` (index 2 <-> 4: red body to blue) and `team` (palette skin) give for each symbol. */
+const W7_RIVAL = { O: W7_BASE.O, B: [59, 93, 201, 255], S: W7_BASE.S };
+const W7_TEAM = { O: [16, 24, 32, 255], B: [46, 139, 87, 255], S: [242, 232, 207, 255] };
+
+function w7() {
+  const dir = workspace('W7', ['W7.steps.json']);
+  const sheet = new Uint8Array(16 * 8 * 4);
+  W7_SPRITE.forEach((rows, cell) =>
+    rows.forEach((row, y) =>
+      [...row].forEach((c, x) => {
+        if (c !== '.') sheet.set(W7_BASE[c], (y * 16 + cell * 8 + x) * 4);
+      }),
+    ),
+  );
+  writeFileSync(
+    join(dir, 'w7-sheet.png'),
+    encodePng({ width: 16, height: 8, data: sheet, kind: 'rgba' }),
+  );
+  const s = check(dir, 'W7.steps.json');
+  // Lint over the rendered output of base, rival and team: 0 violations (FR-PAL-06). `check` also
+  // required the end-of-run lint of every rule to be clean.
+  assert.equal(s.lint.output.count, 0);
+  assert.deepEqual(s.team.output.skins, ['rival', 'team']);
+  // `io.export allSkins`: one sheet per skin, the same size, base under the plain name.
+  const sheets = s.export.output.sheets;
+  assert.deepEqual(
+    sheets.map((x) => x.skin),
+    ['base', 'rival', 'team'],
+  );
+  const oracle = { base: W7_BASE, rival: W7_RIVAL, team: W7_TEAM };
+  for (const { skin, png } of sheets) {
+    const img = decode(png);
+    assert.deepEqual([img.width, img.height], [16, 8], `${skin}: sheet size`);
+    // Every pixel is the hand-written colour of its symbol under that skin; transparent stays.
+    W7_SPRITE.forEach((rows, cell) =>
+      rows.forEach((row, y) =>
+        [...row].forEach((c, x) => {
+          const want = c === '.' ? [0, 0, 0, 0] : oracle[skin][c];
+          assert.deepEqual(pixel(img, cell * 8 + x, y), want, `${skin}: cell ${cell} (${x},${y})`);
+        }),
+      ),
+    );
+  }
+  // The CLI flag, and the saved .pxf: a render folder per skin, listed in render/index.json.
+  const cli = JSON.parse(pf(['export', 'w7.pxf', 'cli.png', '--all-skins'], dir).stdout).output;
+  assert.deepEqual(
+    cli.sheets.map((x) => x.skin),
+    ['base', 'rival', 'team'],
+  );
+  assert.deepEqual([...decode(join(dir, 'cli.rival.png')).data], [...decode(sheets[1].png).data]);
+  pf(['unpack', 'w7.pxf'], dir);
+  const index = JSON.parse(readFileSync(join(dir, 'w7.pxfd/render/index.json'), 'utf8'));
+  assert.deepEqual(index.skins, ['base', 'rival', 'team']);
+  for (const skin of index.skins) {
+    for (const f of index.animations.idle.default.frames) {
+      const img = decode(join(dir, `w7.pxfd/render/${skin}/${f.image}`));
+      assert.deepEqual(pixel(img, 2, 2), oracle[skin].B, `${skin}: cache pixel`);
+    }
+  }
+  return 'locked 5-colour sprite, skins rival (remap) and team (palette): lint 0 violations over 3 renders, 3 sheets and 3 cache folders match the hand-written colours';
+}
+
 // ---- run ----------------------------------------------------------------------------------------------
 
 if (!existsSync(PF)) {
@@ -349,6 +419,7 @@ const SCENARIOS_RUN = [
   ['W3-presets', w3Presets],
   ['ninja-presets', ninjaPresets],
   ['W4-CLI', w4],
+  ['W7', w7],
 ];
 let failed = 0;
 const started = Date.now();

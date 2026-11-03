@@ -546,6 +546,13 @@
           "description": "Skin name, or \"base\" (default)."
         },
         {
+          "name": "allSkins",
+          "flag": "--all-skins",
+          "kind": "boolean",
+          "required": false,
+          "description": "One sheet per skin: base as <name>.png, each skin as <name>.<skin>.png."
+        },
+        {
           "name": "exportOnly",
           "flag": "--export-only",
           "kind": "boolean",
@@ -2215,6 +2222,56 @@
           "kind": "boolean",
           "required": false,
           "description": "Also key all other bones at rest on posed frames."
+        }
+      ]
+    },
+    {
+      "op": "skin.set",
+      "command": ["skin", "set"],
+      "summary": "Create, replace or remove a skin (a recoloured render for team kits).",
+      "safety": "mutate",
+      "options": [
+        {
+          "name": "doc",
+          "flag": "--doc",
+          "kind": "string",
+          "required": true,
+          "description": "Document id from doc_open or doc_create."
+        },
+        {
+          "name": "skin",
+          "flag": "--skin",
+          "kind": "string",
+          "required": true,
+          "description": "Skin name (a-z, 0-9, \"-\", \"_\"; not \"base\") or id."
+        },
+        {
+          "name": "map",
+          "flag": "--map",
+          "kind": "json",
+          "required": false,
+          "description": "Remap skin: index (or palette colour) from to to; applied at once."
+        },
+        {
+          "name": "palette",
+          "flag": "--palette",
+          "kind": "string",
+          "required": false,
+          "description": "Palette skin: id or name of another palette."
+        },
+        {
+          "name": "colors",
+          "flag": "--colors",
+          "kind": "json",
+          "required": false,
+          "description": "Palette skin: a new palette, one colour per active palette entry."
+        },
+        {
+          "name": "remove",
+          "flag": "--remove",
+          "kind": "boolean",
+          "required": false,
+          "description": "Delete the skin."
         }
       ]
     }

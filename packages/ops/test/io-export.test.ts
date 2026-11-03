@@ -1,4 +1,5 @@
 // io.export: spritesheet PNG + JSON written atomically through the host file system.
+import { decodePng } from '@pixel-forge/png';
 import { describe, expect, it, vi } from 'vitest';
 import { ioExport, registry } from '../src/index.js';
 import { HERO_ID, need, openHero, issues, rejection } from './helpers.js';
@@ -98,5 +99,64 @@ describe('io.export', () => {
     expect(failed.code).toBe('IO_FAILED');
     expect(await fs.exists('/work/f.png')).toBe(false);
     expect(await fs.exists('/work/f.png.tmp-0')).toBe(false);
+  });
+
+  it('allSkins writes one sheet per skin with the same layout; base keeps the plain name', async () => {
+    const { fs, run } = await openHero();
+    const doc = HERO_ID;
+    await registry.execute(
+      'palette.edit',
+      {
+        doc,
+        edits: [
+          { do: 'add', color: '#e8be96' },
+          { do: 'add', color: '#3c6ebe' },
+        ],
+      },
+      run,
+    );
+    await registry.execute(
+      'skin.set',
+      { doc, skin: 'rival', map: [{ from: '#e8be96', to: '#3c6ebe' }] },
+      run,
+    );
+    await registry.execute('skin.set', { doc, skin: 'team', colors: ['#112233', '#445566'] }, run);
+    const out = (await registry.execute(
+      'io.export',
+      { doc, path: '/work/out/all.png', allSkins: true },
+      run,
+    )) as { png: string; sheets: { skin: string; png: string; json: string }[] };
+    expect(out.png).toBe('/work/out/all.png');
+    expect(out.sheets).toEqual([
+      { skin: 'base', png: '/work/out/all.png', json: '/work/out/all.json' },
+      { skin: 'rival', png: '/work/out/all.rival.png', json: '/work/out/all.rival.json' },
+      { skin: 'team', png: '/work/out/all.team.png', json: '/work/out/all.team.json' },
+    ]);
+    const imgs = await Promise.all(
+      out.sheets.map(async (s) => decodePng(await fs.readFile(s.png))),
+    );
+    const base = need(imgs[0]);
+    for (const img of imgs) expect([img.width, img.height]).toEqual([base.width, base.height]);
+    expect(imgs.slice(1).every((img) => Buffer.compare(img.data, base.data) !== 0)).toBe(true);
+    // Same layout: the JSON differs only in meta.image.
+    const [b, r] = await Promise.all([
+      readJson(fs, '/work/out/all.json'),
+      readJson(fs, '/work/out/all.rival.json'),
+    ]);
+    expect(b.meta.image).toBe('all.png');
+    expect(r.meta.image).toBe('all.rival.png');
+    expect(r.frames).toEqual(b.frames);
+    // Without allSkins: unchanged single sheet, no "sheets"; "skin" and allSkins together are refused.
+    const one = await registry.execute('io.export', { doc, path: '/work/one.png' }, run);
+    expect(one).not.toHaveProperty('sheets');
+    const both = await rejection(
+      registry.execute(
+        'io.export',
+        { doc, path: '/work/x.png', allSkins: true, skin: 'rival' },
+        run,
+      ),
+    );
+    expect(both.code).toBe('BAD_INPUT');
+    expect(await fs.exists('/work/x.png')).toBe(false);
   });
 });

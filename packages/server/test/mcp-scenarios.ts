@@ -334,6 +334,12 @@ export const SCENARIOS: Record<string, Scenario> = {
     }),
     entry: 'one',
   },
+  skin_set: {
+    base: 'hero',
+    setup: (f, doc) => withPalette(f, doc),
+    args: ({ doc }) => ({ doc, skin: 'rival', map: [{ from: 1, to: 2 }] }),
+    entry: 'one',
+  },
   rig_apply_preset: {
     base: 'hero',
     args: ({ doc }) => ({ doc, preset: 'walk', frames: 6 }),

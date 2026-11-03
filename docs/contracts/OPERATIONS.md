@@ -29,7 +29,7 @@ Every op belongs to one group; `pf mcp --tools <groups>` (or `PF_TOOLS`) lists o
 | --- | --- |
 | `core` | documents, frames, animations, layers, cels, import/export, renders, pixel grids, lint, undo |
 | `rig` | bones, poses, presets, templates, parts and overrides |
-| `palette` | palette editing, sorting and colour ramps |
+| `palette` | palette editing, sorting, colour ramps, remaps, generation and skins |
 
 ## Errors
 
@@ -104,6 +104,7 @@ Every failure is `{"code", "message", "details"}`, identical on every transport.
 | [`rig.setPartZ`](#rigsetpartz) | rig | mutate | `rig_set_part_z` | `pf rig set-part-z` | Set a part's default z (draw order) after creation. |
 | [`rig.setPivot`](#rigsetpivot) | rig | mutate | `rig_set_pivot` | `pf rig set-pivot` | Set a part variant's pivot: the pixel (int px, in the variant image) that sits on the bone pivot. |
 | [`rig.setPose`](#rigsetpose) | rig | mutate | `rig_set_pose` | `pf rig set-pose` | Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z, visible) on one frame or many. |
+| [`skin.set`](#skinset) | palette | mutate | `skin_set` | `pf skin set` | Create, replace or remove a skin (a recoloured render for team kits). |
 
 ## anim.create
 
@@ -670,7 +671,7 @@ Hold the hero frame 200 ms and fire a footstep event:
 
 Export animations as a spritesheet PNG plus a JSON description (Aseprite hash format).
 
-Renders every frame like the game would see it (export layers only; rig, overrides and post-passes applied; mirrors flipped) and writes <name>.png and <name>.json side by side, atomically. layout "rows" puts one animation per row; "packed" fills a near-square grid. scale is an integer 1..16. The JSON lists a frame per cell with its duration, and one tag per animation. To look at art use render_contact_sheet instead; a scale 1 export of one animation is the base for override_import.
+Renders every frame like the game would see it (export layers only; rig, overrides and post-passes applied; mirrors flipped) and writes <name>.png and <name>.json side by side, atomically. layout "rows" puts one animation per row; "packed" fills a near-square grid. scale is an integer 1..16. The JSON lists a frame per cell with its duration, and one tag per animation. skin renders one skin; allSkins writes one sheet per skin (base, then each skin) with the same layout: <name>.png, <name>.<skin>.png. To look at art use render_contact_sheet instead; a scale 1 export of one animation is the base for override_import.
 
 - Group: `core`
 - Safety: `io`
@@ -687,6 +688,7 @@ Renders every frame like the game would see it (export layers only; rig, overrid
 | `layout` | "rows" \| "packed" | no | "rows" (default) or "packed". |
 | `scale` | integer >= 1 | no | Integer scale, 1..16 (default 1). |
 | `skin` | string | no | Skin name, or "base" (default). |
+| `allSkins` | boolean | no | One sheet per skin: base as <name>.png, each skin as <name>.<skin>.png. |
 | `exportOnly` | boolean | no | Only layers with export: true (default true). |
 
 ### Output
@@ -698,6 +700,7 @@ Renders every frame like the game would see it (export layers only; rig, overrid
 | `size` | {w, h} | yes | Sheet size, px. |
 | `frames` | integer | yes | Frames exported. |
 | `animations` | string[] | yes | Animation tags in sheet order. |
+| `sheets` | {skin, png, json}[] | no | allSkins: every sheet written, base first. |
 
 ### Examples
 
@@ -2084,4 +2087,45 @@ Switch the forearm to its sleeve variant and drop the torso key:
 
 ```json
 {"doc":"doc_g1ed5q","animation":{"group":"run","direction":"side"},"frame":2,"bones":{"torso":null},"parts":{"lower_arm_r":{"variant":"sleeve"}}}
+```
+
+## skin.set
+
+Create, replace or remove a skin (a recoloured render for team kits).
+
+Name a skin and give exactly one of: map [{from,to}] (remap skin: palette index, or the exact colour of a palette entry), palette (id or name of another palette: palette skin), colors (new palette, same length as the active one), remove true. Same name replaces the skin. Skins never change pixels; render_frame, io.export (allSkins) and lint (palette.offPalette) apply them. Palette edits that move indices are refused while a palette skin exists.
+
+- Group: `palette`
+- Safety: `mutate`
+- MCP tool: `skin_set`
+- CLI: `pf skin set`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
+| `skin` | string | yes | Skin name (a-z, 0-9, "-", "_"; not "base") or id. |
+| `map` | {from, to}[] | no | Remap skin: index (or palette colour) from to to; applied at once. |
+| `palette` | string | no | Palette skin: id or name of another palette. |
+| `colors` | string[] | no | Palette skin: a new palette, one colour per active palette entry. |
+| `remove` | true | no | Delete the skin. |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `skin` | string | yes | Skin name. |
+| `id` | string | yes | Skin id. |
+| `action` | "created" \| "updated" \| "removed" | yes |  |
+| `kind` | "remap" \| "palette" | no | Absent when removed. |
+| `skins` | string[] | yes | All skin names afterwards. |
+| `warnings` | string[] | no |  |
+
+### Examples
+
+A rival kit: swap the body colour (1) and the accent (4):
+
+```json
+{"doc":"doc_g1ed5q","skin":"rival","map":[{"from":1,"to":4},{"from":4,"to":1}]}
 ```

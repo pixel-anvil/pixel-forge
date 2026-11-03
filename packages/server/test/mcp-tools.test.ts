@@ -31,8 +31,8 @@ describe('tools/list', () => {
     const long = tools.filter((t) => (t.description ?? '').length > 800);
     expect(long.map((t) => `${t.name}: ${String(t.description?.length)}`)).toEqual([]);
     const bytes = Buffer.byteLength(JSON.stringify({ tools }));
-    // MCP-04: 75,775 bytes after B0.3 (was 83,005); T5.16 `rig_fit_template` and B0.1 `rig_fit_pose` raised the limit 76,300 -> 82,000 (list: 81,159). E3.3 `rig_apply_preset` raised it 82,000 -> 84,000 (list: 83,499). TG.1 adds no tool to the default list (83,506 bytes). E5.2 `palette_edit`, `palette_ramp`, `palette_sort` raised it 84,000 -> 89,000 (list: 88,627). E5.4 `palette_remap` raised it 89,000 -> 92,000 (list: 91,059). E5.3 `palette_generate` (2,840 bytes) raised it 92,000 -> 95,000 (list: 93,899); `core` alone is held under 45,000 in mcp-groups.test.ts.
-    expect(bytes).toBeLessThan(95_000);
+    // MCP-04: 75,775 bytes after B0.3 (was 83,005); T5.16 `rig_fit_template` and B0.1 `rig_fit_pose` raised the limit 76,300 -> 82,000 (list: 81,159). E3.3 `rig_apply_preset` raised it 82,000 -> 84,000 (list: 83,499). TG.1 adds no tool to the default list (83,506 bytes). E5.2 `palette_edit`, `palette_ramp`, `palette_sort` raised it 84,000 -> 89,000 (list: 88,627). E5.4 `palette_remap` raised it 89,000 -> 92,000 (list: 91,059). E5.3 `palette_generate` (2,840 bytes) raised it 92,000 -> 95,000 (list: 93,899). E5.5 `skin_set` (about 2.2 KB; list: 96,138) raised it 95,000 -> 98,000; `core` alone is held under 45,000 in mcp-groups.test.ts.
+    expect(bytes).toBeLessThan(98_000);
   });
 
   it('states the shared conventions once, in the server instructions', async () => {

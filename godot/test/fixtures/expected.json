@@ -247,5 +247,41 @@
         ]
       }
     ]
+  },
+  "rival": {
+    "canvas": [
+      16,
+      16
+    ],
+    "origin": [
+      8,
+      15
+    ],
+    "skins": [
+      "base",
+      "rival"
+    ],
+    "frames": [
+      {
+        "key": "blink/default/0",
+        "durationMs": 90,
+        "box": [
+          4,
+          4,
+          10,
+          8
+        ]
+      },
+      {
+        "key": "blink/default/1",
+        "durationMs": 110,
+        "box": [
+          3,
+          3,
+          10,
+          9
+        ]
+      }
+    ]
   }
 }

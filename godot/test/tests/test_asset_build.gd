@@ -216,6 +216,39 @@ func test_animation_table_has_loops_mirror_and_fallback() -> void:
 	assert_eq(asset.frames.size(), 9, "a mirror adds no frame entries")
 
 
+func test_locked_document_gets_one_atlas_per_skin_with_palette_colours_only() -> void:
+	# E5.5 / W7: a palette-locked document with a skin `rival` (index 2 <-> 4). The importer must
+	# build one atlas per skin (`base`, `rival`), the same layout, and every opaque pixel of every
+	# atlas must be a palette colour (the palette is written here, not read from the file).
+	var palette: Array[Color] = [
+		Color8(20, 12, 28),
+		Color8(200, 60, 50),
+		Color8(235, 205, 70),
+		Color8(50, 90, 200),
+	]
+	var asset := S.build(S.RIVAL, {"padding": 0})
+	assert_eq(asset.skins, PackedStringArray(["base", "rival"]))
+	assert_eq(asset.atlases.size(), 2, "one atlas per skin")
+	assert_true(asset.atlases.has(&"base") and asset.atlases.has(&"rival"))
+	assert_ne(asset.atlases[&"base"], asset.atlases[&"rival"], "not the same texture")
+	assert_eq(asset.atlases[&"rival"].get_size(), asset.atlases[&"base"].get_size(), "same layout")
+	for skin: StringName in asset.atlases:
+		var img: Image = asset.atlases[skin].get_image()
+		img.convert(Image.FORMAT_RGBA8)
+		for y in img.get_height():
+			for x in img.get_width():
+				var c := img.get_pixel(x, y)
+				if c.a == 0.0:
+					continue
+				assert_true(c in palette, "%s atlas (%d,%d): %s is a palette colour" % [skin, x, y, c])
+	# body (index 2, red) is blue under rival and red in base; the accent swaps the other way.
+	var base_img := S.canvas_frame(asset, &"base", 0)
+	var rival_img := S.canvas_frame(asset, &"rival", 0)
+	assert_eq(base_img.get_pixel(6, 6), Color8(200, 60, 50), "base body")
+	assert_eq(rival_img.get_pixel(6, 6), Color8(50, 90, 200), "rival body")
+	assert_eq(rival_img.get_pixel(4, 4), base_img.get_pixel(4, 4), "outline is not remapped")
+
+
 func test_every_skin_uses_the_same_layout() -> void:
 	var asset := S.build(S.SKINS, {"padding": 0})
 	assert_eq(asset.skins, PackedStringArray(["base", "ghost", "swap"]))

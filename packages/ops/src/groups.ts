@@ -20,7 +20,7 @@ export type ToolGroup = (typeof TOOL_GROUPS)[number];
 export const TOOL_GROUP_INFO: Readonly<Record<ToolGroup, string>> = {
   core: 'documents, frames, animations, layers, cels, import/export, renders, pixel grids, lint, undo',
   rig: 'bones, poses, presets, templates, parts and overrides',
-  palette: 'palette editing, sorting and colour ramps',
+  palette: 'palette editing, sorting, colour ramps, remaps, generation and skins',
 };
 
 /** True when `value` is a group name. */

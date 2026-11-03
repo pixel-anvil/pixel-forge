@@ -1,0 +1,91 @@
+{
+  "steps": [
+    {
+      "id": "create",
+      "op": "doc.create",
+      "input": { "name": "w7", "width": 8, "height": 8, "idSeed": 7 }
+    },
+    {
+      "id": "import",
+      "op": "io.import",
+      "input": {
+        "doc": "${create.output.doc}",
+        "file": "w7-sheet.png",
+        "cell": [8, 8],
+        "animations": [
+          {
+            "group": "idle",
+            "cells": [
+              [0, 0],
+              [0, 1]
+            ],
+            "durationMs": 100
+          }
+        ]
+      }
+    },
+    {
+      "id": "palette",
+      "op": "palette.edit",
+      "input": {
+        "doc": "${create.output.doc}",
+        "edits": [
+          { "do": "add", "color": "#00000000" },
+          { "do": "add", "color": "#1a1c2c" },
+          { "do": "add", "color": "#b13e53" },
+          { "do": "add", "color": "#ffcd75" },
+          { "do": "add", "color": "#3b5dc9" }
+        ]
+      }
+    },
+    {
+      "id": "lock",
+      "op": "doc.setColorMode",
+      "input": { "doc": "${create.output.doc}", "colorMode": "indexed", "paletteLocked": true },
+      "expect": { "output": { "colorMode": "indexed", "paletteLocked": true, "converted": 2 } }
+    },
+    {
+      "id": "rival",
+      "op": "skin.set",
+      "input": {
+        "doc": "${create.output.doc}",
+        "skin": "rival",
+        "map": [
+          { "from": 2, "to": 4 },
+          { "from": 4, "to": 2 }
+        ]
+      },
+      "expect": { "output": { "action": "created", "kind": "remap", "skins": ["rival"] } }
+    },
+    {
+      "id": "team",
+      "op": "skin.set",
+      "input": {
+        "doc": "${create.output.doc}",
+        "skin": "team",
+        "colors": ["#00000000", "#101820", "#2e8b57", "#f2e8cf", "#8b2e5a"]
+      },
+      "expect": { "output": { "action": "created", "kind": "palette", "skins": ["rival", "team"] } }
+    },
+    {
+      "id": "lint",
+      "op": "lint.run",
+      "input": {
+        "doc": "${create.output.doc}",
+        "enable": ["palette.offPalette"],
+        "skins": ["base", "rival", "team"]
+      },
+      "expect": { "output": { "count": 0 } }
+    },
+    {
+      "id": "save",
+      "op": "doc.save",
+      "input": { "doc": "${create.output.doc}", "path": "w7.pxf" }
+    },
+    {
+      "id": "export",
+      "op": "io.export",
+      "input": { "doc": "${create.output.doc}", "path": "w7-sheet-out.png", "allSkins": true }
+    }
+  ]
+}

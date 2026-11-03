@@ -8,6 +8,8 @@ const Asset := preload("res://addons/pixel_forge/pixel_forge_asset.gd")
 
 const WALKER := "res://fixtures/walker.pxf"
 const SKINS := "res://fixtures/skins.pxf"
+## Palette-locked, one remap skin `rival` (the W7 shape).
+const RIVAL := "res://fixtures/rival.pxf"
 const EXPECTED := "res://fixtures/expected.json"
 
 

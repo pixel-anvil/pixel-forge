@@ -20,6 +20,7 @@ import { paletteGenerate } from './palette-generate.js';
 import { paletteRamp } from './palette-ramp.js';
 import { paletteRemap } from './palette-remap.js';
 import { paletteSort } from './palette-sort.js';
+import { skinSet } from './skin-set.js';
 import { overrideImport } from './override-import.js';
 import { overrideList } from './override-list.js';
 import { pxfPack, pxfUnpack } from './pxf-pack.js';
@@ -68,6 +69,7 @@ export { paletteGenerate } from './palette-generate.js';
 export { paletteRamp } from './palette-ramp.js';
 export { paletteRemap } from './palette-remap.js';
 export { paletteSort } from './palette-sort.js';
+export { skinSet } from './skin-set.js';
 export { overrideImport } from './override-import.js';
 export { overrideList } from './override-list.js';
 export { pxfPack, pxfUnpack } from './pxf-pack.js';
@@ -120,6 +122,7 @@ export const ALL_OPS: readonly AnyOp[] = [
   paletteRamp,
   paletteRemap,
   paletteSort,
+  skinSet,
   overrideResolve,
   pxfPack,
   pxfUnpack,

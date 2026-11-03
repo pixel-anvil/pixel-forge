@@ -9,6 +9,8 @@
 //               markers, events, root motion, directionFallback.
 //   skins.pxf   indexed 16x16 with a palette skin and a remap skin (skins recolour, they keep
 //               alpha, so every skin has the same extent).
+//   rival.pxf   indexed 16x16, palette-locked, one remap skin `rival` (W7 shape): every atlas must hold
+//               palette colours only.
 
 type Rgb = readonly [number, number, number];
 /** A filled rectangle: x, y, width, height, colour. Later rectangles paint over earlier ones. */
@@ -153,7 +155,13 @@ async function load(): Promise<{ core: any; io: any; raster: any; schema: any }>
 
 function newStore(
   m: { core: any; schema: any },
-  opts: { name: string; size: number; origin: { x: number; y: number }; indexed: boolean },
+  opts: {
+    name: string;
+    size: number;
+    origin: { x: number; y: number };
+    indexed: boolean;
+    locked?: boolean;
+  },
 ): any {
   const gen = m.schema.createIdGenerator({ seed: 6, next: 0 });
   return new m.core.DocumentStore({
@@ -165,7 +173,7 @@ function newStore(
       origin: opts.origin,
       pixelsPerUnit: 16,
       colorMode: opts.indexed ? 'indexed' : 'rgba',
-      paletteLocked: false,
+      paletteLocked: opts.locked === true,
       ids: gen.state(),
     },
     palettes: [],
@@ -351,10 +359,17 @@ function indexRaster(w: number, h: number, rects: readonly IRect[]): Uint8Array 
   return data;
 }
 
-async function buildSkins(): Promise<{ bytes: Uint8Array; expected: unknown }> {
+/** `skins.pxf` (a palette skin and a remap skin) or `rival.pxf` (locked, one remap skin). */
+async function buildSkins(locked = false): Promise<{ bytes: Uint8Array; expected: unknown }> {
   const m = await load();
   const SIZE = 16;
-  const store = newStore(m, { name: 'skins', size: SIZE, origin: { x: 8, y: 15 }, indexed: true });
+  const store = newStore(m, {
+    name: locked ? 'rival' : 'skins',
+    size: SIZE,
+    origin: { x: 8, y: 15 },
+    indexed: true,
+    locked,
+  });
   store.transact('skins', (tx: any) => {
     const basePal = tx.newId('palette');
     const ghostPal = tx.newId('palette');
@@ -368,23 +383,23 @@ async function buildSkins(): Promise<{ bytes: Uint8Array; expected: unknown }> {
       cels[id] = { imageId, offset: { x: 0, y: 0 }, opacity: 255 };
     }
     tx.update((d: any) => {
-      d.palettes.push(
-        { id: basePal, name: 'Base', colors: BASE_PALETTE, ramps: [] },
-        { id: ghostPal, name: 'Ghost', colors: GHOST_PALETTE, ramps: [] },
-      );
+      d.palettes.push({ id: basePal, name: 'Base', colors: BASE_PALETTE, ramps: [] });
+      if (!locked) {
+        d.palettes.push({ id: ghostPal, name: 'Ghost', colors: GHOST_PALETTE, ramps: [] });
+      }
       d.activePaletteId = basePal;
-      // A palette skin and a remap skin (body <-> accent). Skins recolour; alpha is kept.
-      d.skins.push(
-        { id: tx.newId('skin'), name: 'ghost', paletteId: ghostPal },
-        {
-          id: tx.newId('skin'),
-          name: 'swap',
-          remap: [
-            [2, 4],
-            [4, 2],
-          ],
-        },
-      );
+      // Skins recolour; alpha is kept. skins.pxf: a palette skin and a remap skin (body <-> accent).
+      // rival.pxf (palette-locked, the W7 shape): the remap skin `rival` alone.
+      const swap = (name: string): any => ({
+        id: tx.newId('skin'),
+        name,
+        remap: [
+          [2, 4],
+          [4, 2],
+        ],
+      });
+      if (locked) d.skins.push(swap('rival'));
+      else d.skins.push({ id: tx.newId('skin'), name: 'ghost', paletteId: ghostPal }, swap('swap'));
       d.layers.push({
         kind: 'pixel',
         id: tx.newId('layer'),
@@ -410,7 +425,7 @@ async function buildSkins(): Promise<{ bytes: Uint8Array; expected: unknown }> {
   const expected = {
     canvas: [SIZE, SIZE],
     origin: [8, 15],
-    skins: ['base', 'ghost', 'swap'],
+    skins: locked ? ['base', 'rival'] : ['base', 'ghost', 'swap'],
     // The box of the opaque pixels (the same in every skin: skins recolour, they keep alpha).
     frames: BLINK.map((f, i) => ({
       key: `blink/default/${i}`,
@@ -424,7 +439,13 @@ async function buildSkins(): Promise<{ bytes: Uint8Array; expected: unknown }> {
 export default async function generate(ctx: Ctx): Promise<void> {
   const walker = await buildWalker();
   const skins = await buildSkins();
+  const rival = await buildSkins(true);
   ctx.writeFile(`${OUT}/walker.pxf`, walker.bytes);
   ctx.writeFile(`${OUT}/skins.pxf`, skins.bytes);
-  ctx.writeJson(`${OUT}/expected.json`, { walker: walker.expected, skins: skins.expected });
+  ctx.writeFile(`${OUT}/rival.pxf`, rival.bytes);
+  ctx.writeJson(`${OUT}/expected.json`, {
+    walker: walker.expected,
+    skins: skins.expected,
+    rival: rival.expected,
+  });
 }
