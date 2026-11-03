@@ -21,3 +21,13 @@ export type {
   BackgroundOptions,
   RgbTriple,
 } from './background.js';
+export { FLOYD_STEINBERG, bayerMatrix, bayerThreshold } from './dither.js';
+export type { BayerSize, DiffusionTap } from './dither.js';
+export {
+  DEFAULT_ALPHA_THRESHOLD,
+  DEFAULT_DITHER_SPREAD,
+  MAX_QUANTIZE_COLORS,
+  TRANSPARENT_INDEX,
+  quantize,
+} from './quantize.js';
+export type { DitherMode, QuantizeOptions, QuantizeResult } from './quantize.js';

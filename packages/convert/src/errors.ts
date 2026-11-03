@@ -4,8 +4,9 @@
  * - `BAD_IMAGE`: the input is not a valid `RgbaImage` (size not a positive integer, or wrong data length).
  * - `BAD_RECT`: a crop rectangle has non-integer fields, a non-positive size, or leaves the image.
  * - `BAD_OPTION`: a step option is invalid (tolerance, threshold or colour out of range).
+ * - `BAD_PALETTE`: a palette given to `quantize` is empty, too large (> 256), malformed or has no visible colour.
  */
-export type ConvertErrorCode = 'BAD_IMAGE' | 'BAD_RECT' | 'BAD_OPTION';
+export type ConvertErrorCode = 'BAD_IMAGE' | 'BAD_RECT' | 'BAD_OPTION' | 'BAD_PALETTE';
 
 /** Typed error thrown by every step of `@pixel-forge/convert`. Branch on `code`. */
 export class ConvertError extends Error {

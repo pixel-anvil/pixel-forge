@@ -13,10 +13,11 @@ convert to PNG first.
 
 ## Steps
 
-| Step       | Function                       | Notes                                                             |
-| ---------- | ------------------------------ | ----------------------------------------------------------------- |
-| Crop       | `cropImage(img, {x, y, w, h})` | Integers, fully inside the image, else `ConvertError` `BAD_RECT`. |
-| Background | `removeBackground(img, opts)`  | Modes `none`, `key`, `flood`, `alpha`.                            |
+| Step       | Function                       | Notes                                                                |
+| ---------- | ------------------------------ | -------------------------------------------------------------------- |
+| Crop       | `cropImage(img, {x, y, w, h})` | Integers, fully inside the image, else `ConvertError` `BAD_RECT`.    |
+| Background | `removeBackground(img, opts)`  | Modes `none`, `key`, `flood`, `alpha`.                               |
+| Quantise   | `quantize(img, palette, opts)` | Nearest colour in OKLab, optional dither. Returns image + index map. |
 
 Option types (`CropOptions`, `BackgroundOptions`) are named so the ConvertRecipe (E4.4) can reuse them.
 
@@ -31,6 +32,24 @@ Option types (`CropOptions`, `BackgroundOptions`) are named so the ConvertRecipe
 - `alpha` keeps the alpha and clears pixels below `threshold`.
 - Removed pixels become `0,0,0,0`.
 
+### Quantise and dither (FR-CONV-05, FR-CONV-06)
+
+`quantize(img, palette, { dither, strength, spread, alphaThreshold })` returns `{ image, indices }`.
+
+- `palette` is a list of `[r,g,b,a]` (1..256 entries) or any object with `colors` (a `Palette`, the
+  result of `generatePalette` from `@pixel-forge/color`). Entries with alpha 0 are never chosen.
+- Distance is squared Euclidean in OKLab (`@pixel-forge/color`). A tie goes to the lowest index.
+- Alpha: below `alphaThreshold` (default 128) the pixel is transparent (`0,0,0,0`, index `-1`); all
+  others are opaque (alpha 255, palette RGB). Transparent pixels do not take part in dithering.
+- `dither`: `none` (default), `bayer2`, `bayer4`, `bayer8` (Bayer 1973; offsets of
+  `threshold * spread * strength` added to sRGB, `spread` default 64, use about 255 for two colours),
+  `floyd-steinberg` (Floyd and Steinberg 1976; error diffused in OKLab, rows top to bottom, pixels left
+  to right, no serpentine, weights 7/16 3/16 5/16 1/16).
+- `strength` 0..1 scales the offset or the diffused error. 0 equals `none`. Any mode with
+  `strength < 1` is the strength-limited dither.
+- Only `+ - * /` and `sqrt` on doubles, so results are the same on every platform. Pinned hashes in
+  `test/quantize.test.ts` guard this.
+
 ## Errors
 
-`ConvertError` with `code`: `BAD_IMAGE`, `BAD_RECT`, `BAD_OPTION`.
+`ConvertError` with `code`: `BAD_IMAGE`, `BAD_RECT`, `BAD_OPTION`, `BAD_PALETTE`.
