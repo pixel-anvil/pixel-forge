@@ -118,7 +118,7 @@ Every card: standard context pack, definition of done and oracles (`docs/02-plan
 
 ### Wave B3: converter
 
-- **E4.0 ADR.** Decide how JPEG and WebP enter the system before any code. `convert` is a pure package, so decoding belongs in `io`. Dependencies must be permissive (NFR-11), and decoded pixels must not differ between platforms (NFR-02). If a decoder cannot give that, the hash suite must start from a decoded PNG. The user approves any new dependency.
+- **E4.0 ADR.** Decide how JPEG and WebP enter the system before any code. `convert` is a pure package, so decoding belongs in `io`. Dependencies must be permissive (NFR-11), and decoded pixels must not differ between platforms (NFR-02). If a decoder cannot give that, the hash suite must start from a decoded PNG. The user approves any new dependency. **Decided 2026-11-02: PNG only in M1b; JPEG/WebP are refused with a clear error and no dependency is added. Revisit if needed.**
 - **E4.1 Input and background.** FR-CONV-01, FR-CONV-02.
 - **E4.2 Grid detection and downscale.** FR-CONV-03, FR-CONV-04. Clean-room code from papers only. **Oracle:** synthetic upscaled art with a known cell size and phase. **Review:** `code-review` high.
 - **E4.3 Quantise and dither.** FR-CONV-05, FR-CONV-06. Dither matrices come from published sources, named in TSDoc.

@@ -51,4 +51,7 @@ Planning steps 1 to 5 are done (research, spec, plan and their reviews). Impleme
 - **Next:** wave B2 (first card TG.1 tool groups, then the rest per `docs/03-plan-m1b.md`). Open question 1 (E4.0 decoder choice) is needed before wave B3.
 
 ## Open questions for the user
-1. E4.0 (before wave B3): the JPEG/WebP decoder choice and its dependency, for approval.
+none.
+
+## Decisions
+- **E4.0 (user, 2026-11-02): PNG only for now.** No JPEG or WebP decoder and no new dependency in M1b; JPEG/WebP input is refused with a clear error that tells the user to convert to PNG first. Add them later if needed (then a small ADR: permissive licence, same pixels on every platform). E4.0 becomes a short note, not an Opus ADR card; E4.1 starts from PNG.
