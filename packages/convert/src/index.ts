@@ -31,3 +31,29 @@ export {
   quantize,
 } from './quantize.js';
 export type { DitherMode, QuantizeOptions, QuantizeResult } from './quantize.js';
+
+export {
+  DEFAULT_GRID_CONFIDENCE,
+  DEFAULT_MAX_CELL,
+  DEFAULT_NOISE_FLOOR,
+  GRID_RELATIVE_SCORE,
+  MAX_GRID_CELL,
+  MIN_GRID_LINES,
+  detectGrid,
+} from './grid.js';
+export type {
+  DetectGridOptions,
+  GridDetection,
+  GridFound,
+  GridNone,
+  GridNoneReason,
+  GridSpec,
+} from './grid.js';
+export {
+  DEFAULT_KCENTROID_K,
+  DOWNSCALE_METHODS,
+  KCENTROID_MAX_ITERATIONS,
+  MAX_KCENTROID_K,
+  downscale,
+} from './downscale.js';
+export type { DownscaleMethod, DownscaleOptions } from './downscale.js';

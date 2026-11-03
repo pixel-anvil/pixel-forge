@@ -18,8 +18,11 @@ convert to PNG first.
 | Crop       | `cropImage(img, {x, y, w, h})` | Integers, fully inside the image, else `ConvertError` `BAD_RECT`.    |
 | Background | `removeBackground(img, opts)`  | Modes `none`, `key`, `flood`, `alpha`.                               |
 | Quantise   | `quantize(img, palette, opts)` | Nearest colour in OKLab, optional dither. Returns image + index map. |
+| Grid       | `detectGrid(img, opts?)`       | Cell size and phase of upscaled art, or a clear "no grid".           |
+| Downscale  | `downscale(img, opts)`         | `box`, `kcentroid`, `nearest`, `mode`; by size or by grid.           |
 
-Option types (`CropOptions`, `BackgroundOptions`) are named so the ConvertRecipe (E4.4) can reuse them.
+Option types (`CropOptions`, `BackgroundOptions`, `DetectGridOptions`, `DownscaleOptions`) are named
+so the ConvertRecipe (E4.4) can reuse them.
 
 ### Background removal
 
@@ -49,6 +52,56 @@ Option types (`CropOptions`, `BackgroundOptions`) are named so the ConvertRecipe
   `strength < 1` is the strength-limited dither.
 - Only `+ - * /` and `sqrt` on doubles, so results are the same on every platform. Pinned hashes in
   `test/quantize.test.ts` guard this.
+
+### Grid detection (FR-CONV-03)
+
+`detectGrid` finds the cell size and phase of art that was upscaled by a whole number (or AI "fake
+pixel art" with whole-pixel cells).
+
+1. Edge histogram: per axis, the difference of neighbour pixels (sum of the 4 channel differences,
+   0..1020; alpha 0 reads as `0,0,0,0`). Only local maxima along the line count (1-D non-maximum
+   suppression, Canny 1986), less `noiseFloor` (default 24).
+2. Period and phase: the histogram is folded modulo each trial size `p` (2..`maxCell`, default 64),
+   "epoch folding" (Leahy et al. 1983). The score is the share of edge energy on the best comb, above
+   chance: 1 for a perfect grid, about 0 for no grid.
+3. Choice: the **largest** `p` whose score is at least `minConfidence` (0.5) and 3/4 of the best
+   score, with edges on at least 3 grid lines. Divisors of the true size also fit, so this is the
+   coarsest grid that explains the edges.
+
+The result is `{ found: true, cellWidth, cellHeight, offsetX, offsetY, confidence, ... }`, or
+`{ found: false, reason }` with `reason` `too-small`, `flat` or `no-period`. A "no grid" answer is
+definite: native pixel art and photos give it. Without `square` each axis is found alone (non-square
+cells work) and both must succeed; `square: true` pools both axes into one size.
+
+Offsets: cells start at `offsetX + k * cellWidth`, so a non-zero offset means a partial cell at the
+left. Limit: fractional or drifting cell sizes are not modelled (they give "no grid").
+
+### Downscale (FR-CONV-04)
+
+Target: `width` and/or `height` (one alone keeps the aspect, rounded), or `grid` (a `GridFound` or any
+`GridSpec`). A target larger than the source is refused: downscale never upscales.
+
+- Size cells: output column `i` of `W` covers `floor(i*w/W) .. floor((i+1)*w/W) - 1`.
+- Grid cells: partial cells at the edges are kept by default (`edges: 'keep'`), so no source pixel is
+  lost; `edges: 'drop'` leaves them out.
+
+Alpha, the same for every method: a pixel is visible when alpha >= `alphaThreshold` (default 128).
+A cell with fewer than half visible pixels becomes `0,0,0,0` (a tie keeps the cell). Colours come
+from visible pixels only.
+
+| Method      | Colour of a cell                                                                    |
+| ----------- | ----------------------------------------------------------------------------------- |
+| `box`       | Mean in 8-bit sRGB, RGB weighted by alpha; alpha is the mean of the visible alphas. |
+| `nearest`   | The visible pixel nearest to the centre (even cells: top-left of the middle 2x2).   |
+| `mode`      | The most common RGBA; ties go to the colour seen first in row-major order.          |
+| `kcentroid` | k-means in OKLab (`k` default 2, max 8), centroid of the heaviest cluster.          |
+
+`kcentroid` follows the public description of Astropulse's "K-Centroid" downscale; it is Lloyd's
+k-means (1982) with deterministic farthest-point seeding (Gonzalez 1985). A cluster of one distinct
+colour returns that colour exactly. All of it is written here from those descriptions.
+
+Round trip: art upscaled by whole numbers at any phase, downscaled by its grid, gives the source back
+exactly with every method (`box` too, because the cells are uniform).
 
 ## Errors
 
