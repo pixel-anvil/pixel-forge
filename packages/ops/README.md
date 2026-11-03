@@ -2,7 +2,7 @@
 
 Op registry, definitions, handlers, error types and generators (MCP tool JSON, CLI, docs).
 
-**Depends on:** `core`, `lint`, `io`, `rig`, `convert`, plus `schema` (reference and value schemas; added to the dependency-cruiser table in T5.1), `raster` and `png` (grid and render ops build images and encode PNG, T5.3) and `zod`. No Node built-ins (eslint and dependency-cruiser enforce it): files go through the host's `FileSystem` port.
+**Depends on:** `core`, `lint`, `io`, `rig`, `convert`, `color` (palette maths for the `palette` ops, E5.2), plus `schema` (reference and value schemas; added to the dependency-cruiser table in T5.1), `raster` and `png` (grid and render ops build images and encode PNG, T5.3) and `zod`. No Node built-ins (eslint and dependency-cruiser enforce it): files go through the host's `FileSystem` port.
 
 **Status:** T5.1: `defineOp`, the registry, `OpContext`, `OpError`, safety classes, `confirm`, reference resolution, the `OpHost` interface with an in-memory host, the generators, and the exemplar ops `doc.open`, `doc.summary`, `rig.setPose`. T5.2a: the thin wrappers `doc.undo`, `doc.redo`, `frame.add`, `frame.delete`, `frame.duplicate`, `lint.run`, `rig.jointCheck`, `rig.applyTemplate`. T5.2b: `doc.create`, `doc.save`, `doc.setColorMode`, `anim.create`, `anim.update`, `frame.setMeta`, `layer.update`, `cel.link`, `part.split`, `part.paintOverlap`, `part.paintVariant` (T5.14), `rig.bindParts`, `rig.editBones`, `rig.setPivot`, `rig.setPartZ` (T5.13), `rig.mirrorAnimation`, `rig.bake` (destructive, `confirmText`), `override.list`, `override.resolve`, `io.import` (MCP `import_file`), `io.export` (MCP `export`). T5.3: `pixels.readGrid`, `pixels.writeGrid`, `render.frame`, `render.contactSheet`. T5.10: `rig.readPose` (MCP `rig_read_pose`). T5.16: `rig.fitTemplate` (MCP `rig_fit_template`). B0.1: `rig.fitPose` (MCP `rig_fit_pose`). T5.6b: `override.import` (`io` safety, one undo step through `ctx.transact`; shares `attributeFrameEdit` in `frame-edit.ts` with `pixels.writeGrid`), `pxf.pack`, `pxf.unpack` (CLI `pf pack`, `pf unpack`). Adding an op: `docs/ai/PLAYBOOKS.md`, "Add an op". Reference of every op: `docs/contracts/OPERATIONS.md` (generated).
 
@@ -41,7 +41,7 @@ const r = await registry.call('doc.summary', { doc }, run); // envelope, never t
 
 ## Tool groups
 
-Every op has a required `group` (`TOOL_GROUPS` in `src/groups.ts`: `core`, `rig`; `TOOL_GROUP_INFO` says what each holds; `parseToolGroups` reads a `--tools` list). A transport lists only some groups to keep the tool list small: `pf mcp --tools core,rig` (TG.1). `core`: doc, frame, anim, layer, cel, io, render, pixels, lint, pxf. `rig`: rig, part, override. Add a group by extending both constants; the compiler fails until `TOOL_GROUP_INFO` has the new entry.
+Every op has a required `group` (`TOOL_GROUPS` in `src/groups.ts`: `core`, `rig`, `palette`; `TOOL_GROUP_INFO` says what each holds; `parseToolGroups` reads a `--tools` list). A transport lists only some groups to keep the tool list small: `pf mcp --tools core,rig` (TG.1). `core`: doc, frame, anim, layer, cel, io, render, pixels, lint, pxf. `rig`: rig, part, override. `palette`: palette.edit, palette.sort, palette.ramp (an indexed document's pixels, ramps and remap skins follow every index change through core's `remapPaletteIndices`). Add a group by extending both constants; the compiler fails until `TOOL_GROUP_INFO` has the new entry.
 
 ## Registry
 

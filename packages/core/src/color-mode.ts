@@ -5,7 +5,7 @@
  */
 import { IndexedImage, TiledImage } from '@pixel-forge/raster';
 import type { Rgba } from '@pixel-forge/raster';
-import type { ColorMode, ImageId, Layer } from '@pixel-forge/schema';
+import type { ColorMode, Document, ImageId, Layer, RemapPair } from '@pixel-forge/schema';
 import { CoreError } from './errors.js';
 import type { DeepReadonly } from './json.js';
 import type { Transaction } from './transaction.js';
@@ -46,6 +46,33 @@ function celImages(layers: readonly LayerRo[], out: Set<ImageId>): void {
   }
 }
 
+/** Ids of the drawings a colour change touches: cel images, part variants, override `set` images. */
+function drawingIds(doc: DeepReadonly<Document>): Set<ImageId> {
+  const ids = new Set<ImageId>();
+  celImages(doc.layers, ids);
+  for (const p of doc.rig?.parts ?? []) for (const v of p.variants) ids.add(v.imageId);
+  for (const a of doc.animations) for (const o of a.overrides) if (o.set) ids.add(o.set);
+  return ids;
+}
+
+/** Points every reference to a replaced drawing at its new id (call inside `tx.update`). */
+function swapDrawings(d: Document, fresh: ReadonlyMap<ImageId, ImageId>): void {
+  const swap = (id: ImageId): ImageId => fresh.get(id) ?? id;
+  const visit = (layers: Layer[]): void => {
+    for (const l of layers) {
+      if (l.kind === 'group') visit(l.children);
+      else if (l.kind === 'pixel' || l.kind === 'reference') {
+        for (const c of Object.values(l.cels)) if ('imageId' in c) c.imageId = swap(c.imageId);
+      }
+    }
+  };
+  visit(d.layers);
+  for (const p of d.rig?.parts ?? []) for (const v of p.variants) v.imageId = swap(v.imageId);
+  for (const a of d.animations) {
+    for (const o of a.overrides) if (o.set !== undefined) o.set = swap(o.set);
+  }
+}
+
 /**
  * Sets the colour mode and/or the palette lock.
  *
@@ -72,10 +99,7 @@ export function setColorMode(tx: Transaction, opts: SetColorModeOptions = {}): S
   }
   const converted = new Map<ImageId, TiledImage | IndexedImage>();
   if (to !== from) {
-    const ids = new Set<ImageId>();
-    celImages(doc.layers, ids);
-    for (const p of doc.rig?.parts ?? []) for (const v of p.variants) ids.add(v.imageId);
-    for (const a of doc.animations) for (const o of a.overrides) if (o.set) ids.add(o.set);
+    const ids = drawingIds(doc);
     const colors: Rgba[] = (palette ?? []).map((c) => [c[0], c[1], c[2], c[3]]);
     const transparent = colors.findIndex((c) => c[3] === 0);
     if (to === 'indexed' && transparent < 0) {
@@ -136,22 +160,134 @@ export function setColorMode(tx: Transaction, opts: SetColorModeOptions = {}): S
     tx.update((d) => {
       d.meta.colorMode = to;
       d.meta.paletteLocked = locked;
-      const swap = (id: ImageId): ImageId => fresh.get(id) ?? id;
-      const visit = (layers: Layer[]): void => {
-        for (const l of layers) {
-          if (l.kind === 'group') visit(l.children);
-          else if (l.kind === 'pixel' || l.kind === 'reference') {
-            for (const c of Object.values(l.cels)) if ('imageId' in c) c.imageId = swap(c.imageId);
-          }
-        }
-      };
-      visit(d.layers);
-      for (const p of d.rig?.parts ?? []) for (const v of p.variants) v.imageId = swap(v.imageId);
-      for (const a of d.animations) {
-        for (const o of a.overrides) if (o.set !== undefined) o.set = swap(o.set);
-      }
+      swapDrawings(d, fresh);
     });
   }
   for (const id of converted.keys()) tx.deleteImage(id);
   return { colorMode: to, paletteLocked: locked, converted: converted.size };
+}
+
+/** Why {@link remapPaletteIndices} refused. All are `BAD_VALUE`. */
+export type PaletteRemapReason =
+  'index-removed' | 'index-out-of-range' | 'skin-uses-index' | 'palette-skin';
+
+/** Result of {@link remapPaletteIndices}. */
+export interface PaletteRemapResult {
+  /** Indexed drawings rewritten (new images; the old ones are deleted). */
+  readonly images: number;
+  /** Remap skins whose pairs were rewritten. */
+  readonly skins: number;
+}
+
+/**
+ * Follows a palette index change through the document, so the render does not change: `remap[old]` is
+ * the new index of palette entry `old`, or `null` when it was removed.
+ *
+ * - **Indexed drawings** (cels, variants, override `set` images) get every pixel index, and the
+ *   transparent index, rewritten. A pixel that uses a removed index refuses the whole change
+ *   (`index-removed`; the details name the image, index and one position), so removing a colour needs
+ *   its pixels moved first. Index 255 style leftovers beyond the old palette refuse as `index-out-of-range`.
+ * - **Remap skins** have their `[from, to]` pairs rewritten (pairs that become identity are dropped,
+ *   the rest stay sorted). A pair that names a removed index refuses (`skin-uses-index`).
+ * - **Palette skins** pair colours with another palette index for index, which a moved index would
+ *   break: any non-identity remap with one present refuses (`palette-skin`).
+ *
+ * An identity remap (`remap[i] === i` for all `i`, as for a colour added at the end or replaced) is
+ * a no-op. Ramps are not touched here (`@pixel-forge/color` remaps them with the palette).
+ *
+ * @throws CoreError `BAD_VALUE` with `details.reason` a {@link PaletteRemapReason}.
+ */
+export function remapPaletteIndices(
+  tx: Transaction,
+  remap: readonly (number | null)[],
+): PaletteRemapResult {
+  const none = { images: 0, skins: 0 };
+  if (remap.every((m, i) => m === i)) return none;
+  const doc = tx.doc;
+  const fail = (reason: PaletteRemapReason, message: string, more = {}): CoreError =>
+    new CoreError('BAD_VALUE', message, { reason, ...more });
+  if (doc.skins.some((k) => 'paletteId' in k)) {
+    throw fail(
+      'palette-skin',
+      'a palette skin pairs colours with another palette index for index; move or remove it first',
+    );
+  }
+  const pairs = new Map<string, RemapPair[]>();
+  for (const k of doc.skins) {
+    if (!('remap' in k)) continue;
+    const next: RemapPair[] = [];
+    for (const [from, to] of k.remap) {
+      const f = remap[from];
+      const t = remap[to];
+      if (f === null || f === undefined || t === null || t === undefined) {
+        throw fail(
+          'skin-uses-index',
+          `skin ${k.name} maps index ${String(from)} to ${String(to)}`,
+          {
+            skin: k.name,
+          },
+        );
+      }
+      if (f !== t) next.push([f, t]);
+    }
+    next.sort((x, y) => x[0] - y[0]);
+    pairs.set(k.id, next);
+  }
+  const converted = new Map<ImageId, IndexedImage>();
+  for (const id of [...drawingIds(doc)].sort()) {
+    const img = tx.image(id);
+    if (!(img instanceof IndexedImage)) continue;
+    const to = (i: number): number | null => {
+      const m = remap[i];
+      if (m === undefined) {
+        throw fail('index-out-of-range', `image ${id} uses index ${String(i)} beyond the palette`, {
+          imageId: id,
+          index: i,
+        });
+      }
+      return m;
+    };
+    const idx = img.toIndices();
+    const used = new Uint8Array(256);
+    for (const i of idx) used[i] = 1;
+    const lut = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) {
+      if (used[i] === 0) continue;
+      const m = to(i);
+      if (m === null) {
+        const at = idx.indexOf(i);
+        throw fail(
+          'index-removed',
+          `image ${id} still uses palette index ${String(i)}; recolour those pixels before removing it`,
+          { imageId: id, index: i, x: at % img.width, y: Math.floor(at / img.width) },
+        );
+      }
+      lut[i] = m;
+    }
+    const t = to(img.transparentIndex);
+    if (t === null) {
+      throw fail(
+        'index-removed',
+        `image ${id} uses palette index ${String(img.transparentIndex)} as transparent`,
+        {
+          imageId: id,
+          index: img.transparentIndex,
+        },
+      );
+    }
+    const out = new Uint8Array(idx.length);
+    for (let p = 0; p < idx.length; p++) out[p] = lut[idx[p] ?? 0] ?? 0;
+    converted.set(id, IndexedImage.fromIndices(img.width, img.height, out, t));
+  }
+  const fresh = new Map<ImageId, ImageId>();
+  for (const [id, img] of converted) fresh.set(id, tx.createImage(img));
+  tx.update((d) => {
+    swapDrawings(d, fresh);
+    for (const k of d.skins) {
+      const next = pairs.get(k.id);
+      if (next !== undefined && 'remap' in k) k.remap = next;
+    }
+  });
+  for (const id of converted.keys()) tx.deleteImage(id);
+  return { images: converted.size, skins: pairs.size };
 }

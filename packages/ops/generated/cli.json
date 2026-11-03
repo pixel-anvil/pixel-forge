@@ -843,6 +843,157 @@
       ]
     },
     {
+      "op": "palette.edit",
+      "command": ["palette", "edit"],
+      "summary": "Add, remove, replace or move colours of the active palette.",
+      "safety": "mutate",
+      "options": [
+        {
+          "name": "doc",
+          "flag": "--doc",
+          "kind": "string",
+          "required": true,
+          "description": "Document id from doc_open or doc_create."
+        },
+        {
+          "name": "edits",
+          "flag": "--edits",
+          "kind": "json",
+          "required": true,
+          "description": "Edits, in order."
+        },
+        {
+          "name": "name",
+          "flag": "--name",
+          "kind": "string",
+          "required": false,
+          "description": "Name for a palette this call creates."
+        }
+      ]
+    },
+    {
+      "op": "palette.ramp",
+      "command": ["palette", "ramp"],
+      "summary": "Generate a dark-to-light colour ramp from a base colour; optionally add it.",
+      "safety": "mutate",
+      "options": [
+        {
+          "name": "doc",
+          "flag": "--doc",
+          "kind": "string",
+          "required": true,
+          "description": "Document id from doc_open or doc_create."
+        },
+        {
+          "name": "base",
+          "flag": "--base",
+          "kind": "string",
+          "required": true,
+          "description": "Base colour."
+        },
+        {
+          "name": "steps",
+          "flag": "--steps",
+          "kind": "integer",
+          "required": true,
+          "description": "Colours in the ramp."
+        },
+        {
+          "name": "baseIndex",
+          "flag": "--base-index",
+          "kind": "integer",
+          "required": false,
+          "description": "Where the base sits (default: middle)."
+        },
+        {
+          "name": "hueShift",
+          "flag": "--hue-shift",
+          "kind": "number",
+          "required": false,
+          "description": "Largest hue turn at the ends, degrees (default 20; 0 = none)."
+        },
+        {
+          "name": "satShift",
+          "flag": "--sat-shift",
+          "kind": "number",
+          "required": false,
+          "description": "Chroma change at the ends: shadows x(1-s), lights x(1+s) (default 0)."
+        },
+        {
+          "name": "lightRange",
+          "flag": "--light-range",
+          "kind": "json",
+          "required": false,
+          "description": "OKLab lightness [darkest, lightest] (default from the base)."
+        },
+        {
+          "name": "coolHue",
+          "flag": "--cool-hue",
+          "kind": "number",
+          "required": false,
+          "description": "Shadow hue target, OKLCH degrees (default 265)."
+        },
+        {
+          "name": "warmHue",
+          "flag": "--warm-hue",
+          "kind": "number",
+          "required": false,
+          "description": "Light hue target, OKLCH degrees (default 90)."
+        },
+        {
+          "name": "add",
+          "flag": "--add",
+          "kind": "boolean",
+          "required": false,
+          "description": "Add the ramp to the active palette (default false: only return it)."
+        },
+        {
+          "name": "at",
+          "flag": "--at",
+          "kind": "integer",
+          "required": false,
+          "description": "With add: insert here (default: the end)."
+        },
+        {
+          "name": "name",
+          "flag": "--name",
+          "kind": "string",
+          "required": false,
+          "description": "With add: ramp name (default \"ramp1\", \"ramp2\"...)."
+        }
+      ]
+    },
+    {
+      "op": "palette.sort",
+      "command": ["palette", "sort"],
+      "summary": "Sort the active palette by hue, luminance, luma or chroma.",
+      "safety": "mutate",
+      "options": [
+        {
+          "name": "doc",
+          "flag": "--doc",
+          "kind": "string",
+          "required": true,
+          "description": "Document id from doc_open or doc_create."
+        },
+        {
+          "name": "by",
+          "flag": "--by",
+          "kind": "string",
+          "required": true,
+          "description": "Sort key.",
+          "choices": ["hue", "luminance", "luma", "chroma"]
+        },
+        {
+          "name": "descending",
+          "flag": "--descending",
+          "kind": "boolean",
+          "required": false,
+          "description": "Largest first (default false)."
+        }
+      ]
+    },
+    {
       "op": "part.paintOverlap",
       "command": ["part", "paint-overlap"],
       "summary": "Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite stays the same.",

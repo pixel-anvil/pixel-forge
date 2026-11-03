@@ -30,6 +30,9 @@
       "path": "../convert"
     },
     {
+      "path": "../color"
+    },
+    {
       "path": "../schema"
     }
   ]

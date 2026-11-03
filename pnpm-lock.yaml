@@ -305,6 +305,9 @@ importers:
 
   packages/ops:
     dependencies:
+      '@pixel-forge/color':
+        specifier: workspace:*
+        version: link:../color
       '@pixel-forge/convert':
         specifier: workspace:*
         version: link:../convert

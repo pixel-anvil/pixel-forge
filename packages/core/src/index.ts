@@ -134,5 +134,11 @@ export type {
   PaintOverlapResult,
   PaintedVariant,
 } from './paint-overlap.js';
-export { setColorMode } from './color-mode.js';
-export type { ColorModeReason, SetColorModeOptions, SetColorModeResult } from './color-mode.js';
+export { remapPaletteIndices, setColorMode } from './color-mode.js';
+export type {
+  ColorModeReason,
+  PaletteRemapReason,
+  PaletteRemapResult,
+  SetColorModeOptions,
+  SetColorModeResult,
+} from './color-mode.js';

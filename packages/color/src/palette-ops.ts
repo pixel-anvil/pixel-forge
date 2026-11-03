@@ -5,7 +5,7 @@
  * @packageDocumentation
  */
 import { MAX_PALETTE_COLORS, type Palette, type RGBA8 } from '@pixel-forge/schema';
-import { oklabToOklch, srgb8ToOklab } from './convert.js';
+import { srgb8ToOklab } from './convert.js';
 import { packRgba } from './nearest.js';
 
 /** Maps old palette index to new index; `null` when the colour was removed. */
@@ -117,29 +117,101 @@ export function moveColor(palette: Palette, from: number, to: number): PaletteEd
   return reorder(palette, order);
 }
 
+/**
+ * Replaces the colour at `index`. No index moves, so the remap is the identity and ramps stay.
+ * @throws RangeError for an out-of-range index.
+ */
+export function replaceColor(palette: Palette, index: number, color: RGBA8): PaletteEdit {
+  const n = palette.colors.length;
+  if (!Number.isInteger(index) || index < 0 || index >= n) {
+    throw new RangeError(`replaceColor: bad index ${String(index)}`);
+  }
+  const colors = palette.colors.map((c, i): RGBA8 => (i === index ? color : c));
+  return { palette: { ...palette, colors }, remap: identity(n) };
+}
+
+/** Options of {@link insertRamp}. */
+export interface InsertRampOptions {
+  /** Position of the first new colour (default: append). */
+  readonly at?: number;
+  /** When given, the new colours are also recorded as a ramp of this name. */
+  readonly name?: string;
+}
+
+/**
+ * Inserts `colors` as one block at `at` (default: append). Later colours shift up by `colors.length`
+ * and ramps follow. With `name`, a new ramp listing the block (dark to light as given) is added.
+ * @throws RangeError for a bad position, a full palette, no colours, or a ramp name already used.
+ */
+export function insertRamp(
+  palette: Palette,
+  colors: readonly RGBA8[],
+  options: InsertRampOptions = {},
+): PaletteEdit {
+  const n = palette.colors.length;
+  const pos = options.at ?? n;
+  if (colors.length === 0) throw new RangeError('insertRamp: no colours to insert');
+  if (n + colors.length > MAX_PALETTE_COLORS) {
+    throw new RangeError(
+      `insertRamp: ${String(colors.length)} more colours do not fit the palette`,
+    );
+  }
+  if (!Number.isInteger(pos) || pos < 0 || pos > n) {
+    throw new RangeError(`insertRamp: bad position ${String(pos)}`);
+  }
+  if (options.name !== undefined && palette.ramps.some((r) => r.name === options.name)) {
+    throw new RangeError(`insertRamp: the palette already has a ramp named ${options.name}`);
+  }
+  const all = [...palette.colors.slice(0, pos), ...colors, ...palette.colors.slice(pos)];
+  const remap = identity(n).map((i) => (i >= pos ? i + colors.length : i));
+  const ramps = [...remapRamps(palette.ramps, remap)];
+  if (options.name !== undefined) {
+    ramps.push({ name: options.name, indices: colors.map((_, i) => pos + i) });
+  }
+  return { palette: { ...palette, colors: all, ramps }, remap };
+}
+
+/** Composes edits applied one after the other into one remap (first edit's indices to the last's). */
+export function composeRemaps(first: IndexRemap, second: IndexRemap): IndexRemap {
+  return first.map((m) => (m === null ? null : (second[m] ?? null)));
+}
+
 /** Sort keys for {@link sortBy}. */
-export type SortKey = 'hue' | 'luminance' | 'chroma';
+export type SortKey = 'hue' | 'luminance' | 'luma' | 'chroma';
+
+/**
+ * A number that grows with the angle of `(a, b)` from the +a axis, counter-clockwise, in `[0, 4)`
+ * (the "diamond angle"). It orders like `atan2` but uses only `+ - /`, so it is exact on every platform.
+ */
+function pseudoAngle(a: number, b: number): number {
+  if (b >= 0) return a >= 0 ? b / (a + b) : 1 + -a / (-a + b);
+  return a < 0 ? 2 + -b / (-a - b) : 3 + a / (a - b);
+}
 
 /**
  * Sorts colours by an OKLab-derived key (stable: ties keep original order).
  * - `luminance`: OKLab L ascending (dark to light).
+ * - `luma`: Rec. 709 luma of the 8-bit sRGB values, `2126 R + 7152 G + 722 B` (integers, exact).
  * - `chroma`: OKLCH C ascending, ties by L.
  * - `hue`: near-greys (C < 0.02) first, ordered by L, then chromatic colours by hue ascending
- *   (ties by L). Hue uses `atan2`, so near-identical hues could order differently across engines.
+ *   (ties by L). Hue is ordered by a trig-free angle (`pseudoAngle`), so it is platform-exact.
  *
  * Pass `descending` to reverse the key order (ties still keep original order).
  */
 export function sortBy(palette: Palette, key: SortKey, descending = false): SortEdit {
   const keyed = palette.colors.map((c, i) => {
-    const lch = oklabToOklch(srgb8ToOklab(c[0], c[1], c[2]));
-    let k1 = lch.L;
+    const lab = srgb8ToOklab(c[0], c[1], c[2]);
+    const chroma = Math.sqrt(lab.a * lab.a + lab.b * lab.b);
+    let k1 = lab.L;
     let k2 = 0;
-    if (key === 'chroma') {
-      k1 = lch.C;
-      k2 = lch.L;
+    if (key === 'luma') {
+      k1 = 2126 * c[0] + 7152 * c[1] + 722 * c[2];
+    } else if (key === 'chroma') {
+      k1 = chroma;
+      k2 = lab.L;
     } else if (key === 'hue') {
-      k1 = lch.C < 0.02 ? -1 : lch.h;
-      k2 = lch.L;
+      k1 = chroma < 0.02 ? -1 : pseudoAngle(lab.a, lab.b);
+      k2 = lab.L;
     }
     return { i, k1, k2 };
   });

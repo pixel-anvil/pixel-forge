@@ -29,6 +29,7 @@ Every op belongs to one group; `pf mcp --tools <groups>` (or `PF_TOOLS`) lists o
 | --- | --- |
 | `core` | documents, frames, animations, layers, cels, import/export, renders, pixel grids, lint, undo |
 | `rig` | bones, poses, presets, templates, parts and overrides |
+| `palette` | palette editing, sorting and colour ramps |
 
 ## Errors
 
@@ -76,6 +77,9 @@ Every failure is `{"code", "message", "details"}`, identical on every transport.
 | [`override.import`](#overrideimport) | rig | io | `override_import` | `pf override import` | Import an edited PNG of a rig frame: the pixels that differ from the render become overrides. |
 | [`override.list`](#overridelist) | rig | read | `override_list` | `pf override list` | List overrides: stale ones (art under them changed) and ones that fail to render, apart. |
 | [`override.resolve`](#overrideresolve) | rig | mutate | `override_resolve` | `pf override resolve` | Resolve overrides: "keep" them, "rebase" onto the current art, or "discard" them. |
+| [`palette.edit`](#paletteedit) | palette | mutate | `palette_edit` | `pf palette edit` | Add, remove, replace or move colours of the active palette. |
+| [`palette.ramp`](#paletteramp) | palette | mutate | `palette_ramp` | `pf palette ramp` | Generate a dark-to-light colour ramp from a base colour; optionally add it. |
+| [`palette.sort`](#palettesort) | palette | mutate | `palette_sort` | `pf palette sort` | Sort the active palette by hue, luminance, luma or chroma. |
 | [`part.paintOverlap`](#partpaintoverlap) | rig | mutate | `part_paint_overlap` | `pf part paint-overlap` | Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite stays the same. |
 | [`part.paintVariant`](#partpaintvariant) | rig | mutate | `part_paint_variant` | `pf part paint-variant` | Paint a text grid into a part variant's own image. |
 | [`part.split`](#partsplit) | rig | mutate | `part_split` | `pf part split` | Split a region (rect, lasso or flood) of a flat layer's cel into a new layer bound to a bone. |
@@ -943,6 +947,123 @@ Output:
 
 ```json
 {"action":"rebase","resolved":[],"skipped":[]}
+```
+
+## palette.edit
+
+Add, remove, replace or move colours of the active palette.
+
+Edits apply in order; indices refer to the palette as earlier edits left it. Indexed documents: pixels and skins follow moves; removing a colour pixels still use is refused. Replace recolours indexed pixels. With no palette, add creates one.
+
+- Group: `palette`
+- Safety: `mutate`
+- MCP tool: `palette_edit`
+- CLI: `pf palette edit`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
+| `edits` | any[] | yes | Edits, in order. |
+| `name` | string | no | Name for a palette this call creates. |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `palette` | string | yes | Palette id. |
+| `colors` | string[] | yes | The colours afterwards, "#rrggbb[aa]". |
+| `remap` | any[] | no | New index of each old index (null: removed); omitted when nothing moved. |
+| `images` | integer | yes | Indexed drawings rewritten. |
+| `warning` | string | no |  |
+
+### Examples
+
+Add a dark outline colour, then recolour entry 2:
+
+```json
+{"doc":"doc_g1ed5q","edits":[{"do":"add","color":"#1a1c2c"},{"do":"replace","index":2,"color":"#b13e53"}]}
+```
+
+## palette.ramp
+
+Generate a dark-to-light colour ramp from a base colour; optionally add it.
+
+OKLab ramp, step 0 darkest. Shadows turn toward blue, lights toward yellow by up to hueShift degrees; the base colour stays exact at baseIndex. Without add: true it only returns the colours. add inserts them (at, default the end) and records a named ramp; an indexed document keeps its pixels.
+
+- Group: `palette`
+- Safety: `mutate`
+- MCP tool: `palette_ramp`
+- CLI: `pf palette ramp`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
+| `base` | string | yes | Base colour. |
+| `steps` | integer >= 1 | yes | Colours in the ramp. |
+| `baseIndex` | integer >= 0 | no | Where the base sits (default: middle). |
+| `hueShift` | number | no | Largest hue turn at the ends, degrees (default 20; 0 = none). |
+| `satShift` | number | no | Chroma change at the ends: shadows x(1-s), lights x(1+s) (default 0). |
+| `lightRange` | array | no | OKLab lightness [darkest, lightest] (default from the base). |
+| `coolHue` | number | no | Shadow hue target, OKLCH degrees (default 265). |
+| `warmHue` | number | no | Light hue target, OKLCH degrees (default 90). |
+| `add` | boolean | no | Add the ramp to the active palette (default false: only return it). |
+| `at` | integer >= 0 | no | With add: insert here (default: the end). |
+| `name` | string | no | With add: ramp name (default "ramp1", "ramp2"...). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `colors` | string[] | yes | The ramp, dark to light, "#rrggbb[aa]". |
+| `indices` | integer[] | no | Palette indices of the new colours (with add). |
+| `ramp` | string | no | Name of the recorded ramp (with add). |
+| `warning` | string | no |  |
+
+### Examples
+
+A 5-colour skin ramp, added to the palette:
+
+```json
+{"doc":"doc_g1ed5q","base":"#c8503c","steps":5,"add":true,"name":"skin"}
+```
+
+## palette.sort
+
+Sort the active palette by hue, luminance, luma or chroma.
+
+Stable: equal keys keep their order. luminance = OKLab lightness, luma = Rec. 709 on 8-bit sRGB, hue puts greys first. Indexed documents: pixels, ramps and skins follow the colours.
+
+- Group: `palette`
+- Safety: `mutate`
+- MCP tool: `palette_sort`
+- CLI: `pf palette sort`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
+| `by` | "hue" \| "luminance" \| "luma" \| "chroma" | yes | Sort key. |
+| `descending` | boolean | no | Largest first (default false). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `order` | integer[] | yes | order[newIndex] = oldIndex. |
+| `images` | integer | yes | Indexed drawings rewritten. |
+| `warning` | string | no |  |
+
+### Examples
+
+Dark to light:
+
+```json
+{"doc":"doc_g1ed5q","by":"luminance"}
 ```
 
 ## part.paintOverlap

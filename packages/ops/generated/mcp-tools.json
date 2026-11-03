@@ -2613,6 +2613,350 @@
     }
   },
   {
+    "name": "palette_edit",
+    "title": "palette.edit",
+    "description": "Add, remove, replace or move colours of the active palette.\n\nEdits apply in order; indices refer to the palette as earlier edits left it. Indexed documents: pixels and skins follow moves; removing a colour pixels still use is refused. Replace recolours indexed pixels. With no palette, add creates one.\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Add a dark outline colour, then recolour entry 2): {\"doc\":\"doc_g1ed5q\",\"edits\":[{\"do\":\"add\",\"color\":\"#1a1c2c\"},{\"do\":\"replace\",\"index\":2,\"color\":\"#b13e53\"}]}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id from doc_open or doc_create."
+        },
+        "edits": {
+          "minItems": 1,
+          "maxItems": 64,
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "do": {
+                    "type": "string",
+                    "const": "add"
+                  },
+                  "color": {
+                    "type": "string",
+                    "pattern": "^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+                  },
+                  "at": {
+                    "description": "Insert here (default: the end).",
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 255
+                  }
+                },
+                "required": ["do", "color"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "do": {
+                    "type": "string",
+                    "const": "remove"
+                  },
+                  "index": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 255
+                  }
+                },
+                "required": ["do", "index"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "do": {
+                    "type": "string",
+                    "const": "replace"
+                  },
+                  "index": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 255
+                  },
+                  "color": {
+                    "type": "string",
+                    "pattern": "^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+                  }
+                },
+                "required": ["do", "index", "color"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "do": {
+                    "type": "string",
+                    "const": "move"
+                  },
+                  "from": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 255
+                  },
+                  "to": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 255,
+                    "description": "Final index."
+                  }
+                },
+                "required": ["do", "from", "to"],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "description": "Edits, in order."
+        },
+        "name": {
+          "description": "Name for a palette this call creates.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": ["doc", "edits"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "palette": {
+          "type": "string",
+          "description": "Palette id."
+        },
+        "colors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The colours afterwards, \"#rrggbb[aa]\"."
+        },
+        "remap": {
+          "description": "New index of each old index (null: removed); omitted when nothing moved.",
+          "type": "array",
+          "items": {
+            "type": ["integer", "null"]
+          }
+        },
+        "images": {
+          "type": "integer",
+          "description": "Indexed drawings rewritten."
+        },
+        "warning": {
+          "type": "string"
+        }
+      },
+      "required": ["palette", "colors", "images"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "palette.edit",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "palette.edit",
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "palette"
+    }
+  },
+  {
+    "name": "palette_ramp",
+    "title": "palette.ramp",
+    "description": "Generate a dark-to-light colour ramp from a base colour; optionally add it.\n\nOKLab ramp, step 0 darkest. Shadows turn toward blue, lights toward yellow by up to hueShift degrees; the base colour stays exact at baseIndex. Without add: true it only returns the colours. add inserts them (at, default the end) and records a named ramp; an indexed document keeps its pixels.\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (A 5-colour skin ramp, added to the palette): {\"doc\":\"doc_g1ed5q\",\"base\":\"#c8503c\",\"steps\":5,\"add\":true,\"name\":\"skin\"}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id from doc_open or doc_create."
+        },
+        "base": {
+          "type": "string",
+          "pattern": "^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$",
+          "description": "Base colour."
+        },
+        "steps": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32,
+          "description": "Colours in the ramp."
+        },
+        "baseIndex": {
+          "description": "Where the base sits (default: middle).",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 31
+        },
+        "hueShift": {
+          "description": "Largest hue turn at the ends, degrees (default 20; 0 = none).",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 180
+        },
+        "satShift": {
+          "description": "Chroma change at the ends: shadows x(1-s), lights x(1+s) (default 0).",
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1
+        },
+        "lightRange": {
+          "description": "OKLab lightness [darkest, lightest] (default from the base).",
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          ],
+          "items": false,
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "coolHue": {
+          "description": "Shadow hue target, OKLCH degrees (default 265).",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 360
+        },
+        "warmHue": {
+          "description": "Light hue target, OKLCH degrees (default 90).",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 360
+        },
+        "add": {
+          "description": "Add the ramp to the active palette (default false: only return it).",
+          "type": "boolean"
+        },
+        "at": {
+          "description": "With add: insert here (default: the end).",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 256
+        },
+        "name": {
+          "description": "With add: ramp name (default \"ramp1\", \"ramp2\"...).",
+          "type": "string",
+          "pattern": "^[a-z0-9_-]{1,48}$"
+        }
+      },
+      "required": ["doc", "base", "steps"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "colors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The ramp, dark to light, \"#rrggbb[aa]\"."
+        },
+        "indices": {
+          "description": "Palette indices of the new colours (with add).",
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "ramp": {
+          "description": "Name of the recorded ramp (with add).",
+          "type": "string"
+        },
+        "warning": {
+          "type": "string"
+        }
+      },
+      "required": ["colors"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "palette.ramp",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "palette.ramp",
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "palette"
+    }
+  },
+  {
+    "name": "palette_sort",
+    "title": "palette.sort",
+    "description": "Sort the active palette by hue, luminance, luma or chroma.\n\nStable: equal keys keep their order. luminance = OKLab lightness, luma = Rec. 709 on 8-bit sRGB, hue puts greys first. Indexed documents: pixels, ramps and skins follow the colours.\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Dark to light): {\"doc\":\"doc_g1ed5q\",\"by\":\"luminance\"}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id from doc_open or doc_create."
+        },
+        "by": {
+          "type": "string",
+          "enum": ["hue", "luminance", "luma", "chroma"],
+          "description": "Sort key."
+        },
+        "descending": {
+          "description": "Largest first (default false).",
+          "type": "boolean"
+        }
+      },
+      "required": ["doc", "by"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "order": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "description": "order[newIndex] = oldIndex."
+        },
+        "images": {
+          "type": "integer",
+          "description": "Indexed drawings rewritten."
+        },
+        "warning": {
+          "type": "string"
+        }
+      },
+      "required": ["order", "images"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "palette.sort",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "palette.sort",
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "palette"
+    }
+  },
+  {
     "name": "part_paint_overlap",
     "title": "part.paintOverlap",
     "description": "Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite stays the same.\n\nFor each joint with gaps (rig_joint_check), paints only pixels the upper part covers at rest, growing the variant image and shifting its pivot to keep the part in place. One flat colour: the variant's most frequent opaque one, or color. At big bends it shows as a patch with no outline, so check the pose. \"uncovered\" lists joints no hidden paint can close; \"skipped\" joints with several parts per bone or a part rotated at rest. Run rig_joint_check next.\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Close the elbow gap of the hero): {\"doc\":\"doc_g1ed5q\",\"bones\":[\"lower_arm_r\"]}",

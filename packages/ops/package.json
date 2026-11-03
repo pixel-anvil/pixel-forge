@@ -19,6 +19,7 @@
     "test": "vitest run --root ../.. --project ops"
   },
   "dependencies": {
+    "@pixel-forge/color": "workspace:*",
     "@pixel-forge/convert": "workspace:*",
     "@pixel-forge/core": "workspace:*",
     "@pixel-forge/io": "workspace:*",

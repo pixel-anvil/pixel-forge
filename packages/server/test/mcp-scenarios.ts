@@ -30,6 +30,27 @@ const run = [
 ];
 const frame0 = { group: 'default' };
 
+/** Gives the document a palette of three colours (the palette tools edit the active one). */
+function withPalette(f: McpFixture, doc: string): Promise<void> {
+  f.doc(doc).store.transact('palette', (tx) => {
+    const id = tx.newId('palette');
+    tx.update((d) => {
+      d.palettes.push({
+        id,
+        name: 'test',
+        colors: [
+          [0, 0, 0, 0],
+          [200, 200, 200, 255],
+          [20, 20, 20, 255],
+        ],
+        ramps: [],
+      });
+      d.activePaletteId = id;
+    });
+  });
+  return Promise.resolve();
+}
+
 export const SCENARIOS: Record<string, Scenario> = {
   anim_create: {
     base: 'hero',
@@ -185,6 +206,30 @@ export const SCENARIOS: Record<string, Scenario> = {
       await f.call('rig_set_pivot', { doc, part: 'lower_arm_r', pivot: { x: 3, y: 1 } });
     },
     args: ({ doc }) => ({ doc, bones: ['lower_arm_r'] }),
+    entry: 'one',
+  },
+  palette_edit: {
+    base: 'hero',
+    setup: (f, doc) => withPalette(f, doc),
+    args: ({ doc }) => ({
+      doc,
+      edits: [
+        { do: 'add', color: '#1a1c2c' },
+        { do: 'replace', index: 1, color: '#b13e53' },
+      ],
+    }),
+    entry: 'one',
+  },
+  palette_ramp: {
+    base: 'hero',
+    setup: (f, doc) => withPalette(f, doc),
+    args: ({ doc }) => ({ doc, base: '#c8503c', steps: 5, add: true, name: 'skin' }),
+    entry: 'one',
+  },
+  palette_sort: {
+    base: 'hero',
+    setup: (f, doc) => withPalette(f, doc),
+    args: ({ doc }) => ({ doc, by: 'luminance' }),
     entry: 'one',
   },
   part_paint_variant: {

@@ -15,6 +15,9 @@ import { frameSetMeta } from './frame-set-meta.js';
 import { ioExport } from './io-export.js';
 import { ioImport } from './io-import.js';
 import { layerUpdate } from './layer-update.js';
+import { paletteEdit } from './palette-edit.js';
+import { paletteRamp } from './palette-ramp.js';
+import { paletteSort } from './palette-sort.js';
 import { overrideImport } from './override-import.js';
 import { overrideList } from './override-list.js';
 import { pxfPack, pxfUnpack } from './pxf-pack.js';
@@ -58,6 +61,9 @@ export { frameSetMeta } from './frame-set-meta.js';
 export { ioExport } from './io-export.js';
 export { CellSpec, MAX_CELLS, expandCells, ioImport } from './io-import.js';
 export { layerUpdate } from './layer-update.js';
+export { paletteEdit } from './palette-edit.js';
+export { paletteRamp } from './palette-ramp.js';
+export { paletteSort } from './palette-sort.js';
 export { overrideImport } from './override-import.js';
 export { overrideList } from './override-list.js';
 export { pxfPack, pxfUnpack } from './pxf-pack.js';
@@ -105,6 +111,9 @@ export const ALL_OPS: readonly AnyOp[] = [
   layerUpdate,
   overrideImport,
   overrideList,
+  paletteEdit,
+  paletteRamp,
+  paletteSort,
   overrideResolve,
   pxfPack,
   pxfUnpack,

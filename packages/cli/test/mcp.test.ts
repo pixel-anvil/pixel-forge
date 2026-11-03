@@ -196,7 +196,10 @@ describe('pf mcp --tools / PF_TOOLS (real process)', () => {
     const fromEnv = await listTools([], { ...nodeEnv, PF_TOOLS: 'core' });
     expect(fromEnv).toEqual(core);
     // the flag wins over the variable
-    const flagWins = await listTools(['--tools', 'core,rig'], { ...nodeEnv, PF_TOOLS: 'core' });
+    const flagWins = await listTools(['--tools', 'core,rig,palette'], {
+      ...nodeEnv,
+      PF_TOOLS: 'core',
+    });
     expect(flagWins).toEqual(all);
   });
 });
