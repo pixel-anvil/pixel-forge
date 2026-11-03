@@ -32,7 +32,7 @@ An op is one file in `packages/ops/src/ops/` that calls `defineOp`. The registry
 **Steps** (the worked example below is `frame.duplicate`; replace names, keep the shape):
 
 1. **Find the function the op wraps** (core frame ops, `rig-edit.ts`, overrides, lint, io) and read its README section. Most ops are a thin wrapper: they pass `ctx.tx` and the refs straight through. Never re-implement document logic in `ops`.
-2. **Choose the group** (TG.1): `group: 'core' | 'rig' | 'palette'` is a required field, so an op without one does not compile and `defineOp` refuses it. `core` holds documents, frames, animations, layers, cels, import/export, renders, pixel grids, lint and undo; `rig` holds bones, poses, presets, templates, parts and overrides; `palette` holds palette editing, sorting and ramps. `pf mcp --tools core` lists only `core`, so put an op where a user of that group needs it. A new group (convert, gif) is added to `TOOL_GROUPS` and `TOOL_GROUP_INFO` in `packages/ops/src/groups.ts` (the compiler forces both). Name the group in the card report. Adding an op to a group adds its bytes to `tools/list` for that group: check `core` stays under 45 KB (`packages/server/test/mcp-groups.test.ts`).
+2. **Choose the group** (TG.1): `group: 'core' | 'rig' | 'palette'` is a required field, so an op without one does not compile and `defineOp` refuses it. `core` holds documents, frames, animations, layers, cels, import/export, renders, pixel grids, lint and undo; `rig` holds bones, poses, presets, templates, parts and overrides; `palette` holds palette editing, sorting, ramps and generation. `pf mcp --tools core` lists only `core`, so put an op where a user of that group needs it. A new group (convert, gif) is added to `TOOL_GROUPS` and `TOOL_GROUP_INFO` in `packages/ops/src/groups.ts` (the compiler forces both). Name the group in the card report. Adding an op to a group adds its bytes to `tools/list` for that group: check `core` stays under 45 KB (`packages/server/test/mcp-groups.test.ts`).
 
    Then **choose the safety class**: `read` (changes nothing), `mutate` (changes one document; undoable), `destructive` (like mutate but drastic, e.g. bake: the registry adds `confirm` and refuses without `"confirm": true`; never declare `confirm` yourself), `io` (files through `ctx.host.fs`; may be `async`).
 3. **Create** `packages/ops/src/ops/<area>-<verb>.ts` (file name in kebab case; op name `area.verbNoun`, e.g. `frame.duplicate`, `rig.setPivot`). Use the template below:
@@ -221,6 +221,9 @@ To add one: write the steps file, add a function to `scripts/scenarios.mjs` that
 
 ## Add a migration
 Filled in by card T4.2.
+
+## Make a palette from an image
+`palette.generate` (`palette_generate`, `pf palette generate`) turns a PNG or a frame into N colours (2 to 256). The algorithm is `generatePalette` in `packages/color/src/palette-gen.ts` (pure, no I/O; read its file comment for the alpha, merging and ordering rules). To change a result on purpose, update the pinned hashes in `packages/color/test/palette-gen.test.ts` and say why in the card report: they guard against a change in output between platforms. Use only `+ - * /`, `Math.sqrt` and integer maths there (no `Math.pow`, `sin`, `cos`, `exp`, `log`); clustering sums run in a fixed order. Typical run: `palette_generate {doc, n: 16, animation, frame: 0}` to look at the colours, then the same call with `add: true, name: "sprite16"` to keep them.
 
 ## Add a palette preset
 Filled in by card T1.3.

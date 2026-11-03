@@ -29,6 +29,20 @@ dropped, a ramp left empty is removed). Callers must apply `remap` to pixel indi
 - Ties go to the lower index. The cache (`createNearestCache`, FIFO eviction, keyed by RGBA uint32)
   is tied to `palette.colors` identity and the weight; treat palettes as immutable.
 
+## Palette generation (FR-PAL-04)
+
+`generatePalette(rgba, { n, method, seed, minAlpha })` makes 2 to 256 colours from straight RGBA bytes:
+`'kmeans'` (k-means++ seeding, then up to 32 Lloyd iterations in OKLab, weighted by pixel count) or
+`'mediancut'` (split the box with the largest squared error at the weighted median of its longest
+axis). The seed (xorshift32, default 1) only affects k-means. Pixels with alpha below `minAlpha`
+(default 1) are ignored, others count by their RGB, and the result is opaque. Every output colour
+occurs in the image: a final centre is replaced by the nearest image colour not taken yet, so the
+`n` colours are distinct. They are sorted darkest first (OKLab lightness, ties by packed RGB). An
+image with `n` colours or fewer returns its own colours (`exact`). The image is never sampled; above
+8,192 distinct colours they are merged into coarser cells first (`binned`), and more than 16,777,216
+pixels are refused. Pure integer maths for counting, ordering and random numbers; OKLab is the
+deterministic one above.
+
 ## Determinism (NFR-02)
 
 Conversions use only IEEE-754 basic operations (`+ - * /`, `Math.sqrt`). The sRGB power curve and

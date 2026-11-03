@@ -2768,6 +2768,176 @@
     }
   },
   {
+    "name": "palette_generate",
+    "title": "palette.generate",
+    "description": "Make a palette of N colours from an image (k-means++ in OKLab or median cut); optionally keep it.\n\nSource: \"file\" (a PNG) or \"animation\"+\"frame\" (rendered; \"layer\" = one cel). Seeded: same image, method and seed give the same colours everywhere. Alpha 0 pixels are ignored, others count by their RGB; colours come out opaque, darkest first, and occur in the image. With n or fewer distinct colours you get those (fewer than n). Without add: true it only returns them; add stores a NEW palette (activate: also make it active; refused for an indexed document, whose pixels would change colour).\n\nFile I/O. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (16 colours from frame 0, kept as a new palette): {\"doc\":\"doc_g1ed5q\",\"n\":16,\"animation\":{\"group\":\"default\"},\"frame\":0,\"add\":true,\"name\":\"sprite16\"}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id from doc_open or doc_create."
+        },
+        "n": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 256,
+          "description": "Colours wanted, 2 to 256."
+        },
+        "file": {
+          "description": "Source: absolute path of a PNG inside the workspace roots.",
+          "type": "string",
+          "minLength": 1
+        },
+        "animation": {
+          "description": "Source: the animation to take a frame from (instead of \"file\").",
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "group": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                },
+                "direction": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                }
+              },
+              "required": ["group"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^anm_[0-9a-z]{1,24}$"
+                }
+              },
+              "required": ["id"],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "frame": {
+          "description": "With animation: the frame (default 0).",
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^frm_[0-9a-z]{1,24}$"
+            }
+          ]
+        },
+        "layer": {
+          "description": "With animation: use this pixel layer's cel instead of the whole rendered frame.",
+          "type": "string",
+          "minLength": 1
+        },
+        "method": {
+          "description": "\"kmeans\" (default): k-means++ in OKLab. \"mediancut\": splits colour boxes; ignores seed.",
+          "type": "string",
+          "enum": ["kmeans", "mediancut"]
+        },
+        "seed": {
+          "description": "Random seed of kmeans (default 1).",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "minAlpha": {
+          "description": "Ignore pixels with alpha below this (default 1: only fully transparent pixels).",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 255
+        },
+        "add": {
+          "description": "Store the colours as a new palette of the document (default false: only return them).",
+          "type": "boolean"
+        },
+        "activate": {
+          "description": "With add: make it the active palette (default: only when the document has none).",
+          "type": "boolean"
+        },
+        "name": {
+          "description": "With add: palette name (default \"generated\").",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": ["doc", "n"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "colors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The palette, darkest first, \"#rrggbb\"."
+        },
+        "method": {
+          "type": "string",
+          "enum": ["kmeans", "mediancut"]
+        },
+        "seed": {
+          "description": "Seed used (kmeans).",
+          "type": "integer"
+        },
+        "source": {
+          "type": "string",
+          "enum": ["file", "frame", "layer"],
+          "description": "Where the pixels came from."
+        },
+        "pixels": {
+          "type": "integer",
+          "description": "Pixels that counted."
+        },
+        "ignored": {
+          "type": "integer",
+          "description": "Pixels ignored (alpha below minAlpha)."
+        },
+        "unique": {
+          "type": "integer",
+          "description": "Distinct colours among the counted pixels."
+        },
+        "palette": {
+          "description": "Id of the stored palette (with add).",
+          "type": "string"
+        },
+        "active": {
+          "description": "True when the stored palette is now active (with add).",
+          "type": "boolean"
+        },
+        "note": {
+          "description": "Set when fewer colours than n were found or colours were merged.",
+          "type": "string"
+        }
+      },
+      "required": ["colors", "method", "source", "pixels", "ignored", "unique"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "palette.generate",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "palette.generate",
+      "pixel-forge/safety": "io",
+      "pixel-forge/group": "palette"
+    }
+  },
+  {
     "name": "palette_ramp",
     "title": "palette.ramp",
     "description": "Generate a dark-to-light colour ramp from a base colour; optionally add it.\n\nOKLab ramp, step 0 darkest. Shadows turn toward blue, lights toward yellow by up to hueShift degrees; the base colour stays exact at baseIndex. Without add: true it only returns the colours. add inserts them (at, default the end) and records a named ramp; an indexed document keeps its pixels.\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (A 5-colour skin ramp, added to the palette): {\"doc\":\"doc_g1ed5q\",\"base\":\"#c8503c\",\"steps\":5,\"add\":true,\"name\":\"skin\"}",

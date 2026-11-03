@@ -13,3 +13,4 @@ export * from './palette-map.js';
 export * from './palette-ops.js';
 export * from './ramp.js';
 export * from './presets/index.js';
+export * from './palette-gen.js';

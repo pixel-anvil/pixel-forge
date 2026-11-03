@@ -220,6 +220,11 @@ export const SCENARIOS: Record<string, Scenario> = {
     }),
     entry: 'one',
   },
+  palette_generate: {
+    base: 'hero',
+    args: ({ doc }) => ({ doc, n: 4, animation: frame0, frame: 0, add: true, name: 'sprite4' }),
+    entry: 'one',
+  },
   palette_ramp: {
     base: 'hero',
     setup: (f, doc) => withPalette(f, doc),

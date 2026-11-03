@@ -78,6 +78,7 @@ Every failure is `{"code", "message", "details"}`, identical on every transport.
 | [`override.list`](#overridelist) | rig | read | `override_list` | `pf override list` | List overrides: stale ones (art under them changed) and ones that fail to render, apart. |
 | [`override.resolve`](#overrideresolve) | rig | mutate | `override_resolve` | `pf override resolve` | Resolve overrides: "keep" them, "rebase" onto the current art, or "discard" them. |
 | [`palette.edit`](#paletteedit) | palette | mutate | `palette_edit` | `pf palette edit` | Add, remove, replace or move colours of the active palette. |
+| [`palette.generate`](#palettegenerate) | palette | io | `palette_generate` | `pf palette generate` | Make a palette of N colours from an image (k-means++ in OKLab or median cut); optionally keep it. |
 | [`palette.ramp`](#paletteramp) | palette | mutate | `palette_ramp` | `pf palette ramp` | Generate a dark-to-light colour ramp from a base colour; optionally add it. |
 | [`palette.remap`](#paletteremap) | palette | mutate | `palette_remap` | `pf palette remap` | Recolour drawings with a mapping table, or swap the palette colours. |
 | [`palette.sort`](#palettesort) | palette | mutate | `palette_sort` | `pf palette sort` | Sort the active palette by hue, luminance, luma or chroma. |
@@ -985,6 +986,57 @@ Add a dark outline colour, then recolour entry 2:
 
 ```json
 {"doc":"doc_g1ed5q","edits":[{"do":"add","color":"#1a1c2c"},{"do":"replace","index":2,"color":"#b13e53"}]}
+```
+
+## palette.generate
+
+Make a palette of N colours from an image (k-means++ in OKLab or median cut); optionally keep it.
+
+Source: "file" (a PNG) or "animation"+"frame" (rendered; "layer" = one cel). Seeded: same image, method and seed give the same colours everywhere. Alpha 0 pixels are ignored, others count by their RGB; colours come out opaque, darkest first, and occur in the image. With n or fewer distinct colours you get those (fewer than n). Without add: true it only returns them; add stores a NEW palette (activate: also make it active; refused for an indexed document, whose pixels would change colour).
+
+- Group: `palette`
+- Safety: `io`
+- MCP tool: `palette_generate`
+- CLI: `pf palette generate`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
+| `n` | integer >= 2 | yes | Colours wanted, 2 to 256. |
+| `file` | string | no | Source: absolute path of a PNG inside the workspace roots. |
+| `animation` | {group, direction} \| {id} | no | Source: the animation to take a frame from (instead of "file"). |
+| `frame` | integer >= 0 \| string | no | With animation: the frame (default 0). |
+| `layer` | string | no | With animation: use this pixel layer's cel instead of the whole rendered frame. |
+| `method` | "kmeans" \| "mediancut" | no | "kmeans" (default): k-means++ in OKLab. "mediancut": splits colour boxes; ignores seed. |
+| `seed` | integer >= 0 | no | Random seed of kmeans (default 1). |
+| `minAlpha` | integer >= 1 | no | Ignore pixels with alpha below this (default 1: only fully transparent pixels). |
+| `add` | boolean | no | Store the colours as a new palette of the document (default false: only return them). |
+| `activate` | boolean | no | With add: make it the active palette (default: only when the document has none). |
+| `name` | string | no | With add: palette name (default "generated"). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `colors` | string[] | yes | The palette, darkest first, "#rrggbb". |
+| `method` | "kmeans" \| "mediancut" | yes |  |
+| `seed` | integer | no | Seed used (kmeans). |
+| `source` | "file" \| "frame" \| "layer" | yes | Where the pixels came from. |
+| `pixels` | integer | yes | Pixels that counted. |
+| `ignored` | integer | yes | Pixels ignored (alpha below minAlpha). |
+| `unique` | integer | yes | Distinct colours among the counted pixels. |
+| `palette` | string | no | Id of the stored palette (with add). |
+| `active` | boolean | no | True when the stored palette is now active (with add). |
+| `note` | string | no | Set when fewer colours than n were found or colours were merged. |
+
+### Examples
+
+16 colours from frame 0, kept as a new palette:
+
+```json
+{"doc":"doc_g1ed5q","n":16,"animation":{"group":"default"},"frame":0,"add":true,"name":"sprite16"}
 ```
 
 ## palette.ramp

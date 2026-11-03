@@ -35,7 +35,11 @@ export interface WiringContext {
 const RESERVED_FLAGS: readonly string[] = ['root', 'home', 'save', 'out'];
 
 /** Non-mutating ops that still change their document, so `--save` applies. */
-const SAVES_AFTER: ReadonlySet<string> = new Set(['io.import', 'override.import']);
+const SAVES_AFTER: ReadonlySet<string> = new Set([
+  'io.import',
+  'override.import',
+  'palette.generate',
+]);
 
 const INTEGER = /^-?\d+$/;
 

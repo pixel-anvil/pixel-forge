@@ -872,6 +872,99 @@
       ]
     },
     {
+      "op": "palette.generate",
+      "command": ["palette", "generate"],
+      "summary": "Make a palette of N colours from an image (k-means++ in OKLab or median cut); optionally keep it.",
+      "safety": "io",
+      "options": [
+        {
+          "name": "doc",
+          "flag": "--doc",
+          "kind": "string",
+          "required": true,
+          "description": "Document id from doc_open or doc_create."
+        },
+        {
+          "name": "n",
+          "flag": "--n",
+          "kind": "integer",
+          "required": true,
+          "description": "Colours wanted, 2 to 256."
+        },
+        {
+          "name": "file",
+          "flag": "--file",
+          "kind": "string",
+          "required": false,
+          "description": "Source: absolute path of a PNG inside the workspace roots."
+        },
+        {
+          "name": "animation",
+          "flag": "--animation",
+          "kind": "json",
+          "required": false,
+          "description": "Source: the animation to take a frame from (instead of \"file\")."
+        },
+        {
+          "name": "frame",
+          "flag": "--frame",
+          "kind": "json",
+          "required": false,
+          "description": "With animation: the frame (default 0)."
+        },
+        {
+          "name": "layer",
+          "flag": "--layer",
+          "kind": "string",
+          "required": false,
+          "description": "With animation: use this pixel layer's cel instead of the whole rendered frame."
+        },
+        {
+          "name": "method",
+          "flag": "--method",
+          "kind": "string",
+          "required": false,
+          "description": "\"kmeans\" (default): k-means++ in OKLab. \"mediancut\": splits colour boxes; ignores seed.",
+          "choices": ["kmeans", "mediancut"]
+        },
+        {
+          "name": "seed",
+          "flag": "--seed",
+          "kind": "integer",
+          "required": false,
+          "description": "Random seed of kmeans (default 1)."
+        },
+        {
+          "name": "minAlpha",
+          "flag": "--min-alpha",
+          "kind": "integer",
+          "required": false,
+          "description": "Ignore pixels with alpha below this (default 1: only fully transparent pixels)."
+        },
+        {
+          "name": "add",
+          "flag": "--add",
+          "kind": "boolean",
+          "required": false,
+          "description": "Store the colours as a new palette of the document (default false: only return them)."
+        },
+        {
+          "name": "activate",
+          "flag": "--activate",
+          "kind": "boolean",
+          "required": false,
+          "description": "With add: make it the active palette (default: only when the document has none)."
+        },
+        {
+          "name": "name",
+          "flag": "--name",
+          "kind": "string",
+          "required": false,
+          "description": "With add: palette name (default \"generated\")."
+        }
+      ]
+    },
+    {
       "op": "palette.ramp",
       "command": ["palette", "ramp"],
       "summary": "Generate a dark-to-light colour ramp from a base colour; optionally add it.",
