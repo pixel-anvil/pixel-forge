@@ -15,6 +15,7 @@ export {
   cc0SheetInputs,
   cellOffset,
   createDocumentFromSpritesheet,
+  createEmptyDocumentStore,
   defaultOrigin,
   importSpritesheetTx,
 } from './sheet-import.js';

@@ -340,14 +340,15 @@ export interface CreateFromSheetOptions {
 }
 
 /**
- * Builds a fresh valid RGBA document whose canvas is the cell size and imports the sheet into it
- * (one undoable transaction "Import spritesheet"). Returns the store and the import summary.
+ * A fresh valid RGBA document store with no layers, animations or palettes, whose canvas is `cell`.
+ * Ids derive from `options.idSeed` (default 1).
+ * @throws IoError `BAD_INPUT` for a cell that is not a pair of integers >= 1.
  */
-export function createDocumentFromSpritesheet(
-  input: SheetImportInput,
+export function createEmptyDocumentStore(
+  cell: readonly [number, number],
   options: CreateFromSheetOptions = {},
-): { store: DocumentStore; result: SheetImportResult } {
-  const [cw, ch] = input.cell;
+): DocumentStore {
+  const [cw, ch] = cell;
   positiveInt(cw, 'cell width');
   positiveInt(ch, 'cell height');
   const gen = createIdGenerator({ seed: options.idSeed ?? 1, next: 0 });
@@ -371,7 +372,18 @@ export function createDocumentFromSpritesheet(
     markerDefs: [],
     eventDefs: [],
   };
-  const store = new DocumentStore(doc);
+  return new DocumentStore(doc);
+}
+
+/**
+ * Builds a fresh valid RGBA document whose canvas is the cell size and imports the sheet into it
+ * (one undoable transaction "Import spritesheet"). Returns the store and the import summary.
+ */
+export function createDocumentFromSpritesheet(
+  input: SheetImportInput,
+  options: CreateFromSheetOptions = {},
+): { store: DocumentStore; result: SheetImportResult } {
+  const store = createEmptyDocumentStore(input.cell, options);
   const tx = store.begin('Import spritesheet');
   try {
     const result = importSpritesheetTx(tx, input);

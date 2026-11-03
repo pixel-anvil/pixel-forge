@@ -18,3 +18,4 @@ third-party game art. Prettier and ESLint ignore this folder.
 - `generated/ninja.pxf`: the second test rig (E7.4), cut from one frame of `cc0/male_base_ninja/ninja_full.png` by `src/ninja.ts` (16 parts; far limbs are darker copies). Presets script: `../scenarios/ninja-presets.steps.json`.
 - `generated/hero.pxf`: the synthetic 48x48 humanoid (T3.9) from `src/hero.ts`. Its Aseprite twin is
   `aseprite/hero_parts.aseprite` (`src/aseprite/hero_parts.lua`).
+- `photo_ball.png`: the W1 source image (card E4.5), a 192x192 rendered "photo-like" red ball on a wall and floor, made by `src/photo-ball.ts` (shaded sphere, highlight, soft shadow, noise). Licence: made for this repository and released under CC0 1.0; it contains no third-party pixels. Used by `../scenarios/W1.steps.json`.

@@ -187,7 +187,19 @@ describe('size of tools/list per group set', () => {
     const f = await mcpFixture({ serverOptions: { tools: ['core'] } });
     const { tools } = await f.client.listTools();
     const bytes = Buffer.byteLength(JSON.stringify({ tools }));
-    // TG.1: measured 43,189 bytes with the two server tools (core alone 42,190; all groups 83,506)
+    // TG.1: measured 43,189 bytes with the two server tools (core alone 42,190; all groups 83,506).
+    // E4.5: 43,497 (the `convert` name in the tool_groups enum adds 308 bytes).
     expect(bytes).toBeLessThan(45_000);
+  });
+
+  it('keeps the convert tools out of core and the convert group under 10 KB (E4.5)', async () => {
+    const core = await mcpFixture({ serverOptions: { tools: ['core'] } });
+    const names = (await core.client.listTools()).tools.map((t) => t.name);
+    expect(names).not.toContain('image_to_sprite');
+    expect(names).not.toContain('convert_apply');
+    const only = await mcpFixture({ serverOptions: { tools: ['convert'] } });
+    const { tools } = await only.client.listTools();
+    expect(tools.map((t) => t.name).slice(0, 2)).toEqual(['convert_apply', 'image_to_sprite']);
+    expect(Buffer.byteLength(JSON.stringify({ tools }))).toBeLessThan(10_000);
   });
 });

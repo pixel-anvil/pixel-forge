@@ -50,7 +50,7 @@ export function createProgram(ctx: WiringContext, registry: OpRegistry = builtin
     .addOption(
       new Option(
         '--tools <groups>',
-        'Tool groups to list, comma-separated: core, rig, or all (default: all; env PF_TOOLS).',
+        'Tool groups to list, comma-separated: core, rig, palette, convert, or all (default: all; env PF_TOOLS).',
       ),
     )
     .action(async (flags: McpFlags) => {

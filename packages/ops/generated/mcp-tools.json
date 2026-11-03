@@ -421,6 +421,523 @@
     }
   },
   {
+    "name": "convert_apply",
+    "title": "convert.apply",
+    "description": "Run a convert recipe on a layer cel: replace it, add a layer, or make a variant contact sheet.\n\nSource: the cel of \"layer\" at animation/frame. Without newLayer the result replaces the cel and must keep the canvas size (so no downscale or outline). With newLayer it is added aligned to the origin. Quantises to the active palette unless palette/colors is given. With variants the document is untouched: a new document holds the sheet, \"tiles\" says where each combination sits.\n\nFile I/O. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Variant grid: two dither modes on layer \"body\"): {\"doc\":\"doc_g1ed5q\",\"animation\":{\"group\":\"idle\"},\"frame\":0,\"layer\":\"body\",\"variants\":{\"dither\":[\"none\",\"bayer4\"]}}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id from doc_open or doc_create."
+        },
+        "animation": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "group": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                },
+                "direction": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                }
+              },
+              "required": ["group"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^anm_[0-9a-z]{1,24}$"
+                }
+              },
+              "required": ["id"],
+              "additionalProperties": false
+            }
+          ],
+          "description": "{\"group\": \"idle\"}"
+        },
+        "frame": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^frm_[0-9a-z]{1,24}$"
+            }
+          ],
+          "description": "Frame: 0-based index or frame id (\"frm_...\")."
+        },
+        "layer": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Layer id (\"lay_...\") or layer name."
+        },
+        "newLayer": {
+          "description": "Add the result as a new layer of this name.",
+          "type": "string",
+          "pattern": "^[a-z0-9_-]{1,48}$"
+        },
+        "recipe": {
+          "description": "Advanced: a ConvertRecipe {version:1, crop?, background?, downscale?, cleanup?, quantize?}. Replaces crop..clean.",
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        },
+        "crop": {
+          "description": "[x, y, w, h], source px.",
+          "minItems": 4,
+          "maxItems": 4,
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "background": {
+          "description": "key: all pixels near the corner colour. flood: only those joined to the border.",
+          "type": "string",
+          "enum": ["none", "key", "flood", "alpha"]
+        },
+        "tolerance": {
+          "description": "key/flood: RGB distance (default 0).",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 442
+        },
+        "grid": {
+          "description": "Upscaled pixel art: \"auto\" finds the cell, or give its px size. Not with width/height.",
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "auto"
+            },
+            {
+              "type": "integer",
+              "minimum": 2
+            }
+          ]
+        },
+        "width": {
+          "description": "Target px; the other side keeps the aspect.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "height": {
+          "description": "Target px, like width.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "method": {
+          "description": "Default kcentroid (mode with grid).",
+          "type": "string",
+          "enum": ["box", "kcentroid", "nearest", "mode"]
+        },
+        "palette": {
+          "description": "Preset id (pico-8, sweetie-16, ...) or [\"#rrggbb\", ...].",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "minItems": 1,
+              "maxItems": 256,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+              }
+            }
+          ]
+        },
+        "colors": {
+          "description": "Make a palette of this many colours.",
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 256
+        },
+        "dither": {
+          "description": "Dither mode (default none).",
+          "type": "string",
+          "enum": ["none", "bayer2", "bayer4", "bayer8", "floyd-steinberg"]
+        },
+        "strength": {
+          "description": "Dither strength (default 1).",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "outline": {
+          "description": "Add a 1 px outline (canvas +2 px).",
+          "type": "boolean"
+        },
+        "clean": {
+          "description": "Alpha cut and lone-pixel removal (default true).",
+          "type": "boolean"
+        },
+        "variants": {
+          "description": "Run every combination (max 64).",
+          "type": "object",
+          "properties": {
+            "method": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["box", "kcentroid", "nearest", "mode"]
+              }
+            },
+            "dither": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["none", "bayer2", "bayer4", "bayer8", "floyd-steinberg"]
+              }
+            },
+            "palette": {
+              "description": "Preset ids.",
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": ["doc", "animation", "frame", "layer"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "layer": {
+          "description": "Layer that holds the result.",
+          "type": "string"
+        },
+        "size": {
+          "description": "Result size, px.",
+          "type": "object",
+          "properties": {
+            "w": {
+              "type": "integer"
+            },
+            "h": {
+              "type": "integer"
+            }
+          },
+          "required": ["w", "h"],
+          "additionalProperties": false
+        },
+        "sheetDoc": {
+          "description": "Variants: the new document with the contact sheet.",
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$"
+        },
+        "tiles": {
+          "description": "Variants: label and position of each result on the sheet.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "x": {
+                "type": "integer"
+              },
+              "y": {
+                "type": "integer"
+              },
+              "w": {
+                "type": "integer"
+              },
+              "h": {
+                "type": "integer"
+              }
+            },
+            "required": ["label", "x", "y", "w", "h"],
+            "additionalProperties": false
+          }
+        },
+        "palette": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "colors": {
+              "type": "integer"
+            }
+          },
+          "required": ["name", "colors"],
+          "additionalProperties": false
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Size after each step, e.g. \"downscale 32x32\"."
+        },
+        "grid": {
+          "description": "Cell size used by the downscale, \"WxH\".",
+          "type": "string"
+        }
+      },
+      "required": ["steps"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "convert.apply",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "convert.apply",
+      "pixel-forge/safety": "io",
+      "pixel-forge/group": "convert"
+    }
+  },
+  {
+    "name": "image_to_sprite",
+    "title": "convert.imageToSprite",
+    "description": "Turn a PNG into pixel art: crop, background, grid or size, palette, dither. Opens a new document.\n\nPNG only. Steps run in order: crop, background, downscale (width/height or grid), clean, quantise (any of palette, colors, dither). Quantising adds the palette to the document. With variants each combination is a layer (the first is visible).\n\nFile I/O. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (32 px tall, PICO-8 colours, Bayer dither): {\"file\":\"/work/photo.png\",\"height\":32,\"background\":\"flood\",\"tolerance\":40,\"palette\":\"pico-8\",\"dither\":\"bayer4\"}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Absolute PNG path inside the workspace roots."
+        },
+        "name": {
+          "description": "Document name (default: the file name).",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "recipe": {
+          "description": "Advanced: a ConvertRecipe {version:1, crop?, background?, downscale?, cleanup?, quantize?}. Replaces crop..clean.",
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        },
+        "crop": {
+          "description": "[x, y, w, h], source px.",
+          "minItems": 4,
+          "maxItems": 4,
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "background": {
+          "description": "key: all pixels near the corner colour. flood: only those joined to the border.",
+          "type": "string",
+          "enum": ["none", "key", "flood", "alpha"]
+        },
+        "tolerance": {
+          "description": "key/flood: RGB distance (default 0).",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 442
+        },
+        "grid": {
+          "description": "Upscaled pixel art: \"auto\" finds the cell, or give its px size. Not with width/height.",
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "auto"
+            },
+            {
+              "type": "integer",
+              "minimum": 2
+            }
+          ]
+        },
+        "width": {
+          "description": "Target px; the other side keeps the aspect.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "height": {
+          "description": "Target px, like width.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "method": {
+          "description": "Default kcentroid (mode with grid).",
+          "type": "string",
+          "enum": ["box", "kcentroid", "nearest", "mode"]
+        },
+        "palette": {
+          "description": "Preset id (pico-8, sweetie-16, ...) or [\"#rrggbb\", ...].",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "minItems": 1,
+              "maxItems": 256,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+              }
+            }
+          ]
+        },
+        "colors": {
+          "description": "Make a palette of this many colours.",
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 256
+        },
+        "dither": {
+          "description": "Dither mode (default none).",
+          "type": "string",
+          "enum": ["none", "bayer2", "bayer4", "bayer8", "floyd-steinberg"]
+        },
+        "strength": {
+          "description": "Dither strength (default 1).",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "outline": {
+          "description": "Add a 1 px outline (canvas +2 px).",
+          "type": "boolean"
+        },
+        "clean": {
+          "description": "Alpha cut and lone-pixel removal (default true).",
+          "type": "boolean"
+        },
+        "variants": {
+          "description": "Run every combination (max 64).",
+          "type": "object",
+          "properties": {
+            "method": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["box", "kcentroid", "nearest", "mode"]
+              }
+            },
+            "dither": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["none", "bayer2", "bayer4", "bayer8", "floyd-steinberg"]
+              }
+            },
+            "palette": {
+              "description": "Preset ids.",
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": ["file"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "The new document."
+        },
+        "canvas": {
+          "type": "object",
+          "properties": {
+            "w": {
+              "type": "integer"
+            },
+            "h": {
+              "type": "integer"
+            }
+          },
+          "required": ["w", "h"],
+          "additionalProperties": false
+        },
+        "layers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Layer names."
+        },
+        "palette": {
+          "description": "Active palette, if quantised.",
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "colors": {
+              "type": "integer"
+            }
+          },
+          "required": ["name", "colors"],
+          "additionalProperties": false
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Size after each step, e.g. \"downscale 32x32\"."
+        },
+        "grid": {
+          "description": "Cell size used by the downscale, \"WxH\".",
+          "type": "string"
+        }
+      },
+      "required": ["doc", "canvas", "layers", "steps"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "convert.imageToSprite",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "convert.imageToSprite",
+      "pixel-forge/safety": "io",
+      "pixel-forge/group": "convert"
+    }
+  },
+  {
     "name": "doc_create",
     "title": "doc.create",
     "description": "Create a new empty RGBA document (no layers, no animations) and open it. Save it with doc_save.\n\nThe origin defaults to the bottom-centre pixel of the canvas (where the feet go). For a sprite sheet make the canvas the size of one cell. Import art with import_file, apply a skeleton with rig_apply_template, add animations with anim_create. Use doc_set_color_mode for indexed colour. Nothing is on disk until doc_save with a path.\n\nFile I/O. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (A 48x48 canvas): {\"name\":\"hero\",\"width\":48,\"height\":48}",

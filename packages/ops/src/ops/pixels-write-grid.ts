@@ -141,7 +141,7 @@ export function checkPalette(doc: ReadonlyDocument, cells: readonly (readonly Ce
 }
 
 /** Sets `layer`'s cel at `frameId` to `imageId` (a canvas-sized image at offset 0,0) in the draft. */
-function setCel(
+export function setCel(
   draft: Document,
   layerId: LayerId,
   frameId: string,

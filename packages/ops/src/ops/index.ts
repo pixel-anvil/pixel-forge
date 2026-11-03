@@ -8,6 +8,8 @@ import { createRegistry } from '../registry.js';
 import { animCreate } from './anim-create.js';
 import { animUpdate } from './anim-update.js';
 import { celLink } from './cel-link.js';
+import { convertApply } from './convert-apply.js';
+import { convertImageToSprite } from './convert-image-to-sprite.js';
 import { docCreate } from './doc-create.js';
 import { docSave } from './doc-save.js';
 import { docSetColorMode } from './doc-set-color-mode.js';
@@ -57,6 +59,8 @@ import { rigFitPose } from './rig-fit-pose.js';
 export { animCreate } from './anim-create.js';
 export { animUpdate } from './anim-update.js';
 export { celLink } from './cel-link.js';
+export { convertApply } from './convert-apply.js';
+export { convertImageToSprite } from './convert-image-to-sprite.js';
 export { docCreate } from './doc-create.js';
 export { docSave } from './doc-save.js';
 export { docSetColorMode } from './doc-set-color-mode.js';
@@ -108,6 +112,8 @@ export const ALL_OPS: readonly AnyOp[] = [
   animCreate,
   animUpdate,
   celLink,
+  convertApply,
+  convertImageToSprite,
   docCreate,
   docSave,
   docSetColorMode,

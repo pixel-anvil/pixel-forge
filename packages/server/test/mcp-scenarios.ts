@@ -76,6 +76,22 @@ export const SCENARIOS: Record<string, Scenario> = {
     args: ({ doc }) => ({ doc, layer: 'body', mode: 'linkIdentical' }),
     entry: 'one',
   },
+  convert_apply: {
+    base: 'flat',
+    args: ({ doc }) => ({
+      doc,
+      animation: { group: 'run' },
+      frame: 0,
+      layer: 'body',
+      palette: 'pico-8',
+    }),
+    entry: 'one',
+  },
+  image_to_sprite: {
+    base: 'none',
+    args: ({ root }) => ({ file: `${root}/idle.png`, height: 16, palette: 'pico-8' }),
+    entry: { none: 'creates a new document; its history starts empty' },
+  },
   doc_create: {
     base: 'none',
     args: () => ({ name: 'fresh', width: 32, height: 32 }),

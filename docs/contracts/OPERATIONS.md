@@ -30,6 +30,7 @@ Every op belongs to one group; `pf mcp --tools <groups>` (or `PF_TOOLS`) lists o
 | `core` | documents, frames, animations, layers, cels, import/export, renders, pixel grids, lint, undo |
 | `rig` | bones, poses, presets, templates, parts and overrides |
 | `palette` | palette editing, sorting, colour ramps, remaps, generation and skins |
+| `convert` | turn a PNG image or a layer into pixel art (crop, grid, downscale, palette, dither) |
 
 ## Errors
 
@@ -59,6 +60,8 @@ Every failure is `{"code", "message", "details"}`, identical on every transport.
 | [`anim.create`](#animcreate) | core | mutate | `anim_create` | `pf anim create` | Create an animation (group + optional direction) with empty frames of equal duration. |
 | [`anim.update`](#animupdate) | core | mutate | `anim_update` | `pf anim update` | Rename an animation (group, direction), set its loop mode, angle quantum or post-passes. |
 | [`cel.link`](#cellink) | core | mutate | `cel_link` | `pf cel link` | Link a layer's cel to another frame's cel (mode "link"), make a linked cel independent ("unlink"), or link all identical cels ("linkIdentical"). |
+| [`convert.apply`](#convertapply) | convert | io | `convert_apply` | `pf convert apply` | Run a convert recipe on a layer cel: replace it, add a layer, or make a variant contact sheet. |
+| [`convert.imageToSprite`](#convertimagetosprite) | convert | io | `image_to_sprite` | `pf convert image-to-sprite` | Turn a PNG into pixel art: crop, background, grid or size, palette, dither. Opens a new document. |
 | [`doc.create`](#doccreate) | core | io | `doc_create` | `pf doc create` | Create a new empty RGBA document (no layers, no animations) and open it. Save it with doc_save. |
 | [`doc.open`](#docopen) | core | io | `doc_open` | `pf doc open` | Open a .pxf file and return its document id, which every other op takes as "doc". |
 | [`doc.redo`](#docredo) | core | mutate | `redo` | `pf doc redo` | Redo the newest undone change of the document (one history entry). |
@@ -227,6 +230,114 @@ Link the hero layer cels that have identical pixels:
 
 ```json
 {"doc":"doc_g1ed5q","layer":"body","mode":"linkIdentical"}
+```
+
+## convert.apply
+
+Run a convert recipe on a layer cel: replace it, add a layer, or make a variant contact sheet.
+
+Source: the cel of "layer" at animation/frame. Without newLayer the result replaces the cel and must keep the canvas size (so no downscale or outline). With newLayer it is added aligned to the origin. Quantises to the active palette unless palette/colors is given. With variants the document is untouched: a new document holds the sheet, "tiles" says where each combination sits.
+
+- Group: `convert`
+- Safety: `io`
+- MCP tool: `convert_apply`
+- CLI: `pf convert apply`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
+| `animation` | {group, direction} \| {id} | yes | {"group": "idle"} |
+| `frame` | integer >= 0 \| string | yes | Frame: 0-based index or frame id ("frm_..."). |
+| `layer` | string | yes | Layer id ("lay_...") or layer name. |
+| `newLayer` | string | no | Add the result as a new layer of this name. |
+| `recipe` | map of any | no | Advanced: a ConvertRecipe {version:1, crop?, background?, downscale?, cleanup?, quantize?}. Replaces crop..clean. |
+| `crop` | integer >= 0[] | no | [x, y, w, h], source px. |
+| `background` | "none" \| "key" \| "flood" \| "alpha" | no | key: all pixels near the corner colour. flood: only those joined to the border. |
+| `tolerance` | integer >= 0 | no | key/flood: RGB distance (default 0). |
+| `grid` | "auto" \| integer >= 2 | no | Upscaled pixel art: "auto" finds the cell, or give its px size. Not with width/height. |
+| `width` | integer >= 1 | no | Target px; the other side keeps the aspect. |
+| `height` | integer >= 1 | no | Target px, like width. |
+| `method` | "box" \| "kcentroid" \| "nearest" \| "mode" | no | Default kcentroid (mode with grid). |
+| `palette` | string \| string[] | no | Preset id (pico-8, sweetie-16, ...) or ["#rrggbb", ...]. |
+| `colors` | integer >= 2 | no | Make a palette of this many colours. |
+| `dither` | "none" \| "bayer2" \| "bayer4" \| "bayer8" \| "floyd-steinberg" | no | Dither mode (default none). |
+| `strength` | number | no | Dither strength (default 1). |
+| `outline` | boolean | no | Add a 1 px outline (canvas +2 px). |
+| `clean` | boolean | no | Alpha cut and lone-pixel removal (default true). |
+| `variants` | {method, dither, palette} | no | Run every combination (max 64). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `layer` | string | no | Layer that holds the result. |
+| `size` | {w, h} | no | Result size, px. |
+| `sheetDoc` | string | no | Variants: the new document with the contact sheet. |
+| `tiles` | {label, x, y, w, h}[] | no | Variants: label and position of each result on the sheet. |
+| `palette` | {name, colors} | no |  |
+| `steps` | string[] | yes | Size after each step, e.g. "downscale 32x32". |
+| `grid` | string | no | Cell size used by the downscale, "WxH". |
+
+### Examples
+
+Variant grid: two dither modes on layer "body":
+
+```json
+{"doc":"doc_g1ed5q","animation":{"group":"idle"},"frame":0,"layer":"body","variants":{"dither":["none","bayer4"]}}
+```
+
+## convert.imageToSprite
+
+Turn a PNG into pixel art: crop, background, grid or size, palette, dither. Opens a new document.
+
+PNG only. Steps run in order: crop, background, downscale (width/height or grid), clean, quantise (any of palette, colors, dither). Quantising adds the palette to the document. With variants each combination is a layer (the first is visible).
+
+- Group: `convert`
+- Safety: `io`
+- MCP tool: `image_to_sprite`
+- CLI: `pf convert image-to-sprite`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `file` | string | yes | Absolute PNG path inside the workspace roots. |
+| `name` | string | no | Document name (default: the file name). |
+| `recipe` | map of any | no | Advanced: a ConvertRecipe {version:1, crop?, background?, downscale?, cleanup?, quantize?}. Replaces crop..clean. |
+| `crop` | integer >= 0[] | no | [x, y, w, h], source px. |
+| `background` | "none" \| "key" \| "flood" \| "alpha" | no | key: all pixels near the corner colour. flood: only those joined to the border. |
+| `tolerance` | integer >= 0 | no | key/flood: RGB distance (default 0). |
+| `grid` | "auto" \| integer >= 2 | no | Upscaled pixel art: "auto" finds the cell, or give its px size. Not with width/height. |
+| `width` | integer >= 1 | no | Target px; the other side keeps the aspect. |
+| `height` | integer >= 1 | no | Target px, like width. |
+| `method` | "box" \| "kcentroid" \| "nearest" \| "mode" | no | Default kcentroid (mode with grid). |
+| `palette` | string \| string[] | no | Preset id (pico-8, sweetie-16, ...) or ["#rrggbb", ...]. |
+| `colors` | integer >= 2 | no | Make a palette of this many colours. |
+| `dither` | "none" \| "bayer2" \| "bayer4" \| "bayer8" \| "floyd-steinberg" | no | Dither mode (default none). |
+| `strength` | number | no | Dither strength (default 1). |
+| `outline` | boolean | no | Add a 1 px outline (canvas +2 px). |
+| `clean` | boolean | no | Alpha cut and lone-pixel removal (default true). |
+| `variants` | {method, dither, palette} | no | Run every combination (max 64). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | The new document. |
+| `canvas` | {w, h} | yes |  |
+| `layers` | string[] | yes | Layer names. |
+| `palette` | {name, colors} | no | Active palette, if quantised. |
+| `steps` | string[] | yes | Size after each step, e.g. "downscale 32x32". |
+| `grid` | string | no | Cell size used by the downscale, "WxH". |
+
+### Examples
+
+32 px tall, PICO-8 colours, Bayer dither:
+
+```json
+{"file":"/work/photo.png","height":32,"background":"flood","tolerance":40,"palette":"pico-8","dither":"bayer4"}
 ```
 
 ## doc.create

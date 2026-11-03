@@ -1,0 +1,78 @@
+{
+  "steps": [
+    {
+      "id": "convert",
+      "op": "convert.imageToSprite",
+      "input": {
+        "file": "photo_ball.png",
+        "name": "ball",
+        "height": 32,
+        "background": "flood",
+        "tolerance": 80,
+        "palette": "pico-8",
+        "variants": { "method": ["box", "kcentroid"], "dither": ["none", "bayer4"] }
+      },
+      "expect": {
+        "output": {
+          "canvas": { "w": 32, "h": 32 },
+          "layers": [
+            "method-box_dither-none",
+            "method-box_dither-bayer4",
+            "method-kcentroid_dither-none",
+            "method-kcentroid_dither-bayer4"
+          ],
+          "palette": { "name": "pico-8", "colors": 16 }
+        }
+      }
+    },
+    {
+      "id": "single",
+      "op": "convert.imageToSprite",
+      "input": {
+        "file": "photo_ball.png",
+        "name": "ball-single",
+        "height": 32,
+        "background": "flood",
+        "tolerance": 80,
+        "palette": "pico-8"
+      },
+      "expect": { "output": { "layers": ["sprite"] } }
+    },
+    {
+      "id": "transparent",
+      "op": "palette.edit",
+      "input": {
+        "doc": "${convert.output.doc}",
+        "edits": [{ "do": "add", "color": "#00000000" }]
+      }
+    },
+    {
+      "id": "lock",
+      "op": "doc.setColorMode",
+      "input": { "doc": "${convert.output.doc}", "colorMode": "indexed", "paletteLocked": true }
+    },
+    {
+      "id": "lint",
+      "op": "lint.run",
+      "input": { "doc": "${convert.output.doc}", "enable": ["palette.offPalette"] },
+      "expect": { "output": { "count": 0 } }
+    },
+    {
+      "id": "export",
+      "op": "io.export",
+      "input": { "doc": "${convert.output.doc}", "path": "w1-ball.png" }
+    },
+    {
+      "id": "jpeg",
+      "op": "convert.imageToSprite",
+      "input": { "file": "photo_ball.jpg", "height": 32 },
+      "expect": { "ok": false, "code": "REFUSED" }
+    },
+    {
+      "id": "webp",
+      "op": "convert.imageToSprite",
+      "input": { "file": "photo_ball.webp", "height": 32 },
+      "expect": { "ok": false, "code": "REFUSED" }
+    }
+  ]
+}

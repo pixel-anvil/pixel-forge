@@ -169,6 +169,287 @@
       ]
     },
     {
+      "op": "convert.apply",
+      "command": ["convert", "apply"],
+      "summary": "Run a convert recipe on a layer cel: replace it, add a layer, or make a variant contact sheet.",
+      "safety": "io",
+      "options": [
+        {
+          "name": "doc",
+          "flag": "--doc",
+          "kind": "string",
+          "required": true,
+          "description": "Document id from doc_open or doc_create."
+        },
+        {
+          "name": "animation",
+          "flag": "--animation",
+          "kind": "json",
+          "required": true,
+          "description": "{\"group\": \"idle\"}"
+        },
+        {
+          "name": "frame",
+          "flag": "--frame",
+          "kind": "json",
+          "required": true,
+          "description": "Frame: 0-based index or frame id (\"frm_...\")."
+        },
+        {
+          "name": "layer",
+          "flag": "--layer",
+          "kind": "string",
+          "required": true,
+          "description": "Layer id (\"lay_...\") or layer name."
+        },
+        {
+          "name": "newLayer",
+          "flag": "--new-layer",
+          "kind": "string",
+          "required": false,
+          "description": "Add the result as a new layer of this name."
+        },
+        {
+          "name": "recipe",
+          "flag": "--recipe",
+          "kind": "json",
+          "required": false,
+          "description": "Advanced: a ConvertRecipe {version:1, crop?, background?, downscale?, cleanup?, quantize?}. Replaces crop..clean."
+        },
+        {
+          "name": "crop",
+          "flag": "--crop",
+          "kind": "json",
+          "required": false,
+          "description": "[x, y, w, h], source px."
+        },
+        {
+          "name": "background",
+          "flag": "--background",
+          "kind": "string",
+          "required": false,
+          "description": "key: all pixels near the corner colour. flood: only those joined to the border.",
+          "choices": ["none", "key", "flood", "alpha"]
+        },
+        {
+          "name": "tolerance",
+          "flag": "--tolerance",
+          "kind": "integer",
+          "required": false,
+          "description": "key/flood: RGB distance (default 0)."
+        },
+        {
+          "name": "grid",
+          "flag": "--grid",
+          "kind": "json",
+          "required": false,
+          "description": "Upscaled pixel art: \"auto\" finds the cell, or give its px size. Not with width/height."
+        },
+        {
+          "name": "width",
+          "flag": "--width",
+          "kind": "integer",
+          "required": false,
+          "description": "Target px; the other side keeps the aspect."
+        },
+        {
+          "name": "height",
+          "flag": "--height",
+          "kind": "integer",
+          "required": false,
+          "description": "Target px, like width."
+        },
+        {
+          "name": "method",
+          "flag": "--method",
+          "kind": "string",
+          "required": false,
+          "description": "Default kcentroid (mode with grid).",
+          "choices": ["box", "kcentroid", "nearest", "mode"]
+        },
+        {
+          "name": "palette",
+          "flag": "--palette",
+          "kind": "json",
+          "required": false,
+          "description": "Preset id (pico-8, sweetie-16, ...) or [\"#rrggbb\", ...]."
+        },
+        {
+          "name": "colors",
+          "flag": "--colors",
+          "kind": "integer",
+          "required": false,
+          "description": "Make a palette of this many colours."
+        },
+        {
+          "name": "dither",
+          "flag": "--dither",
+          "kind": "string",
+          "required": false,
+          "description": "Dither mode (default none).",
+          "choices": ["none", "bayer2", "bayer4", "bayer8", "floyd-steinberg"]
+        },
+        {
+          "name": "strength",
+          "flag": "--strength",
+          "kind": "number",
+          "required": false,
+          "description": "Dither strength (default 1)."
+        },
+        {
+          "name": "outline",
+          "flag": "--outline",
+          "kind": "boolean",
+          "required": false,
+          "description": "Add a 1 px outline (canvas +2 px)."
+        },
+        {
+          "name": "clean",
+          "flag": "--clean",
+          "kind": "boolean",
+          "required": false,
+          "description": "Alpha cut and lone-pixel removal (default true)."
+        },
+        {
+          "name": "variants",
+          "flag": "--variants",
+          "kind": "json",
+          "required": false,
+          "description": "Run every combination (max 64)."
+        }
+      ]
+    },
+    {
+      "op": "convert.imageToSprite",
+      "command": ["convert", "image-to-sprite"],
+      "summary": "Turn a PNG into pixel art: crop, background, grid or size, palette, dither. Opens a new document.",
+      "safety": "io",
+      "options": [
+        {
+          "name": "file",
+          "flag": "--file",
+          "kind": "string",
+          "required": true,
+          "description": "Absolute PNG path inside the workspace roots."
+        },
+        {
+          "name": "name",
+          "flag": "--name",
+          "kind": "string",
+          "required": false,
+          "description": "Document name (default: the file name)."
+        },
+        {
+          "name": "recipe",
+          "flag": "--recipe",
+          "kind": "json",
+          "required": false,
+          "description": "Advanced: a ConvertRecipe {version:1, crop?, background?, downscale?, cleanup?, quantize?}. Replaces crop..clean."
+        },
+        {
+          "name": "crop",
+          "flag": "--crop",
+          "kind": "json",
+          "required": false,
+          "description": "[x, y, w, h], source px."
+        },
+        {
+          "name": "background",
+          "flag": "--background",
+          "kind": "string",
+          "required": false,
+          "description": "key: all pixels near the corner colour. flood: only those joined to the border.",
+          "choices": ["none", "key", "flood", "alpha"]
+        },
+        {
+          "name": "tolerance",
+          "flag": "--tolerance",
+          "kind": "integer",
+          "required": false,
+          "description": "key/flood: RGB distance (default 0)."
+        },
+        {
+          "name": "grid",
+          "flag": "--grid",
+          "kind": "json",
+          "required": false,
+          "description": "Upscaled pixel art: \"auto\" finds the cell, or give its px size. Not with width/height."
+        },
+        {
+          "name": "width",
+          "flag": "--width",
+          "kind": "integer",
+          "required": false,
+          "description": "Target px; the other side keeps the aspect."
+        },
+        {
+          "name": "height",
+          "flag": "--height",
+          "kind": "integer",
+          "required": false,
+          "description": "Target px, like width."
+        },
+        {
+          "name": "method",
+          "flag": "--method",
+          "kind": "string",
+          "required": false,
+          "description": "Default kcentroid (mode with grid).",
+          "choices": ["box", "kcentroid", "nearest", "mode"]
+        },
+        {
+          "name": "palette",
+          "flag": "--palette",
+          "kind": "json",
+          "required": false,
+          "description": "Preset id (pico-8, sweetie-16, ...) or [\"#rrggbb\", ...]."
+        },
+        {
+          "name": "colors",
+          "flag": "--colors",
+          "kind": "integer",
+          "required": false,
+          "description": "Make a palette of this many colours."
+        },
+        {
+          "name": "dither",
+          "flag": "--dither",
+          "kind": "string",
+          "required": false,
+          "description": "Dither mode (default none).",
+          "choices": ["none", "bayer2", "bayer4", "bayer8", "floyd-steinberg"]
+        },
+        {
+          "name": "strength",
+          "flag": "--strength",
+          "kind": "number",
+          "required": false,
+          "description": "Dither strength (default 1)."
+        },
+        {
+          "name": "outline",
+          "flag": "--outline",
+          "kind": "boolean",
+          "required": false,
+          "description": "Add a 1 px outline (canvas +2 px)."
+        },
+        {
+          "name": "clean",
+          "flag": "--clean",
+          "kind": "boolean",
+          "required": false,
+          "description": "Alpha cut and lone-pixel removal (default true)."
+        },
+        {
+          "name": "variants",
+          "flag": "--variants",
+          "kind": "json",
+          "required": false,
+          "description": "Run every combination (max 64)."
+        }
+      ]
+    },
+    {
       "op": "doc.create",
       "command": ["doc", "create"],
       "summary": "Create a new empty RGBA document (no layers, no animations) and open it. Save it with doc_save.",

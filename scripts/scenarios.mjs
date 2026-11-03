@@ -1,4 +1,4 @@
-// `pnpm scenarios`: the W-scenario suite (spec 2: W2, W2b, W3-manual, W4-CLI, W7). Each scenario is a
+// `pnpm scenarios`: the W-scenario suite (spec 2: W1, W2, W2b, W3-manual, W4-CLI, W7). Each scenario is a
 // `scenarios/*.steps.json` run by the real `pf` bundle (`pf check`); this file only prepares inputs in a
 // temp folder, runs `pf`, and checks what a step script cannot (counts, hand-written oracles, the CLI
 // round trip). Nothing is written into the repo. Run after `pnpm build`.
@@ -69,6 +69,86 @@ const pixel = (img, x, y) => [
   ...img.data.subarray((y * img.width + x) * 4, (y * img.width + x) * 4 + 4),
 ];
 const decode = (file) => decodePng(new Uint8Array(readFileSync(file)));
+
+// ---- W1 (E4.5): image to sprite: photo_ball.png -> 32 px, PICO-8, 4 variants; JPEG and WebP are refused ----
+
+/** PICO-8, written out here from the public palette (independent of the preset in packages/color). */
+const PICO8 = [
+  '000000',
+  '1d2b53',
+  '7e2553',
+  '008751',
+  'ab5236',
+  '5f574f',
+  'c2c3c7',
+  'fff1e8',
+  'ff004d',
+  'ffa300',
+  'ffec27',
+  '00e436',
+  '29adff',
+  '83769c',
+  'ff77a8',
+  'ffccaa',
+].map((h) => [0, 2, 4].map((i) => Number.parseInt(h.slice(i, i + 2), 16)).join(','));
+
+function w1() {
+  const dir = workspace('W1', ['W1.steps.json'], {
+    'photo_ball.png': join(FIXTURES, 'photo_ball.png'),
+  });
+  // Magic bytes only: the converter must refuse by format before it decodes anything.
+  writeFileSync(
+    join(dir, 'photo_ball.jpg'),
+    Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, 0, 16, 0x4a, 0x46]),
+  );
+  writeFileSync(
+    join(dir, 'photo_ball.webp'),
+    Uint8Array.from(
+      [...'RIFF']
+        .map((c) => c.charCodeAt(0))
+        .concat(
+          [0, 0, 0, 0],
+          [...'WEBPVP8 '].map((c) => c.charCodeAt(0)),
+        ),
+    ),
+  );
+  const s = check(dir, 'W1.steps.json');
+  // 4 variants = 4 layers (2 methods x dither on/off), every one 32x32 in one document.
+  assert.equal(s.convert.output.layers.length, 4);
+  assert.deepEqual(s.convert.output.canvas, { w: 32, h: 32 });
+  // The first layer is what the export shows: 32x32, every opaque pixel a PICO-8 colour (hand-written
+  // list above), the corners transparent (background removed) and the middle opaque.
+  const img = decode(s.export.output.png);
+  assert.deepEqual([img.width, img.height], [32, 32]);
+  let opaque = 0;
+  for (let i = 0; i < img.data.length; i += 4) {
+    if (img.data[i + 3] === 0) continue;
+    opaque++;
+    assert.equal(img.data[i + 3], 255, 'translucent pixel');
+    assert.ok(
+      PICO8.includes(`${img.data[i]},${img.data[i + 1]},${img.data[i + 2]}`),
+      'off-palette pixel',
+    );
+  }
+  for (const [x, y] of [
+    [0, 0],
+    [31, 0],
+    [0, 31],
+    [31, 31],
+  ])
+    assert.equal(pixel(img, x, y)[3], 0, `corner ${x},${y} is not transparent`);
+  assert.equal(pixel(img, 16, 12)[3], 255, 'the ball is missing');
+  assert.ok(opaque > 300 && opaque < 900, `unexpected sprite area ${opaque}`);
+  // Lint: 0 off-palette pixels (the document is locked to PICO-8 first).
+  assert.equal(s.lint.output.count, 0);
+  // JPEG and WebP: REFUSED, with the "convert to PNG first" advice.
+  for (const id of ['jpeg', 'webp']) {
+    const step = s.report.steps.find((x) => x.id === id);
+    assert.equal(step.error.code, 'REFUSED');
+    assert.match(step.error.message, /convert the image to PNG first/);
+  }
+  return `32x32 sprite from a 192x192 image, 4 variant layers, ${opaque} opaque pixels all PICO-8, lint 0, JPEG and WebP refused`;
+}
 
 // ---- W2: hero_parts.aseprite, humanoid-side template, auto-bind --------------------------------------
 
@@ -412,6 +492,7 @@ if (!existsSync(PF)) {
   process.exit(2);
 }
 const SCENARIOS_RUN = [
+  ['W1', w1],
   ['W2', w2],
   ['W2-joint', w2Joint],
   ['W2b', w2b],

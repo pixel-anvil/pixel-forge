@@ -4,6 +4,8 @@
  * packages (`CoreError`, `IoError`, `AseError`, `RigError`, `JointCheckError`, zod) onto it.
  * @packageDocumentation
  */
+import { ConvertError } from '@pixel-forge/convert';
+import type { ConvertErrorCode } from '@pixel-forge/convert';
 import { CoreError } from '@pixel-forge/core';
 import type { CoreErrorCode } from '@pixel-forge/core';
 import { AseError, IoError } from '@pixel-forge/io';
@@ -146,6 +148,17 @@ const IO_CODES: Readonly<Record<IoErrorCode, OpErrorCode>> = {
   UNSUPPORTED_IMAGE: 'REFUSED',
 };
 
+const CONVERT_CODES: Readonly<Record<ConvertErrorCode, OpErrorCode>> = {
+  BAD_IMAGE: 'BAD_INPUT',
+  BAD_RECT: 'BAD_INPUT',
+  BAD_OPTION: 'BAD_INPUT',
+  BAD_PALETTE: 'BAD_INPUT',
+  BAD_RECIPE: 'BAD_INPUT',
+  NO_GRID: 'REFUSED',
+  BAD_AXES: 'BAD_INPUT',
+  TOO_MANY_VARIANTS: 'REFUSED',
+};
+
 const RIG_CODES: Readonly<Record<RigErrorCode, OpErrorCode>> = {
   UNKNOWN_BONE: 'NOT_FOUND',
   DUPLICATE_BONE: 'BAD_FILE',
@@ -254,6 +267,14 @@ export function toOpError(error: unknown): OpError {
       IO_CODES[error.code],
       error.message,
       { cause: { error: 'IoError', code: error.code } },
+      { cause: error },
+    );
+  }
+  if (error instanceof ConvertError) {
+    return new OpError(
+      CONVERT_CODES[error.code],
+      error.message,
+      { cause: { error: 'ConvertError', code: error.code } },
       { cause: error },
     );
   }

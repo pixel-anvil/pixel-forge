@@ -8,7 +8,7 @@
  */
 
 /** Every group name, in the order the server instructions list them. */
-export const TOOL_GROUPS = ['core', 'rig', 'palette'] as const;
+export const TOOL_GROUPS = ['core', 'rig', 'palette', 'convert'] as const;
 
 /** A tool group name. */
 export type ToolGroup = (typeof TOOL_GROUPS)[number];
@@ -21,6 +21,7 @@ export const TOOL_GROUP_INFO: Readonly<Record<ToolGroup, string>> = {
   core: 'documents, frames, animations, layers, cels, import/export, renders, pixel grids, lint, undo',
   rig: 'bones, poses, presets, templates, parts and overrides',
   palette: 'palette editing, sorting, colour ramps, remaps, generation and skins',
+  convert: 'turn a PNG image or a layer into pixel art (crop, grid, downscale, palette, dither)',
 };
 
 /** True when `value` is a group name. */

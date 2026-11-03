@@ -191,6 +191,10 @@ A recipe is plain JSON. Steps run in this order and each is optional: `crop`, `b
   no text in the pixels; `tiles` gives each tile's position and label so a caller can draw labels.
 - `pnpm convert:sheet` writes a labelled review sheet to `~/pf-work/sheets-e44/` (not committed).
 
+## Ops
+
+`convert.imageToSprite` (MCP `image_to_sprite`) and `convert.apply` (MCP `convert_apply`) in `@pixel-forge/ops`, tool group `convert`, run `runRecipe` and `runVariants` from a PNG file or a layer cel; see the ops README. Scenario W1 (`pnpm scenarios`) converts `fixtures/photo_ball.png` to 32 px with PICO-8 and 4 variants.
+
 ## Errors
 
 `ConvertError` with `code`: `BAD_IMAGE`, `BAD_RECT`, `BAD_OPTION`, `BAD_PALETTE`, `BAD_RECIPE`,
