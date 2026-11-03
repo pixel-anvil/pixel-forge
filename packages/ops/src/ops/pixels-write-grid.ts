@@ -3,21 +3,10 @@
  * edit becomes override(s) through `attributeEdit`; on a flat frame it writes one pixel layer's cel.
  * @packageDocumentation
  */
-import { referencedImages } from '@pixel-forge/core';
-import { IndexedImage, TiledImage } from '@pixel-forge/raster';
 import type { Rgba } from '@pixel-forge/raster';
-import type { Document, LayerId } from '@pixel-forge/schema';
 import { z } from 'zod';
-import {
-  activePalette,
-  celContent,
-  celPixelReader,
-  paletteIndexOf,
-  resolveCelLayer,
-  transparentIndexOf,
-} from '../cel.js';
+import { activePalette, paletteIndexOf } from '../cel.js';
 import { defineOp } from '../define.js';
-import { attributeFrameEdit, sameColor } from '../frame-edit.js';
 import { OpError } from '../errors.js';
 import type { InputIssue } from '../errors.js';
 import {
@@ -29,18 +18,8 @@ import {
   parseHex,
   toHex,
 } from '../grid.js';
-import { frameIndexOf } from '../overlay.js';
-import {
-  AnimRef,
-  DocRef,
-  FrameRef,
-  LayerRef,
-  animationLabel,
-  resolveAnimation,
-  resolveAuthoredAnimation,
-  resolveFrame,
-  walkLayers,
-} from '../refs.js';
+import { editPixels } from '../pixel-edit.js';
+import { AnimRef, DocRef, FrameRef, LayerRef } from '../refs.js';
 import type { ReadonlyDocument } from '../refs.js';
 
 /** What one grid cell asks for. */
@@ -140,29 +119,7 @@ export function checkPalette(doc: ReadonlyDocument, cells: readonly (readonly Ce
   }
 }
 
-/** Sets `layer`'s cel at `frameId` to `imageId` (a canvas-sized image at offset 0,0) in the draft. */
-export function setCel(
-  draft: Document,
-  layerId: LayerId,
-  frameId: string,
-  cel: { imageId: string; opacity: number },
-): void {
-  const visit = (layers: Document['layers']): boolean => {
-    for (const l of layers) {
-      if (l.kind === 'group' && visit(l.children)) return true;
-      if ((l.kind === 'pixel' || l.kind === 'reference') && l.id === layerId) {
-        Reflect.set(l.cels, frameId, {
-          imageId: cel.imageId,
-          offset: { x: 0, y: 0 },
-          opacity: cel.opacity,
-        });
-        return true;
-      }
-    }
-    return false;
-  };
-  visit(draft.layers);
-}
+export { setCel } from '../pixel-edit.js';
 
 /** `pixels.writeGrid` (MCP `pixels_write_grid`, CLI `pf pixels write-grid`). */
 export const pixelsWriteGrid = defineOp({
@@ -244,152 +201,12 @@ export const pixelsWriteGrid = defineOp({
     }
     checkPalette(doc, cells);
 
-    const layers = walkLayers(doc);
-    const hasParts = layers.some((l) => l.layer.kind === 'part');
-    const pixelLayers = layers.filter((l) => l.layer.kind === 'pixel');
-    let layerRef = input.layer;
-    if (layerRef === undefined && !hasParts) {
-      const only = pixelLayers[0];
-      if (only === undefined || pixelLayers.length > 1) {
-        throw new OpError(
-          'REFUSED',
-          pixelLayers.length === 0
-            ? 'the document has no pixel layer to write'
-            : `name the pixel layer to write: ${pixelLayers.map((l) => l.path).join(', ')}`,
-          { reason: 'layer-required', available: pixelLayers.map((l) => l.path) },
-        );
-      }
-      layerRef = only.layer.id;
-    }
-
-    // ---- rig frame: the rendered frame, edited into overrides --------------------------------
-    if (layerRef === undefined) {
-      const { animation } = resolveAnimation(doc, input.animation);
-      const frameIndex = frameIndexOf(ctx, input.animation, input.frame);
-      const before = ctx.renderFrame(input.animation, frameIndex, { exportOnly: true });
-      const edited = before.clone();
-      let changed = 0;
+    return editPixels(ctx, input, (field) => {
       cells.forEach((row, r) => {
         row.forEach((cell, c) => {
-          if (cell === 'keep') return;
-          if (sameColor(before.get(x + c, y + r), cell)) return;
-          edited.set(x + c, y + r, cell);
-          changed += 1;
+          if (cell !== 'keep') field.set(x + c, y + r, cell);
         });
       });
-      const base = {
-        animation: animationLabel(animation),
-        frameIndex,
-        target: 'overrides' as const,
-      };
-      if (changed === 0) return { ...base, changed, overrides: [], newlyStale: [] };
-      const result = attributeFrameEdit(ctx, ctx.tx, input.animation, frameIndex, edited);
-      return { ...base, changed, ...result };
-    }
-
-    // ---- flat frame: one pixel layer's cel ---------------------------------------------------
-    const layer = resolveCelLayer(doc, layerRef);
-    if (layer.kind === 'reference') {
-      throw new OpError('REFUSED', `layer ${layer.name} is a reference layer and is not written`, {
-        reason: 'reference-layer',
-      });
-    }
-    const { animation } = resolveAuthoredAnimation(doc, input.animation);
-    const { index: frameIndex, frame } = resolveFrame(animation, input.frame);
-    const cel = celContent(ctx, layer, frame.id);
-    if (cel?.linked === true) {
-      const link = layer.cels[frame.id];
-      throw new OpError(
-        'REFUSED',
-        `layer ${layer.name} at frame ${String(frameIndex)} shares the cel of frame ${link !== undefined && 'linkTo' in link ? link.linkTo : '?'}; unlink it first, or write that frame (both change)`,
-        { reason: 'linked-cel' },
-      );
-    }
-    const palette = activePalette(doc);
-    const indexed = doc.meta.colorMode === 'indexed';
-    const read = celPixelReader(doc, cel);
-    const base = {
-      animation: animationLabel(animation),
-      frameIndex,
-      target: 'cel' as const,
-      layer: layer.name,
-      overrides: [],
-      newlyStale: [],
-    };
-
-    let changed = 0;
-    for (let r = 0; r < height; r++) {
-      for (let c = 0; c < width; c++) {
-        const cell = cells[r]?.[c];
-        if (cell === undefined || cell === 'keep') continue;
-        if (!sameColor(read(x + c, y + r), cell)) changed += 1;
-      }
-    }
-    if (changed === 0) return { ...base, changed };
-
-    // A new canvas-sized image holding the old cel pixels with the grid written over them.
-    let next: TiledImage | IndexedImage;
-    if (indexed) {
-      if (palette === undefined) {
-        throw new OpError('REFUSED', 'the document is indexed but has no active palette', {
-          reason: 'no-palette',
-        });
-      }
-      const transparent =
-        cel?.image instanceof IndexedImage
-          ? cel.image.transparentIndex
-          : transparentIndexOf(palette);
-      if (transparent === undefined) {
-        throw new OpError('REFUSED', 'the palette has no transparent entry (alpha 0) for "."', {
-          reason: 'no-transparent-index',
-        });
-      }
-      const out = new IndexedImage(cw, ch, transparent);
-      if (cel?.image instanceof IndexedImage) copyInto(cel.image, cel.offset, out);
-      cells.forEach((row, r) => {
-        row.forEach((cell, c) => {
-          if (cell === 'keep') return;
-          const index = cell[3] === 0 ? transparent : paletteIndexOf(palette, cell);
-          if (index !== undefined) out.set(x + c, y + r, index);
-        });
-      });
-      next = out;
-    } else {
-      const out = new TiledImage(cw, ch);
-      if (cel?.image instanceof TiledImage) copyInto(cel.image, cel.offset, out);
-      cells.forEach((row, r) => {
-        row.forEach((cell, c) => {
-          if (cell !== 'keep') out.set(x + c, y + r, cell);
-        });
-      });
-      next = out;
-    }
-    const imageId = ctx.tx.createImage(next);
-    ctx.tx.update((d) => {
-      setCel(d, layer.id, frame.id, { imageId, opacity: cel?.opacity ?? 255 });
     });
-    if (cel !== undefined && !referencedImages(ctx.tx.doc).has(cel.imageId)) {
-      ctx.tx.deleteImage(cel.imageId);
-    }
-    return { ...base, changed };
   },
 });
-
-/** Copies the non-empty pixels of `src` (placed at `offset`) into `dst`. */
-function copyInto(
-  src: TiledImage | IndexedImage,
-  offset: { readonly x: number; readonly y: number },
-  dst: TiledImage | IndexedImage,
-): void {
-  const box = src.bounds();
-  if (box === undefined) return;
-  for (let yy = box.y; yy < box.y + box.h; yy++) {
-    for (let xx = box.x; xx < box.x + box.w; xx++) {
-      if (src instanceof TiledImage && dst instanceof TiledImage) {
-        dst.set(xx + offset.x, yy + offset.y, src.get(xx, yy));
-      } else if (src instanceof IndexedImage && dst instanceof IndexedImage) {
-        dst.set(xx + offset.x, yy + offset.y, src.get(xx, yy));
-      }
-    }
-  }
-}

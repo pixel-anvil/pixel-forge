@@ -30,6 +30,7 @@ Every op belongs to one group; `pf mcp --tools <groups>` (or `PF_TOOLS`) lists o
 | `core` | documents, frames, animations, layers, cels, import/export, renders, pixel grids, lint, undo |
 | `rig` | bones, poses, presets, templates, parts and overrides |
 | `palette` | palette editing, sorting, colour ramps, remaps, generation and skins |
+| `draw` | draw shapes, move, flip or rotate a region, shade along a palette ramp |
 | `convert` | turn a PNG image or a layer into pixel art (crop, grid, downscale, palette, dither) |
 
 ## Errors
@@ -69,6 +70,7 @@ Every failure is `{"code", "message", "details"}`, identical on every transport.
 | [`doc.setColorMode`](#docsetcolormode) | core | mutate | `doc_set_color_mode` | `pf doc set-color-mode` | Switch the document between "rgba" and "indexed" pixels, and/or lock it to its palette. |
 | [`doc.summary`](#docsummary) | core | read | `doc_summary` | `pf doc summary` | Summarise an open document: canvas, palette, layers, rig (bones, parts, views) and animations. |
 | [`doc.undo`](#docundo) | core | mutate | `undo` | `pf doc undo` | Undo the newest applied change of the document (one history entry). |
+| [`draw.shapes`](#drawshapes) | draw | mutate | `draw_shapes` | `pf draw shapes` | Draw lines, rects, ellipses and flood fills (int px) on a frame, in order. |
 | [`frame.add`](#frameadd) | core | mutate | `frame_add` | `pf frame add` | Insert an empty frame before or after a frame; the new frame gets no bone or part keys. |
 | [`frame.delete`](#framedelete) | core | mutate | `frame_delete` | `pf frame delete` | Delete one frame with its bone and part keys, cels and overrides; the last frame cannot go. |
 | [`frame.duplicate`](#frameduplicate) | core | mutate | `frame_duplicate` | `pf frame duplicate` | Duplicate one frame; the copy goes right after it, with linked cels and copied keys. |
@@ -109,6 +111,8 @@ Every failure is `{"code", "message", "details"}`, identical on every transport.
 | [`rig.setPartZ`](#rigsetpartz) | rig | mutate | `rig_set_part_z` | `pf rig set-part-z` | Set a part's default z (draw order) after creation. |
 | [`rig.setPivot`](#rigsetpivot) | rig | mutate | `rig_set_pivot` | `pf rig set-pivot` | Set a part variant's pivot: the pixel (int px, in the variant image) that sits on the bone pivot. |
 | [`rig.setPose`](#rigsetpose) | rig | mutate | `rig_set_pose` | `pf rig set-pose` | Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z, visible) on one frame or many. |
+| [`selection.transform`](#selectiontransform) | draw | mutate | `selection_transform` | `pf selection transform` | Move, flip or rotate (90 deg steps) a rectangular region of a frame, int px. |
+| [`shade.withRamp`](#shadewithramp) | draw | mutate | `shade_with_ramp` | `pf shade with-ramp` | Shift pixels along a palette ramp by N steps (negative: darker), int px. |
 | [`skin.set`](#skinset) | palette | mutate | `skin_set` | `pf skin set` | Create, replace or remove a skin (a recoloured render for team kits). |
 
 ## anim.create
@@ -614,6 +618,48 @@ Output:
 
 ```json
 {"undone":false,"label":null}
+```
+
+## draw.shapes
+
+Draw lines, rects, ellipses and flood fills (int px) on a frame, in order.
+
+Pixels are replaced, not blended. Line ends and box sizes are inclusive. Parts off the canvas are clipped. fill replaces the 4-connected area of the seed colour. On a rig omit layer: the change becomes overrides of this frame (touch-ups only). Locked palettes only take palette colours.
+
+- Group: `draw`
+- Safety: `mutate`
+- MCP tool: `draw_shapes`
+- CLI: `pf draw shapes`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
+| `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
+| `frame` | integer >= 0 \| string | yes | Frame: 0-based index or frame id ("frm_..."). |
+| `layer` | string | no | Pixel layer to draw on. Omit on a rig frame, or when the document has one pixel layer. |
+| `shapes` | {type, x, y, x2, y2, w, h, color, filled}[] | yes | Drawn in order; later ones see earlier ones. |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `animation` | string | yes | "group/direction" of the animation edited. |
+| `frameIndex` | integer | yes | 0-based index of the frame edited. |
+| `target` | "overrides" \| "cel" | yes | "overrides": rig frame, stored as overrides; "cel": a pixel layer cel was rewritten. |
+| `changed` | integer | yes | Pixels whose colour changed (0: nothing was written). |
+| `layer` | string | no | Name of the layer written; only for target "cel". |
+| `overrides` | string[] | yes | Ids of the overrides created; empty unless "overrides". |
+| `newlyStale` | string[] | yes | Ids of earlier overrides this edit made stale. |
+| `shapes` | integer | yes | Shapes drawn. |
+
+### Examples
+
+A 6x4 red box with a blue diagonal:
+
+```json
+{"doc":"doc_g1ed5q","animation":{"group":"default"},"frame":0,"shapes":[{"type":"rect","x":2,"y":2,"w":6,"h":4,"color":"#ff0000","filled":true},{"type":"line","x":2,"y":2,"x2":7,"y2":5,"color":"#0000ff"}]}
 ```
 
 ## frame.add
@@ -2279,6 +2325,98 @@ Switch the forearm to its sleeve variant and drop the torso key:
 
 ```json
 {"doc":"doc_g1ed5q","animation":{"group":"run","direction":"side"},"frame":2,"bones":{"torso":null},"parts":{"lower_arm_r":{"variant":"sleeve"}}}
+```
+
+## selection.transform
+
+Move, flip or rotate (90 deg steps) a rectangular region of a frame, int px.
+
+move: lifts the region, clears it (unless copy) and drops its opaque pixels at +dx,+dy over the rest. flip / rotate: replace the region in place; a 90 or 270 rotation of a non-square region becomes h x w anchored at its top-left corner. Pixels pushed off the canvas are lost (counted in clipped). On a rig omit layer: the change becomes overrides of this frame (touch-ups only).
+
+- Group: `draw`
+- Safety: `mutate`
+- MCP tool: `selection_transform`
+- CLI: `pf selection transform`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
+| `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
+| `frame` | integer >= 0 \| string | yes | Frame: 0-based index or frame id ("frm_..."). |
+| `layer` | string | no | Pixel layer to edit. Omit on a rig frame, or when the document has one pixel layer. |
+| `region` | {x, y, w, h} | no | Pixels to transform (default: the whole canvas). |
+| `action` | "move" \| "flip" \| "rotate" | yes | What to do. |
+| `dx` | integer >= -32768 | no | move: columns to the right (default 0). |
+| `dy` | integer >= -32768 | no | move: rows down (default 0). |
+| `copy` | boolean | no | move: keep the original too (default false). |
+| `axis` | "h" \| "v" | no | flip: "h" mirrors left-right, "v" top-bottom. |
+| `angle` | integer | no | rotate: degrees clockwise, a multiple of 90 (e.g. 90, 180, -90). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `animation` | string | yes | "group/direction" of the animation edited. |
+| `frameIndex` | integer | yes | 0-based index of the frame edited. |
+| `target` | "overrides" \| "cel" | yes | "overrides": rig frame, stored as overrides; "cel": a pixel layer cel was rewritten. |
+| `changed` | integer | yes | Pixels whose colour changed (0: nothing was written). |
+| `layer` | string | no | Name of the layer written; only for target "cel". |
+| `overrides` | string[] | yes | Ids of the overrides created; empty unless "overrides". |
+| `newlyStale` | string[] | yes | Ids of earlier overrides this edit made stale. |
+| `clipped` | integer | yes | Opaque pixels lost off the canvas edge. |
+
+### Examples
+
+Move a 10x10 block 3 px right:
+
+```json
+{"doc":"doc_g1ed5q","animation":{"group":"default"},"frame":0,"region":{"x":20,"y":2,"w":10,"h":10},"action":"move","dx":3}
+```
+
+## shade.withRamp
+
+Shift pixels along a palette ramp by N steps (negative: darker), int px.
+
+A pixel whose colour is on the ramp (palette_ramp with add: true makes one) gets the colour N places along it, stopping at the ends. Other pixels are left alone and counted in skipped. Without "ramp", each pixel uses the first ramp that holds its colour. Ramps run dark to light by convention. On a rig omit layer: the change becomes overrides of this frame (touch-ups only).
+
+- Group: `draw`
+- Safety: `mutate`
+- MCP tool: `shade_with_ramp`
+- CLI: `pf shade with-ramp`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
+| `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
+| `frame` | integer >= 0 \| string | yes | Frame: 0-based index or frame id ("frm_..."). |
+| `layer` | string | no | Pixel layer to shade. Omit on a rig frame, or when the document has one pixel layer. |
+| `region` | {x, y, w, h} | no | Pixels to shade (default: the whole canvas). |
+| `ramp` | string | no | Ramp name in the active palette (default: any). |
+| `steps` | integer >= -64 | yes | Places along the ramp: +1 lighter, -1 darker. |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `animation` | string | yes | "group/direction" of the animation edited. |
+| `frameIndex` | integer | yes | 0-based index of the frame edited. |
+| `target` | "overrides" \| "cel" | yes | "overrides": rig frame, stored as overrides; "cel": a pixel layer cel was rewritten. |
+| `changed` | integer | yes | Pixels whose colour changed (0: nothing was written). |
+| `layer` | string | no | Name of the layer written; only for target "cel". |
+| `overrides` | string[] | yes | Ids of the overrides created; empty unless "overrides". |
+| `newlyStale` | string[] | yes | Ids of earlier overrides this edit made stale. |
+| `skipped` | integer | yes | Opaque pixels in the region that are on no ramp. |
+
+### Examples
+
+Darken the head area by one step of the "skin" ramp:
+
+```json
+{"doc":"doc_g1ed5q","animation":{"group":"default"},"frame":0,"region":{"x":21,"y":2,"w":8,"h":8},"ramp":"skin","steps":-1}
 ```
 
 ## skin.set

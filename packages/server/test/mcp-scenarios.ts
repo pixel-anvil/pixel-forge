@@ -241,6 +241,44 @@ export const SCENARIOS: Record<string, Scenario> = {
     args: ({ doc }) => ({ doc, n: 4, animation: frame0, frame: 0, add: true, name: 'sprite4' }),
     entry: 'one',
   },
+  draw_shapes: {
+    base: 'hero',
+    args: ({ doc }) => ({
+      doc,
+      animation: frame0,
+      frame: 0,
+      shapes: [{ type: 'rect', x: 2, y: 2, w: 6, h: 4, color: '#ff0000', filled: true }],
+    }),
+    entry: 'one',
+  },
+  selection_transform: {
+    base: 'hero',
+    args: ({ doc }) => ({
+      doc,
+      animation: frame0,
+      frame: 0,
+      region: { x: 20, y: 2, w: 10, h: 10 },
+      action: 'move',
+      dx: 3,
+    }),
+    entry: 'one',
+  },
+  shade_with_ramp: {
+    base: 'hero',
+    setup: async (f, doc) => {
+      await withPalette(f, doc);
+      await f.call('palette_ramp', { doc, base: '#e8be96', steps: 3, add: true, name: 'skin' });
+    },
+    args: ({ doc }) => ({
+      doc,
+      animation: frame0,
+      frame: 0,
+      region: { x: 21, y: 2, w: 8, h: 8 },
+      ramp: 'skin',
+      steps: -1,
+    }),
+    entry: 'one',
+  },
   palette_ramp: {
     base: 'hero',
     setup: (f, doc) => withPalette(f, doc),

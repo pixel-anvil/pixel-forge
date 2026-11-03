@@ -1617,6 +1617,200 @@
     }
   },
   {
+    "name": "draw_shapes",
+    "title": "draw.shapes",
+    "description": "Draw lines, rects, ellipses and flood fills (int px) on a frame, in order.\n\nPixels are replaced, not blended. Line ends and box sizes are inclusive. Parts off the canvas are clipped. fill replaces the 4-connected area of the seed colour. On a rig omit layer: the change becomes overrides of this frame (touch-ups only). Locked palettes only take palette colours.\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (A 6x4 red box with a blue diagonal): {\"doc\":\"doc_g1ed5q\",\"animation\":{\"group\":\"default\"},\"frame\":0,\"shapes\":[{\"type\":\"rect\",\"x\":2,\"y\":2,\"w\":6,\"h\":4,\"color\":\"#ff0000\",\"filled\":true},{\"type\":\"line\",\"x\":2,\"y\":2,\"x2\":7,\"y2\":5,\"color\":\"#0000ff\"}]}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id from doc_open or doc_create."
+        },
+        "animation": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "group": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                },
+                "direction": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                }
+              },
+              "required": ["group"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^anm_[0-9a-z]{1,24}$"
+                }
+              },
+              "required": ["id"],
+              "additionalProperties": false
+            }
+          ],
+          "description": "Animation: {\"group\": \"run\", \"direction\": \"side\"} ({\"group\": \"idle\"} for an undirected one) or {\"id\": \"anm_...\"}."
+        },
+        "frame": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^frm_[0-9a-z]{1,24}$"
+            }
+          ],
+          "description": "Frame: 0-based index or frame id (\"frm_...\")."
+        },
+        "layer": {
+          "description": "Pixel layer to draw on. Omit on a rig frame, or when the document has one pixel layer.",
+          "type": "string",
+          "minLength": 1
+        },
+        "shapes": {
+          "minItems": 1,
+          "maxItems": 64,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["line", "rect", "ellipse", "fill"],
+                "description": "Shape kind."
+              },
+              "x": {
+                "type": "integer",
+                "minimum": -32768,
+                "maximum": 32767,
+                "description": "line: start x. rect/ellipse: left. fill: seed x."
+              },
+              "y": {
+                "type": "integer",
+                "minimum": -32768,
+                "maximum": 32767,
+                "description": "line: start y. rect/ellipse: top. fill: seed y."
+              },
+              "x2": {
+                "description": "line: end x (inclusive).",
+                "type": "integer",
+                "minimum": -32768,
+                "maximum": 32767
+              },
+              "y2": {
+                "description": "line: end y (inclusive).",
+                "type": "integer",
+                "minimum": -32768,
+                "maximum": 32767
+              },
+              "w": {
+                "description": "rect/ellipse: width, px.",
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 32768
+              },
+              "h": {
+                "description": "rect/ellipse: height, px.",
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 32768
+              },
+              "color": {
+                "type": "string",
+                "pattern": "^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$",
+                "description": "\"#rrggbb[aa]\"; \"#00000000\" erases."
+              },
+              "filled": {
+                "description": "rect/ellipse: fill the inside too (default: 1 px outline).",
+                "type": "boolean"
+              }
+            },
+            "required": ["type", "x", "y", "color"],
+            "additionalProperties": false
+          },
+          "description": "Drawn in order; later ones see earlier ones."
+        }
+      },
+      "required": ["doc", "animation", "frame", "shapes"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "animation": {
+          "type": "string",
+          "description": "\"group/direction\" of the animation edited."
+        },
+        "frameIndex": {
+          "type": "integer",
+          "description": "0-based index of the frame edited."
+        },
+        "target": {
+          "type": "string",
+          "enum": ["overrides", "cel"],
+          "description": "\"overrides\": rig frame, stored as overrides; \"cel\": a pixel layer cel was rewritten."
+        },
+        "changed": {
+          "type": "integer",
+          "description": "Pixels whose colour changed (0: nothing was written)."
+        },
+        "layer": {
+          "description": "Name of the layer written; only for target \"cel\".",
+          "type": "string"
+        },
+        "overrides": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Ids of the overrides created; empty unless \"overrides\"."
+        },
+        "newlyStale": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Ids of earlier overrides this edit made stale."
+        },
+        "shapes": {
+          "type": "integer",
+          "description": "Shapes drawn."
+        }
+      },
+      "required": [
+        "animation",
+        "frameIndex",
+        "target",
+        "changed",
+        "overrides",
+        "newlyStale",
+        "shapes"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "draw.shapes",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "draw.shapes",
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "draw"
+    }
+  },
+  {
     "name": "frame_add",
     "title": "frame.add",
     "description": "Insert an empty frame before or after a frame; the new frame gets no bone or part keys.\n\nThe new frame has no keys, so bones and parts interpolate into it from the neighbouring keys. Cels and overrides are not copied (frame_duplicate copies them). Set its keys with rig_set_pose.\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Add an empty frame after frame 0 of the hero): {\"doc\":\"doc_g1ed5q\",\"animation\":{\"group\":\"default\"},\"frame\":0}",
@@ -7736,6 +7930,365 @@
       "pixel-forge/op": "rig.setPose",
       "pixel-forge/safety": "mutate",
       "pixel-forge/group": "rig"
+    }
+  },
+  {
+    "name": "selection_transform",
+    "title": "selection.transform",
+    "description": "Move, flip or rotate (90 deg steps) a rectangular region of a frame, int px.\n\nmove: lifts the region, clears it (unless copy) and drops its opaque pixels at +dx,+dy over the rest. flip / rotate: replace the region in place; a 90 or 270 rotation of a non-square region becomes h x w anchored at its top-left corner. Pixels pushed off the canvas are lost (counted in clipped). On a rig omit layer: the change becomes overrides of this frame (touch-ups only).\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Move a 10x10 block 3 px right): {\"doc\":\"doc_g1ed5q\",\"animation\":{\"group\":\"default\"},\"frame\":0,\"region\":{\"x\":20,\"y\":2,\"w\":10,\"h\":10},\"action\":\"move\",\"dx\":3}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id from doc_open or doc_create."
+        },
+        "animation": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "group": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                },
+                "direction": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                }
+              },
+              "required": ["group"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^anm_[0-9a-z]{1,24}$"
+                }
+              },
+              "required": ["id"],
+              "additionalProperties": false
+            }
+          ],
+          "description": "Animation: {\"group\": \"run\", \"direction\": \"side\"} ({\"group\": \"idle\"} for an undirected one) or {\"id\": \"anm_...\"}."
+        },
+        "frame": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^frm_[0-9a-z]{1,24}$"
+            }
+          ],
+          "description": "Frame: 0-based index or frame id (\"frm_...\")."
+        },
+        "layer": {
+          "description": "Pixel layer to edit. Omit on a rig frame, or when the document has one pixel layer.",
+          "type": "string",
+          "minLength": 1
+        },
+        "region": {
+          "description": "Pixels to transform (default: the whole canvas).",
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Left column."
+            },
+            "y": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Top row."
+            },
+            "w": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Width, px."
+            },
+            "h": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Height, px."
+            }
+          },
+          "required": ["x", "y", "w", "h"],
+          "additionalProperties": false
+        },
+        "action": {
+          "type": "string",
+          "enum": ["move", "flip", "rotate"],
+          "description": "What to do."
+        },
+        "dx": {
+          "description": "move: columns to the right (default 0).",
+          "type": "integer",
+          "minimum": -32768,
+          "maximum": 32767
+        },
+        "dy": {
+          "description": "move: rows down (default 0).",
+          "type": "integer",
+          "minimum": -32768,
+          "maximum": 32767
+        },
+        "copy": {
+          "description": "move: keep the original too (default false).",
+          "type": "boolean"
+        },
+        "axis": {
+          "description": "flip: \"h\" mirrors left-right, \"v\" top-bottom.",
+          "type": "string",
+          "enum": ["h", "v"]
+        },
+        "angle": {
+          "description": "rotate: degrees clockwise, a multiple of 90 (e.g. 90, 180, -90).",
+          "type": "integer"
+        }
+      },
+      "required": ["doc", "animation", "frame", "action"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "animation": {
+          "type": "string",
+          "description": "\"group/direction\" of the animation edited."
+        },
+        "frameIndex": {
+          "type": "integer",
+          "description": "0-based index of the frame edited."
+        },
+        "target": {
+          "type": "string",
+          "enum": ["overrides", "cel"],
+          "description": "\"overrides\": rig frame, stored as overrides; \"cel\": a pixel layer cel was rewritten."
+        },
+        "changed": {
+          "type": "integer",
+          "description": "Pixels whose colour changed (0: nothing was written)."
+        },
+        "layer": {
+          "description": "Name of the layer written; only for target \"cel\".",
+          "type": "string"
+        },
+        "overrides": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Ids of the overrides created; empty unless \"overrides\"."
+        },
+        "newlyStale": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Ids of earlier overrides this edit made stale."
+        },
+        "clipped": {
+          "type": "integer",
+          "description": "Opaque pixels lost off the canvas edge."
+        }
+      },
+      "required": [
+        "animation",
+        "frameIndex",
+        "target",
+        "changed",
+        "overrides",
+        "newlyStale",
+        "clipped"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "selection.transform",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "selection.transform",
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "draw"
+    }
+  },
+  {
+    "name": "shade_with_ramp",
+    "title": "shade.withRamp",
+    "description": "Shift pixels along a palette ramp by N steps (negative: darker), int px.\n\nA pixel whose colour is on the ramp (palette_ramp with add: true makes one) gets the colour N places along it, stopping at the ends. Other pixels are left alone and counted in skipped. Without \"ramp\", each pixel uses the first ramp that holds its colour. Ramps run dark to light by convention. On a rig omit layer: the change becomes overrides of this frame (touch-ups only).\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Darken the head area by one step of the \"skin\" ramp): {\"doc\":\"doc_g1ed5q\",\"animation\":{\"group\":\"default\"},\"frame\":0,\"region\":{\"x\":21,\"y\":2,\"w\":8,\"h\":8},\"ramp\":\"skin\",\"steps\":-1}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id from doc_open or doc_create."
+        },
+        "animation": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "group": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                },
+                "direction": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                }
+              },
+              "required": ["group"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^anm_[0-9a-z]{1,24}$"
+                }
+              },
+              "required": ["id"],
+              "additionalProperties": false
+            }
+          ],
+          "description": "Animation: {\"group\": \"run\", \"direction\": \"side\"} ({\"group\": \"idle\"} for an undirected one) or {\"id\": \"anm_...\"}."
+        },
+        "frame": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^frm_[0-9a-z]{1,24}$"
+            }
+          ],
+          "description": "Frame: 0-based index or frame id (\"frm_...\")."
+        },
+        "layer": {
+          "description": "Pixel layer to shade. Omit on a rig frame, or when the document has one pixel layer.",
+          "type": "string",
+          "minLength": 1
+        },
+        "region": {
+          "description": "Pixels to shade (default: the whole canvas).",
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Left column."
+            },
+            "y": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Top row."
+            },
+            "w": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Width, px."
+            },
+            "h": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Height, px."
+            }
+          },
+          "required": ["x", "y", "w", "h"],
+          "additionalProperties": false
+        },
+        "ramp": {
+          "description": "Ramp name in the active palette (default: any).",
+          "type": "string",
+          "minLength": 1
+        },
+        "steps": {
+          "type": "integer",
+          "minimum": -64,
+          "maximum": 64,
+          "description": "Places along the ramp: +1 lighter, -1 darker."
+        }
+      },
+      "required": ["doc", "animation", "frame", "steps"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "animation": {
+          "type": "string",
+          "description": "\"group/direction\" of the animation edited."
+        },
+        "frameIndex": {
+          "type": "integer",
+          "description": "0-based index of the frame edited."
+        },
+        "target": {
+          "type": "string",
+          "enum": ["overrides", "cel"],
+          "description": "\"overrides\": rig frame, stored as overrides; \"cel\": a pixel layer cel was rewritten."
+        },
+        "changed": {
+          "type": "integer",
+          "description": "Pixels whose colour changed (0: nothing was written)."
+        },
+        "layer": {
+          "description": "Name of the layer written; only for target \"cel\".",
+          "type": "string"
+        },
+        "overrides": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Ids of the overrides created; empty unless \"overrides\"."
+        },
+        "newlyStale": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Ids of earlier overrides this edit made stale."
+        },
+        "skipped": {
+          "type": "integer",
+          "description": "Opaque pixels in the region that are on no ramp."
+        }
+      },
+      "required": [
+        "animation",
+        "frameIndex",
+        "target",
+        "changed",
+        "overrides",
+        "newlyStale",
+        "skipped"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "shade.withRamp",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "shade.withRamp",
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "draw"
     }
   },
   {

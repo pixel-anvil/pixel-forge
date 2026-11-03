@@ -196,7 +196,7 @@ describe('pf mcp --tools / PF_TOOLS (real process)', () => {
     const fromEnv = await listTools([], { ...nodeEnv, PF_TOOLS: 'core' });
     expect(fromEnv).toEqual(core);
     // the flag wins over the variable
-    const flagWins = await listTools(['--tools', 'core,rig,palette,convert'], {
+    const flagWins = await listTools(['--tools', 'core,rig,palette,convert,draw'], {
       ...nodeEnv,
       PF_TOOLS: 'core',
     });

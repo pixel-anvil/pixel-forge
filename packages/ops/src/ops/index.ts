@@ -10,6 +10,9 @@ import { animUpdate } from './anim-update.js';
 import { celLink } from './cel-link.js';
 import { convertApply } from './convert-apply.js';
 import { convertImageToSprite } from './convert-image-to-sprite.js';
+import { drawShapes } from './draw-shapes.js';
+import { selectionTransform } from './selection-transform.js';
+import { shadeWithRamp } from './shade-with-ramp.js';
 import { docCreate } from './doc-create.js';
 import { docSave } from './doc-save.js';
 import { docSetColorMode } from './doc-set-color-mode.js';
@@ -63,6 +66,9 @@ export { animUpdate } from './anim-update.js';
 export { celLink } from './cel-link.js';
 export { convertApply } from './convert-apply.js';
 export { convertImageToSprite } from './convert-image-to-sprite.js';
+export { MAX_SHAPES, drawShapes } from './draw-shapes.js';
+export { selectionTransform } from './selection-transform.js';
+export { shadeWithRamp } from './shade-with-ramp.js';
 export { docCreate } from './doc-create.js';
 export { docSave } from './doc-save.js';
 export { docSetColorMode } from './doc-set-color-mode.js';
@@ -119,6 +125,9 @@ export const ALL_OPS: readonly AnyOp[] = [
   convertApply,
   convertImageToSprite,
   docCreate,
+  drawShapes,
+  selectionTransform,
+  shadeWithRamp,
   docSave,
   docSetColorMode,
   frameSetMeta,

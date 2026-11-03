@@ -619,6 +619,49 @@
       ]
     },
     {
+      "op": "draw.shapes",
+      "command": ["draw", "shapes"],
+      "summary": "Draw lines, rects, ellipses and flood fills (int px) on a frame, in order.",
+      "safety": "mutate",
+      "options": [
+        {
+          "name": "doc",
+          "flag": "--doc",
+          "kind": "string",
+          "required": true,
+          "description": "Document id from doc_open or doc_create."
+        },
+        {
+          "name": "animation",
+          "flag": "--animation",
+          "kind": "json",
+          "required": true,
+          "description": "Animation: {\"group\": \"run\", \"direction\": \"side\"} ({\"group\": \"idle\"} for an undirected one) or {\"id\": \"anm_...\"}."
+        },
+        {
+          "name": "frame",
+          "flag": "--frame",
+          "kind": "json",
+          "required": true,
+          "description": "Frame: 0-based index or frame id (\"frm_...\")."
+        },
+        {
+          "name": "layer",
+          "flag": "--layer",
+          "kind": "string",
+          "required": false,
+          "description": "Pixel layer to draw on. Omit on a rig frame, or when the document has one pixel layer."
+        },
+        {
+          "name": "shapes",
+          "flag": "--shapes",
+          "kind": "json",
+          "required": true,
+          "description": "Drawn in order; later ones see earlier ones."
+        }
+      ]
+    },
+    {
       "op": "frame.add",
       "command": ["frame", "add"],
       "summary": "Insert an empty frame before or after a frame; the new frame gets no bone or part keys.",
@@ -2582,6 +2625,150 @@
           "kind": "boolean",
           "required": false,
           "description": "Also key all other bones at rest on posed frames."
+        }
+      ]
+    },
+    {
+      "op": "selection.transform",
+      "command": ["selection", "transform"],
+      "summary": "Move, flip or rotate (90 deg steps) a rectangular region of a frame, int px.",
+      "safety": "mutate",
+      "options": [
+        {
+          "name": "doc",
+          "flag": "--doc",
+          "kind": "string",
+          "required": true,
+          "description": "Document id from doc_open or doc_create."
+        },
+        {
+          "name": "animation",
+          "flag": "--animation",
+          "kind": "json",
+          "required": true,
+          "description": "Animation: {\"group\": \"run\", \"direction\": \"side\"} ({\"group\": \"idle\"} for an undirected one) or {\"id\": \"anm_...\"}."
+        },
+        {
+          "name": "frame",
+          "flag": "--frame",
+          "kind": "json",
+          "required": true,
+          "description": "Frame: 0-based index or frame id (\"frm_...\")."
+        },
+        {
+          "name": "layer",
+          "flag": "--layer",
+          "kind": "string",
+          "required": false,
+          "description": "Pixel layer to edit. Omit on a rig frame, or when the document has one pixel layer."
+        },
+        {
+          "name": "region",
+          "flag": "--region",
+          "kind": "json",
+          "required": false,
+          "description": "Pixels to transform (default: the whole canvas)."
+        },
+        {
+          "name": "action",
+          "flag": "--action",
+          "kind": "string",
+          "required": true,
+          "description": "What to do.",
+          "choices": ["move", "flip", "rotate"]
+        },
+        {
+          "name": "dx",
+          "flag": "--dx",
+          "kind": "integer",
+          "required": false,
+          "description": "move: columns to the right (default 0)."
+        },
+        {
+          "name": "dy",
+          "flag": "--dy",
+          "kind": "integer",
+          "required": false,
+          "description": "move: rows down (default 0)."
+        },
+        {
+          "name": "copy",
+          "flag": "--copy",
+          "kind": "boolean",
+          "required": false,
+          "description": "move: keep the original too (default false)."
+        },
+        {
+          "name": "axis",
+          "flag": "--axis",
+          "kind": "string",
+          "required": false,
+          "description": "flip: \"h\" mirrors left-right, \"v\" top-bottom.",
+          "choices": ["h", "v"]
+        },
+        {
+          "name": "angle",
+          "flag": "--angle",
+          "kind": "integer",
+          "required": false,
+          "description": "rotate: degrees clockwise, a multiple of 90 (e.g. 90, 180, -90)."
+        }
+      ]
+    },
+    {
+      "op": "shade.withRamp",
+      "command": ["shade", "with-ramp"],
+      "summary": "Shift pixels along a palette ramp by N steps (negative: darker), int px.",
+      "safety": "mutate",
+      "options": [
+        {
+          "name": "doc",
+          "flag": "--doc",
+          "kind": "string",
+          "required": true,
+          "description": "Document id from doc_open or doc_create."
+        },
+        {
+          "name": "animation",
+          "flag": "--animation",
+          "kind": "json",
+          "required": true,
+          "description": "Animation: {\"group\": \"run\", \"direction\": \"side\"} ({\"group\": \"idle\"} for an undirected one) or {\"id\": \"anm_...\"}."
+        },
+        {
+          "name": "frame",
+          "flag": "--frame",
+          "kind": "json",
+          "required": true,
+          "description": "Frame: 0-based index or frame id (\"frm_...\")."
+        },
+        {
+          "name": "layer",
+          "flag": "--layer",
+          "kind": "string",
+          "required": false,
+          "description": "Pixel layer to shade. Omit on a rig frame, or when the document has one pixel layer."
+        },
+        {
+          "name": "region",
+          "flag": "--region",
+          "kind": "json",
+          "required": false,
+          "description": "Pixels to shade (default: the whole canvas)."
+        },
+        {
+          "name": "ramp",
+          "flag": "--ramp",
+          "kind": "string",
+          "required": false,
+          "description": "Ramp name in the active palette (default: any)."
+        },
+        {
+          "name": "steps",
+          "flag": "--steps",
+          "kind": "integer",
+          "required": true,
+          "description": "Places along the ramp: +1 lighter, -1 darker."
         }
       ]
     },
