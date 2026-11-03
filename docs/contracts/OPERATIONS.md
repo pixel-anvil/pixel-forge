@@ -63,11 +63,12 @@ Every failure is `{"code", "message", "details"}`, identical on every transport.
 | [`io.export`](#ioexport) | io | `export` | `pf export` | Export animations as a spritesheet PNG plus a JSON description (Aseprite hash format). |
 | [`io.import`](#ioimport) | io | `import_file` | `pf import` | Import a PNG spritesheet (cells per animation) or an .aseprite file into a document. |
 | [`layer.update`](#layerupdate) | mutate | `layer_update` | `pf layer update` | Rename a layer, or set its visible flag, opacity (0..255) or export flag. |
-| [`lint.run`](#lintrun) | read | `lint` | `pf lint` | Check the document and list findings (palette, orphan pixels, joint gaps, stale overrides, empty frames). |
+| [`lint.run`](#lintrun) | read | `lint` | `pf lint` | Lint the document: palette, orphan pixels, joint gaps, stale overrides, empty frames, clipping, holes. |
 | [`override.import`](#overrideimport) | io | `override_import` | `pf override import` | Import an edited PNG of a rig frame: the pixels that differ from the render become overrides. |
 | [`override.list`](#overridelist) | read | `override_list` | `pf override list` | List overrides: stale ones (art under them changed) and ones that fail to render, apart. |
 | [`override.resolve`](#overrideresolve) | mutate | `override_resolve` | `pf override resolve` | Resolve overrides: "keep" them, "rebase" onto the current art, or "discard" them. |
 | [`part.paintOverlap`](#partpaintoverlap) | mutate | `part_paint_overlap` | `pf part paint-overlap` | Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite stays the same. |
+| [`part.paintVariant`](#partpaintvariant) | mutate | `part_paint_variant` | `pf part paint-variant` | Paint a text grid into a part variant's own image. |
 | [`part.split`](#partsplit) | mutate | `part_split` | `pf part split` | Split a region (rect, lasso or flood) of a flat layer's cel into a new layer bound to a bone. |
 | [`pixels.readGrid`](#pixelsreadgrid) | read | `pixels_read_grid` | `pf pixels read-grid` | Read a region (at most 64x64 px) of a frame as a text grid: one symbol per pixel, "." transparent, with a legend of the colours present. |
 | [`pixels.writeGrid`](#pixelswritegrid) | mutate | `pixels_write_grid` | `pf pixels write-grid` | Paint a text grid (at most 32x32 px) at (x, y) of a frame; symbols come from "legend". |
@@ -75,14 +76,19 @@ Every failure is `{"code", "message", "details"}`, identical on every transport.
 | [`pxf.unpack`](#pxfunpack) | io | `pxf_unpack` | `pf unpack` | Expand a .pxf into a .pxfd folder (manifest, document, images, render cache). |
 | [`render.contactSheet`](#rendercontactsheet) | read | `render_contact_sheet` | `pf render contact-sheet` | Render the frames of some or all animations as one labelled PNG contact sheet (long edge at most 1568 px), optionally with bone lines and pivot markers. |
 | [`render.frame`](#renderframe) | read | `render_frame` | `pf render frame` | Render one frame to an upscaled PNG on a checkerboard (long edge at most 1568 px), optionally with bone lines and pivot markers. |
+| [`rig.applyPreset`](#rigapplypreset) | mutate | `rig_apply_preset` | `pf rig apply-preset` | Generate a motion preset (walk, run, jump, idle-breathe, swing) as an animation. |
 | [`rig.applyTemplate`](#rigapplytemplate) | mutate | `rig_apply_template` | `pf rig apply-template` | Apply a humanoid skeleton template: bones matched by name are reused, missing ones are created. |
 | [`rig.bake`](#rigbake) | destructive | `rig_bake` | `pf rig bake` | Bake a rig animation into one plain pixel layer: as a new animation, or in place. |
 | [`rig.bindParts`](#rigbindparts) | mutate | `rig_bind_parts` | `pf rig bind-parts` | Bind pixel layers to bones as parts, by layer name ("part:<bone>[.<part>][@variant][#view]") or by overlap. |
 | [`rig.editBones`](#rigeditbones) | mutate | `rig_edit_bones` | `pf rig edit-bones` | Edit the skeleton: add/delete/reparent/rename bones, set length and rest pose per view, add/rename/delete views. |
+| [`rig.fitPose`](#rigfitpose) | io | `rig_fit_pose` | `pf rig fit-pose` | Find the bone angles (deg, relative to rest) and part variants whose render of one frame matches a target image. |
+| [`rig.fitTemplate`](#rigfittemplate) | mutate | `rig_fit_template` | `pf rig fit-template` | Fit a humanoid template to landmark points: lengths and rest pose in one call. |
 | [`rig.jointCheck`](#rigjointcheck) | read | `rig_joint_check` | `pf rig joint-check` | Sweep each joint of one rig view and report the pixel gaps that open on the outer side of a bend. |
 | [`rig.mirrorAnimation`](#rigmirroranimation) | mutate | `rig_mirror_animation` | `pf rig mirror-animation` | Add a mirror of an animation under a new direction: same group, flipped around the origin. |
+| [`rig.readPose`](#rigreadpose) | read | `rig_read_pose` | `pf rig read-pose` | Read one frame: bone and part values, and which are real keys (the rest are interpolated or held). |
+| [`rig.setPartZ`](#rigsetpartz) | mutate | `rig_set_part_z` | `pf rig set-part-z` | Set a part's default z (draw order) after creation. |
 | [`rig.setPivot`](#rigsetpivot) | mutate | `rig_set_pivot` | `pf rig set-pivot` | Set a part variant's pivot: the pixel (int px, in the variant image) that sits on the bone pivot. |
-| [`rig.setPose`](#rigsetpose) | mutate | `rig_set_pose` | `pf rig set-pose` | Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z, visible) on one frame. |
+| [`rig.setPose`](#rigsetpose) | mutate | `rig_set_pose` | `pf rig set-pose` | Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z, visible) on one frame or many. |
 
 ## anim.create
 
@@ -763,9 +769,9 @@ Hide the hero's head part from the editor render:
 
 ## lint.run
 
-Check the document and list findings (palette, orphan pixels, joint gaps, stale overrides, empty frames).
+Lint the document: palette, orphan pixels, joint gaps, stale overrides, empty frames, clipping, holes.
 
-Findings come sorted by rule, then document order. Narrow the check with enable, disable, animations or skins. Severity "error" means an invariant is broken; fix warnings before a delivery. count 0 is not a visual pass: lint does not see holes inside rotated parts or art cut off at the canvas edge, and rig.jointGap only sweeps around rest. Look at render_contact_sheet too.
+Sorted by rule, then document order. Narrow with enable, disable, animations or skins. "error" means a broken invariant; fix warnings before delivery. pixels.clipped: part art cut off at the canvas edge. rig.partHole: 1 px holes in rotated parts. count 0 is not a visual pass (jointGap checks rest only): see render_contact_sheet.
 
 - Safety: `read`
 - MCP tool: `lint`
@@ -776,8 +782,8 @@ Findings come sorted by rule, then document order. Narrow the check with enable,
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `doc` | string | yes | Document id from doc_open or doc_create. |
-| `enable` | "palette.offPalette" \| "palette.opacityInLocked" \| "pixels.orphan" \| "rig.jointGap" \| "rig.staleOverride" \| "rig.overrideError" \| "rig.rotationResidual" \| "anim.emptyFrame" \| "lint.renderError"[] | no | Run only these rule ids (default: all). |
-| `disable` | "palette.offPalette" \| "palette.opacityInLocked" \| "pixels.orphan" \| "rig.jointGap" \| "rig.staleOverride" \| "rig.overrideError" \| "rig.rotationResidual" \| "anim.emptyFrame" \| "lint.renderError"[] | no | Skip these rule ids (applied after enable). |
+| `enable` | "palette.offPalette" \| "palette.opacityInLocked" \| "pixels.orphan" \| "pixels.clipped" \| "rig.jointGap" \| "rig.partHole" \| "rig.staleOverride" \| "rig.overrideError" \| "rig.rotationResidual" \| "anim.emptyFrame" \| "lint.renderError"[] | no | Run only these rule ids (default: all). |
+| `disable` | "palette.offPalette" \| "palette.opacityInLocked" \| "pixels.orphan" \| "pixels.clipped" \| "rig.jointGap" \| "rig.partHole" \| "rig.staleOverride" \| "rig.overrideError" \| "rig.rotationResidual" \| "anim.emptyFrame" \| "lint.renderError"[] | no | Skip these rule ids (applied after enable). |
 | `animations` | {group, direction} \| {id}[] | no | Animations to render and check (default: all, in document order). |
 | `skins` | string[] | no | Skin names to render for palette checks; "base" is the base colours (default: base, then every skin). |
 | `maxPixels` | integer >= 1 | no | Most pixels listed per finding (default 16). |
@@ -944,6 +950,46 @@ Close the elbow gap of the hero:
 {"doc":"doc_g1ed5q","bones":["lower_arm_r"]}
 ```
 
+## part.paintVariant
+
+Paint a text grid into a part variant's own image.
+
+"." transparent, "_" keeps. x, y are in the variant image; negative grows it (the pivot moves, the part stays put). Fixes a cut for every pose. Frame overrides of the part go stale (override_list). Locked palettes: palette colours only.
+
+- Safety: `mutate`
+- MCP tool: `part_paint_variant`
+- CLI: `pf part paint-variant`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
+| `part` | string | yes | Part: its part-layer name (e.g. "head"), part id ("prt_...") or layer id. |
+| `variant` | string | no | Variant name (e.g. "default", "sleeve") or id ("var_..."). |
+| `x` | integer | no | Column of the grid in the variant image (default 0). |
+| `y` | integer | no | Row (default 0). |
+| `rows` | string[] | yes | Equal-length rows, at most 32x32 symbols. |
+| `legend` | map of string | yes | Symbol (0-9A-Za-z) to "#rrggbb[aa]". |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `part` | string | yes | Part layer name. |
+| `variant` | string | yes | Variant id. |
+| `changed` | integer | yes | Pixels whose colour changed (0: nothing was written). |
+| `grew` | {left, top, right, bottom} | yes | Pixels the image grew on each side. |
+| `pivot` | {x, y} | yes | Pivot afterwards. |
+
+### Examples
+
+Restore two forearm pixels:
+
+```json
+{"doc":"doc_g1ed5q","part":"lower_arm_r","x":0,"y":0,"rows":["11"],"legend":{"1":"#e8be96"}}
+```
+
 ## part.split
 
 Split a region (rect, lasso or flood) of a flat layer's cel into a new layer bound to a bone.
@@ -967,7 +1013,7 @@ Fit the bones first: the part keeps the bone pivot of this moment. partName ("pa
 | `name` | string | no | Name of the new layer while it is not a part (default "split"). |
 | `bind` | boolean | no | Without partName: try to bind by overlap (default true). |
 | `view` | string | no | View for names without #view and for overlap (default: the first). |
-| `zByBone` | map of integer | no | Default z of the new part by part-layer name, then bone name; higher draws on top. Set once, at creation: plan the draw order before the first split. |
+| `zByBone` | map of integer | no | Default z of the new part by part-layer name, then bone name; higher draws on top. Set at creation; change later with rig_set_part_z. |
 
 ### Output
 
@@ -1243,6 +1289,53 @@ Look at frame 0 of the hero with the skeleton drawn:
 {"doc":"doc_g1ed5q","animation":{"group":"default"},"frame":0,"scale":8,"bones":true,"pivots":true}
 ```
 
+## rig.applyPreset
+
+Generate a motion preset (walk, run, jump, idle-breathe, swing) as an animation.
+
+Needs the humanoid template bone names. Writes animation <group>/side (group defaults to the preset); an existing one needs replace:true and loses its bone keys. Output: the resolved params, rootMotion and labels per frame. Next: render_contact_sheet.
+
+- Safety: `mutate`
+- MCP tool: `rig_apply_preset`
+- CLI: `pf rig apply-preset`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
+| `preset` | string | yes | Preset name: idle-breathe, jump, run, swing, walk. |
+| `params` | map of number | no | Numeric parameters (defaults in the output). |
+| `group` | string | no | Default: the preset name. |
+| `direction` | string | no | Default "side". |
+| `frames` | integer | no | Same as params.frames. |
+| `durationMs` | integer >= 1 | no | Frame ms (default 100). |
+| `view` | string | no | Character view; only "side" (default). |
+| `replace` | boolean | no | Overwrite an existing animation. |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `animation` | string | yes | Animation id. |
+| `label` | string | yes | "group/direction". |
+| `created` | boolean | yes | False when an existing animation was replaced. |
+| `frames` | integer | yes | Frame count. |
+| `loop` | string | yes | Loop mode of the preset. |
+| `angleQuantum` | number | yes | Angle quantum the keys use, deg. |
+| `params` | map of number | yes | Every parameter with defaults filled in. |
+| `rootMotion` | {dx, dy}[] | yes | Root motion per frame, px (also stored on the frames). |
+| `labels` | map of string[] | yes | Labels per frame, e.g. foot_l. |
+| `warnings` | string[] | yes |  |
+
+### Examples
+
+A 10-frame walk:
+
+```json
+{"doc":"doc_g1ed5q","preset":"walk","frames":10}
+```
+
 ## rig.applyTemplate
 
 Apply a humanoid skeleton template: bones matched by name are reused, missing ones are created.
@@ -1336,7 +1429,7 @@ By name: a layer called part:upper_arm_r (or just a bone name) becomes that bone
 | `byOverlap` | boolean | no | Bind the rest by overlap with the bones (default true). |
 | `rawNames` | map of string | no | Source names to parse instead of layer names, by layer: {"arm": "part:upper_arm_r@open#side"}. |
 | `view` | string | no | View for names without #view and for overlap (default: the first). |
-| `zByBone` | map of integer | no | Default z of new parts by part-layer name, then bone name; higher draws on top. Set once, at creation. |
+| `zByBone` | map of integer | no | Default z of new parts by part-layer name, then bone name; higher draws on top. Set at creation; change later with rig_set_part_z. |
 
 ### Output
 
@@ -1392,11 +1485,93 @@ Add a tail bone under the torso, then lengthen the head:
 {"doc":"doc_g1ed5q","edits":[{"action":"addBone","name":"tail","parent":"torso","length":8},{"action":"setLength","bone":"head","length":9}]}
 ```
 
+## rig.fitPose
+
+Find the bone angles (deg, relative to rest) and part variants whose render of one frame matches a target image.
+
+Target: file (PNG, canvas size) or targetFrame. Searches each bone angle within ±range and each listed part variant. Pass the output bones and parts to rig_set_pose to apply them. exact: no pixel differs; else error counts them. Seeded: the same input gives the same result. A miss is not proof that no pose fits: raise maxRenders or narrow range.
+
+- Safety: `io`
+- MCP tool: `rig_fit_pose`
+- CLI: `pf rig fit-pose`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
+| `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
+| `frame` | integer >= 0 \| string | yes | The frame to pose; its other keys stay as they are. |
+| `file` | string | no | Target PNG, the size of the canvas. |
+| `targetFrame` | integer >= 0 \| string | no | Target: another frame of this animation, rendered. |
+| `bones` | string[] | no | Bones whose angle to search (names or ids; default: every bone). |
+| `parts` | string[] | no | Parts whose variant to search (default: none). |
+| `range` | number | no | Search each angle within ±range deg of rest (default 180). |
+| `seed` | integer | no | Seed of the random restarts (default 1). |
+| `maxRenders` | integer >= 1 | no | Most renders (default 3000). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `animation` | string | yes | "group/direction" of the animation. |
+| `frameIndex` | integer | yes | The frame that was fitted. |
+| `exact` | boolean | yes | True when the render equals the target (error 0). |
+| `error` | integer | yes | Pixels that differ from the target at the best pose. |
+| `renders` | integer | yes | Renders used. |
+| `bones` | map of {angle} | yes | Best angle by bone name: the bones input of rig_set_pose. |
+| `parts` | map of {variant} | yes | Best variant by part name: the parts input of rig_set_pose. |
+
+### Examples
+
+Pose the right arm like a reference image:
+
+```json
+{"doc":"doc_g1ed5q","animation":{"group":"default"},"frame":0,"file":"/work/reference.png","bones":["upper_arm_r","lower_arm_r"],"parts":["lower_arm_r"]}
+```
+
+## rig.fitTemplate
+
+Fit a humanoid template to landmark points: lengths and rest pose in one call.
+
+Like rig_apply_template, but sizes the bones from landmarks (canvas px, arms hanging): headTop, hips, feet (between the soles; becomes the root), optional handL/handR fingertips. Existing bones are resized. Check with render_frame (bones), then touch up with rig_edit_bones.
+
+- Safety: `mutate`
+- MCP tool: `rig_fit_template`
+- CLI: `pf rig fit-template`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
+| `template` | "humanoid-side" \| "humanoid-front" \| "humanoid-back" | yes | Skeleton template. |
+| `landmarks` | {headTop, hips, feet, handL, handR} | yes | Landmarks in canvas px. |
+| `view` | string | no | Existing view to set the rest pose in (default: new). |
+| `viewName` | string | no | Name of the new view; ignored with view. |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `viewId` | string | yes | Id of the view the fit was written to. |
+| `height` | integer | yes | Character height, px. |
+| `created` | string[] | yes | Names of the bones that were created. |
+| `resized` | string[] | yes | Names of the existing bones whose length changed. |
+
+### Examples
+
+Fit the side template to a 47 px character:
+
+```json
+{"doc":"doc_g1ed5q","template":"humanoid-side","view":"side","landmarks":{"headTop":{"x":31,"y":16},"hips":{"x":30,"y":44},"feet":{"x":30,"y":63},"handR":{"x":38,"y":47}}}
+```
+
 ## rig.jointCheck
 
 Sweep each joint of one rig view and report the pixel gaps that open on the outer side of a bend.
 
-A rig passes when summary.gapCount is 0. The output is long, about 400 characters per joint even when clean: for pass or fail alone use lint with enable ["rig.jointGap"]. The sweep moves one joint at a time, rangeDeg around rest (default 30): a pose beyond that is not checked, so look at the render. Fix gaps with part_paint_overlap, or by moving part pivots, then check again. Checks the view that draws the first direction of the given view (default: the first view).
+A rig passes when summary.gapCount is 0. The full output is about 400 characters per joint: pass compact for a short form, or use lint with enable ["rig.jointGap"] for pass or fail. The sweep moves one joint at a time, rangeDeg around rest (default 30): a pose beyond that is not checked, so look at the render. Fix gaps with part_paint_overlap, or by moving part pivots, then check again. Checks the view that draws the first direction of the given view (default: the first view).
 
 - Safety: `read`
 - MCP tool: `rig_joint_check`
@@ -1411,6 +1586,7 @@ A rig passes when summary.gapCount is 0. The output is long, about 400 character
 | `rangeDeg` | number | no | Sweep range, degrees either side of rest. |
 | `stepDeg` | number | no | Sweep step, degrees. |
 | `radius` | integer >= 1 | no | Window radius of the check, px. |
+| `compact` | boolean | no | Short form: summary and problems, no joints. |
 
 ### Output
 
@@ -1418,7 +1594,8 @@ A rig passes when summary.gapCount is 0. The output is long, about 400 character
 | --- | --- | --- | --- |
 | `view` | string | yes | Name of the checked view. |
 | `params` | {rangeDeg, stepDeg, radius} | yes |  |
-| `joints` | {bone, parent, pivot, gapCount, union, angles}[] | yes | One entry per joint, sorted by bone name. |
+| `joints` | {bone, parent, pivot, gapCount, union, angles}[] | no | One entry per joint, sorted by bone name. Absent when compact. |
+| `problems` | {bone, kind, gapCount, unionCount}[] | no | Joints with gaps. Only when compact. |
 | `summary` | {joints, jointsWithGaps, gapCount, unionCount} | yes |  |
 
 ### Examples
@@ -1463,6 +1640,80 @@ Mirror the hero idle as its left-facing twin:
 {"doc":"doc_g1ed5q","source":{"group":"default"},"direction":"left"}
 ```
 
+## rig.readPose
+
+Read one frame: bone and part values, and which are real keys (the rest are interpolated or held).
+
+Output matches rig_set_pose input: pass bones and parts back unchanged. Lists only bones and channels that some frame keys; the rest are at rest. keyed names the real keys on this frame ("bones.<name>.<channel>"); other values are interpolated or held. Writing a value back makes it a key: this frame renders the same, other frames may change, so write back only what you mean to key. Mirror animations: read the source.
+
+- Safety: `read`
+- MCP tool: `rig_read_pose`
+- CLI: `pf rig read-pose`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
+| `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
+| `frame` | integer >= 0 \| string | yes | Frame: 0-based index or frame id ("frm_..."). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `animation` | string | yes |  |
+| `frameIndex` | integer | yes |  |
+| `frameId` | string | yes |  |
+| `bones` | map of map of any | yes | By bone name: angle, offset {x,y}, flipX, and interp of the stored key. |
+| `parts` | map of map of any | yes | By part name: variant name or "auto", z, visible. |
+| `keyed` | string[] | yes |  |
+
+### Examples
+
+Read frame 2 of the run cycle:
+
+```json
+{"doc":"doc_g1ed5q","animation":{"group":"run","direction":"side"},"frame":2}
+```
+
+## rig.setPartZ
+
+Set a part's default z (draw order) after creation.
+
+Higher z draws on top (default 0). Replaces per-frame z keys of rig_set_pose. A frame z key still wins: keyedFrames counts them. rig_joint_check and part_paint_overlap use the new order.
+
+- Safety: `mutate`
+- MCP tool: `rig_set_part_z`
+- CLI: `pf rig set-part-z`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
+| `part` | string | yes | Part: its part-layer name (e.g. "head"), part id ("prt_...") or layer id. |
+| `z` | integer | yes | New default z. |
+| `view` | string | no | View (default: the first). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `part` | string | yes | Part layer name. |
+| `view` | string | yes | View id. |
+| `z` | integer | yes | Default z afterwards. |
+| `previous` | integer | yes | Default z before. |
+| `keyedFrames` | integer | yes | Frames with their own z key for this part. |
+
+### Examples
+
+Draw the right forearm above the torso:
+
+```json
+{"doc":"doc_g1ed5q","part":"lower_arm_r","z":5}
+```
+
 ## rig.setPivot
 
 Set a part variant's pivot: the pixel (int px, in the variant image) that sits on the bone pivot.
@@ -1502,9 +1753,9 @@ Move the forearm pivot two pixels right:
 
 ## rig.setPose
 
-Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z, visible) on one frame.
+Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z, visible) on one frame or many.
 
-Channels you pass replace the stored ones; null removes the whole key of that bone or part. Angles are from rest and compose down the hierarchy. A channel with no key here interpolates between its keys on other frames (wrapping in a loop), not back to rest: key offsets on every frame or on none. Part keys hold both ways: set z or visible once per animation. Art past the canvas edge is cut off. Next: render_contact_sheet.
+Channels you pass replace the stored ones; null removes a bone or part key. A channel not keyed here interpolates between keys on other frames, not to rest: key offsets on every frame or none. Part keys hold both ways: set z or visible once. "frames" poses many frames as one undo step. targets {bone:{x,y}}: IK sets parent angles (wins over bones, earlier targets); reached: within 1 px. Output keyed: bones keyed; interpolated: keyed elsewhere, not on a posed frame (keyAll keys them at rest). Off-canvas art is cut. Next: render_contact_sheet.
 
 - Safety: `mutate`
 - MCP tool: `rig_set_pose`
@@ -1516,18 +1767,25 @@ Channels you pass replace the stored ones; null removes the whole key of that bo
 | --- | --- | --- | --- |
 | `doc` | string | yes | Document id from doc_open or doc_create. |
 | `animation` | {group, direction} \| {id} | yes | Animation: {"group": "run", "direction": "side"} ({"group": "idle"} for an undirected one) or {"id": "anm_..."}. |
-| `frame` | integer >= 0 \| string | yes | Frame: 0-based index or frame id ("frm_..."). |
+| `frame` | integer >= 0 \| string | no | Frame: 0-based index or frame id ("frm_..."). |
 | `bones` | map of {angle, offset, flipX, interp} \| null | no | Bone keys by bone name (or id); null removes the key. |
 | `parts` | map of {variant, z, visible} \| null | no | Part keys by part-layer name (or part id); null removes the key. |
+| `frames` | {frame, bones, parts, targets}[] | no | Many frames, instead of frame. |
+| `targets` | map of {x, y, chain, bend} | no | End-effector targets by bone name (or id). |
+| `keyAll` | boolean | no | Also key all other bones at rest on posed frames. |
 
 ### Output
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `animation` | string | yes | "group/direction" of the posed animation. |
-| `frameIndex` | integer | yes |  |
+| `frameIndex` | integer | yes | The posed frame; the first with "frames". |
 | `frameId` | string | yes |  |
+| `frames` | integer[] | no | Posed frame indexes, with "frames". |
 | `changed` | string[] | yes | Keys that changed, as "bones.<name>" / "parts.<name>"; empty when nothing did. |
+| `keyed` | string[] | yes | Bones this call keys. |
+| `interpolated` | string[] | yes | Bones that interpolate on a posed frame. |
+| `targets` | {frame, bone, target, effector, reached, keyed}[] | no | One entry per end-effector target. |
 
 ### Examples
 
@@ -1540,7 +1798,13 @@ Raise the right arm on frame 0:
 Output:
 
 ```json
-{"animation":"default","frameIndex":0,"frameId":"frm_j83g8j","changed":["bones.lower_arm_r","bones.upper_arm_r"]}
+{"animation":"default","frameIndex":0,"frameId":"frm_j83g8j","changed":["bones.lower_arm_r","bones.upper_arm_r"],"keyed":["lower_arm_r","upper_arm_r"],"interpolated":[]}
+```
+
+Put the right hand at (24,30) by IK:
+
+```json
+{"doc":"doc_g1ed5q","animation":{"group":"default"},"frame":0,"targets":{"hand_r":{"x":24,"y":30}}}
 ```
 
 Switch the forearm to its sleeve variant and drop the torso key:

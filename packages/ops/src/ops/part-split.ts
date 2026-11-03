@@ -97,7 +97,7 @@ export const partSplit = defineOp({
       .record(z.string(), z.int())
       .optional()
       .describe(
-        'Default z of the new part by part-layer name, then bone name; higher draws on top. Set once, at creation: plan the draw order before the first split.',
+        'Default z of the new part by part-layer name, then bone name; higher draws on top. Set at creation; change later with rig_set_part_z.',
       ),
   }),
   output: z.strictObject({

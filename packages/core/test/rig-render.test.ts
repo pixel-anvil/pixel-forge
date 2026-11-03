@@ -833,3 +833,64 @@ describe('discardOverrides refuses a mirror part override like rebaseOverrides (
     expect(store.doc.animations[1]?.overrides).toHaveLength(1);
   });
 });
+
+describe('variant auto-select through renderFrame (E2.1, FR-RIG-14)', () => {
+  // The arm has two variants: "default" drawn at 0 and "alt" drawn at 90. Frame 0 keys the arm at 0
+  // with an auto variant key; frame 1 moves it to `angle`.
+  const build = (angle: number, variantKey2?: PartKey['variant']): DocumentStore => {
+    const s = makeStore({
+      bones: { [I.boneArm]: { angle: 0 } },
+      parts: { [I.partArm]: { variant: 'auto' } },
+    });
+    s.transact('setup', (tx) => {
+      tx.update((d) => {
+        const arm = d.rig?.parts.find((p) => p.id === I.partArm);
+        if (arm === undefined) throw new Error('fixture');
+        arm.variants = arm.variants.map((v, i) => ({ ...v, drawnAngle: i === 0 ? 0 : 90 }));
+        const f1 = (d.animations[0] as AuthoredAnimation).frames[1];
+        if (f1 === undefined) throw new Error('fixture');
+        f1.boneKeys = { [I.boneArm]: { angle } };
+        if (variantKey2 !== undefined) f1.partKeys = { [I.partArm]: { variant: variantKey2 } };
+      });
+    });
+    return s;
+  };
+  const hash = (s: DocumentStore, frame: number): string =>
+    renderFrame(s, A, frame, { exportOnly: true, rig: createRigRenderer() }).hashRGBA();
+
+  it('holds the previous variant inside the hysteresis, switches beyond it', () => {
+    // 46 degrees: alt is nearer by 2 only, so frame 1 keeps "default", as an explicit key would
+    expect(hash(build(46), 1)).toBe(hash(build(46, I.varArm), 1));
+    expect(hash(build(46), 1)).not.toBe(hash(build(46, I.varArm2), 1));
+    // 50 degrees: alt is nearer by 10, so frame 1 switches to "alt"
+    expect(hash(build(50), 1)).toBe(hash(build(50, I.varArm2), 1));
+    expect(hash(build(50), 1)).not.toBe(hash(build(50, I.varArm), 1));
+  });
+
+  it('renders a frame the same whether or not the frames before it were rendered', () => {
+    const s = build(46);
+    const direct = hash(s, 1); // a fresh renderer, frame 1 first
+    const renderer = createRigRenderer();
+    const frame = (i: number): string =>
+      renderFrame(s, A, i, { exportOnly: true, rig: renderer }).hashRGBA();
+    frame(1);
+    frame(0);
+    expect(frame(1)).toBe(direct);
+  });
+
+  it('the render input key moves with an earlier frame key and carries the renderer version', () => {
+    const key = (s: DocumentStore): string => renderInputKey(s, A, 1, { rig: createRigRenderer() });
+    const k = key(build(46));
+    expect(key(build(46))).toBe(k);
+    // frame 1's variant depends on frame 0's bone key through the hysteresis: it is in the key
+    const earlier = build(46);
+    earlier.transact('f0', (tx) => {
+      tx.update((d) => {
+        const f0 = (d.animations[0] as AuthoredAnimation).frames[0];
+        if (f0 !== undefined) f0.boneKeys = { [I.boneArm]: { angle: 80 } };
+      });
+    });
+    expect(key(earlier)).not.toBe(k);
+    expect(PART_RENDER_KEY.startsWith('rig2.')).toBe(true);
+  });
+});

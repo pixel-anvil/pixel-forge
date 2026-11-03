@@ -9,6 +9,8 @@
  * | `pf://doc/{id}/rig` | the `rig` section of `doc.summary` (bones, parts, views), or `null` |
  * | `pf://doc/{id}/animations/{group}/{direction}` | one animation and its frames |
  * | `pf://doc/{id}/animations/{group}` | the same for an undirected animation (additive) |
+ * | `pf://doc/{id}/animations/{group}/{direction}/pose/{frame}` | the `rig.readPose` output of one frame |
+ * | `pf://doc/{id}/animations/{group}/pose/{frame}` | the same for an undirected animation |
  *
  * Summaries and rigs come from the `doc.summary` op and animations are resolved with the ops
  * `resolveAnimation` helper, so a name means the same thing as in a tool call. An unknown document,
@@ -78,6 +80,19 @@ export const RESOURCE_TEMPLATES: readonly ResourceTemplateEntry[] = [
   {
     uriTemplate: 'pf://doc/{id}/animations/{group}',
     name: 'Undirected animation',
+    description: 'The same for an animation without a direction.',
+    mimeType: JSON_MIME,
+  },
+  {
+    uriTemplate: 'pf://doc/{id}/animations/{group}/{direction}/pose/{frame}',
+    name: 'Frame pose',
+    description:
+      'Bone and part values of one frame (index or frame id) and which are keys (rig_read_pose).',
+    mimeType: JSON_MIME,
+  },
+  {
+    uriTemplate: 'pf://doc/{id}/animations/{group}/pose/{frame}',
+    name: 'Undirected frame pose',
     description: 'The same for an animation without a direction.',
     mimeType: JSON_MIME,
   },
@@ -158,6 +173,13 @@ type Parsed =
       readonly id: string;
       readonly group: string;
       readonly direction: string | undefined;
+    }
+  | {
+      readonly kind: 'pose';
+      readonly id: string;
+      readonly group: string;
+      readonly direction: string | undefined;
+      readonly frame: string;
     };
 
 function parseUri(uri: string): Parsed {
@@ -175,6 +197,12 @@ function parseUri(uri: string): Parsed {
     throw new McpError(ErrorCode.InvalidParams, `malformed resource URI: ${uri}`, { uri });
   }
   const [head, id, view, group, direction] = parts;
+  const poseFrame = (at: number): string | undefined => {
+    const f = parts[at + 1];
+    return parts[at] === 'pose' && parts.length === at + 2 && f !== undefined && f !== ''
+      ? f
+      : undefined;
+  };
   if (parts.length === 1 && head === 'docs') return { kind: 'docs' };
   if (head !== 'doc' || id === undefined || id === '') return bad();
   if (parts.length === 3 && (view === 'summary' || view === 'palette' || view === 'rig')) {
@@ -182,6 +210,12 @@ function parseUri(uri: string): Parsed {
   }
   if (view === 'animations' && group !== undefined && group !== '') {
     if (parts.length === 4) return { kind: 'animation', id, group, direction: undefined };
+    const plain = poseFrame(4);
+    if (plain !== undefined) return { kind: 'pose', id, group, direction: undefined, frame: plain };
+    const directed = poseFrame(5);
+    if (directed !== undefined && direction !== undefined && direction !== '') {
+      return { kind: 'pose', id, group, direction, frame: directed };
+    }
     if (parts.length === 5 && direction !== undefined && direction !== '') {
       return { kind: 'animation', id, group, direction };
     }
@@ -250,6 +284,25 @@ export async function readResource(ctx: ResourceContext, uri: string): Promise<R
           ramps: p.ramps.map((r) => ({ name: r.name, indices: [...r.indices] })),
         })),
       });
+    }
+    case 'pose': {
+      const animation =
+        target.direction === undefined
+          ? { group: target.group }
+          : { group: target.group, direction: target.direction };
+      const frame = /^\d+$/.test(target.frame) ? Number(target.frame) : target.frame;
+      const result = await ctx.registry.call(
+        'rig.readPose',
+        { doc: hosted.id, animation, frame },
+        { host: ctx.host },
+      );
+      if (!result.ok) {
+        if (result.error.code === 'NOT_FOUND') {
+          throw notFound(uri, 'animation or frame not found', result.error.details);
+        }
+        throw new McpError(ErrorCode.InternalError, result.error.message, result.error);
+      }
+      return json(uri, { doc: hosted.id, ...(result.output as object) });
     }
     case 'animation': {
       const doc = hosted.store.doc;

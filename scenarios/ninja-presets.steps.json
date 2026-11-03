@@ -1,0 +1,86 @@
+{
+  "steps": [
+    { "id": "open", "op": "doc.open", "input": { "path": "ninja.pxf" } },
+    {
+      "id": "joints",
+      "op": "rig.jointCheck",
+      "input": { "doc": "${open.output.doc}", "compact": true },
+      "expect": { "output": { "summary": { "gapCount": 0 } } }
+    },
+    {
+      "id": "walk",
+      "op": "rig.applyPreset",
+      "input": { "doc": "${open.output.doc}", "preset": "walk" },
+      "expect": { "output": { "label": "walk/side" } }
+    },
+    {
+      "id": "run",
+      "op": "rig.applyPreset",
+      "input": { "doc": "${open.output.doc}", "preset": "run" },
+      "expect": { "output": { "label": "run/side" } }
+    },
+    {
+      "id": "jump",
+      "op": "rig.applyPreset",
+      "input": { "doc": "${open.output.doc}", "preset": "jump" },
+      "expect": { "output": { "label": "jump/side" } }
+    },
+    {
+      "id": "idle",
+      "op": "rig.applyPreset",
+      "input": { "doc": "${open.output.doc}", "preset": "idle-breathe" },
+      "expect": { "output": { "label": "idle-breathe/side" } }
+    },
+    {
+      "id": "swing",
+      "op": "rig.applyPreset",
+      "input": { "doc": "${open.output.doc}", "preset": "swing" },
+      "expect": { "output": { "label": "swing/side" } }
+    },
+    {
+      "id": "sheet_walk",
+      "op": "render.contactSheet",
+      "input": {
+        "doc": "${open.output.doc}",
+        "animations": [{ "group": "walk", "direction": "side" }],
+        "scale": 4
+      }
+    },
+    {
+      "id": "sheet_run",
+      "op": "render.contactSheet",
+      "input": {
+        "doc": "${open.output.doc}",
+        "animations": [{ "group": "run", "direction": "side" }],
+        "scale": 4
+      }
+    },
+    {
+      "id": "sheet_jump",
+      "op": "render.contactSheet",
+      "input": {
+        "doc": "${open.output.doc}",
+        "animations": [{ "group": "jump", "direction": "side" }],
+        "scale": 4
+      }
+    },
+    {
+      "id": "sheet_idle",
+      "op": "render.contactSheet",
+      "input": {
+        "doc": "${open.output.doc}",
+        "animations": [{ "group": "idle-breathe", "direction": "side" }],
+        "scale": 4
+      }
+    },
+    {
+      "id": "sheet_swing",
+      "op": "render.contactSheet",
+      "input": {
+        "doc": "${open.output.doc}",
+        "animations": [{ "group": "swing", "direction": "side" }],
+        "scale": 4
+      }
+    }
+  ]
+}

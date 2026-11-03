@@ -4,6 +4,7 @@
  */
 import { CoreError, createRigRenderer, renderFrame, resolveAnimation } from '@pixel-forge/core';
 import type { DocumentView, PartRenderer, SkinRef } from '@pixel-forge/core';
+import type { PartRender } from '@pixel-forge/rig';
 import type { LintFinding, LintLocation, LintOptions } from './types.js';
 
 /** `maxPixels` default. */
@@ -33,6 +34,7 @@ export class LintContext {
   /** Render failures, one finding per (animation, frame, skin); reported by `lint.renderError`. */
   readonly renderErrors: LintFinding[] = [];
   private readonly memo = new Map<string, Rendered | undefined>();
+  private readonly partMemo = new Map<string, readonly PartRender[]>();
 
   constructor(
     readonly view: DocumentView,
@@ -137,6 +139,41 @@ export class LintContext {
     }
     this.memo.set(key, img);
     return img;
+  }
+
+  /**
+   * The parts of one frame of an authored animation (a mirror uses its source), before the mirror
+   * flip, on layers that export (visible, with every ancestor group visible and exported). Empty
+   * when there is no rig or the parts fail to render (the render rules report that).
+   */
+  parts(f: FrameTarget): readonly PartRender[] {
+    const key = `${f.animId}|${String(f.frameIndex)}`;
+    const hit = this.partMemo.get(key);
+    if (hit !== undefined) return hit;
+    let out: readonly PartRender[] = [];
+    const anim = this.doc.animations[f.animIndex];
+    const src =
+      anim === undefined || !('mirrorOf' in anim)
+        ? anim
+        : this.doc.animations.find((a) => a.id === anim.mirrorOf);
+    if (this.doc.rig !== undefined && src !== undefined && 'frames' in src) {
+      const shown = new Set<string>();
+      const walk = (layers: Doc['layers']): void => {
+        for (const l of layers) {
+          if (!l.visible || !l.export) continue;
+          if (l.kind === 'group') walk(l.children);
+          else if (l.kind === 'part') shown.add(l.id);
+        }
+      };
+      walk(this.doc.layers);
+      try {
+        out = this.rig.frameParts(this.view, src, f.frameIndex).filter((p) => shown.has(p.layerId));
+      } catch (e) {
+        if (!(e instanceof CoreError)) throw e;
+      }
+    }
+    this.partMemo.set(key, out);
+    return out;
   }
 
   /** The first `maxPixels` pixels of a list, as JSON. */

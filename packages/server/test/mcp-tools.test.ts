@@ -1,6 +1,7 @@
 // The MCP tools over an in-process client: every listed tool is called successfully at least once,
 // each mutating call adds exactly one undo entry labelled "AI: <op>". The scenario table is checked
 // against tools/list, so a new tool without a scenario fails the suite.
+import { CONVENTIONS } from '@pixel-forge/ops';
 import { describe, expect, it } from 'vitest';
 import { mcpFixture } from './mcp-helpers.js';
 import { SCENARIOS, prepare } from './mcp-scenarios.js';
@@ -14,7 +15,12 @@ describe('tools/list', () => {
       expect(tool).not.toHaveProperty('outputSchema');
       expect(tool.inputSchema.type).toBe('object');
       expect(tool._meta?.['pixel-forge/op'], tool.name).toEqual(expect.any(String));
-      expect(tool.description, tool.name).toContain('origin top-left');
+      expect(tool.description, tool.name).not.toContain(CONVENTIONS);
+      expect(tool.description, tool.name).not.toContain('Edit: one undo step.');
+      expect(tool.annotations, tool.name).not.toHaveProperty('title');
+      expect(JSON.stringify(tool.inputSchema), tool.name).not.toContain(
+        '"additionalProperties":false',
+      );
     }
     expect(f.handle.tools.map((t) => t.name)).toEqual(tools.map((t) => t.name));
   });
@@ -25,7 +31,26 @@ describe('tools/list', () => {
     const long = tools.filter((t) => (t.description ?? '').length > 800);
     expect(long.map((t) => `${t.name}: ${String(t.description?.length)}`)).toEqual([]);
     const bytes = Buffer.byteLength(JSON.stringify({ tools }));
-    expect(bytes).toBeLessThan(80_000); // the report states the exact figure
+    // MCP-04: 75,775 bytes after B0.3 (was 83,005); T5.16 `rig_fit_template` and B0.1 `rig_fit_pose` raised the limit 76,300 -> 82,000 (list: 81,159). E3.3 `rig_apply_preset` raised it 82,000 -> 84,000 (list: 83,499).
+    expect(bytes).toBeLessThan(84_000);
+  });
+
+  it('states the shared conventions once, in the server instructions', async () => {
+    const f = await mcpFixture();
+    const instructions = f.client.getInstructions() ?? '';
+    expect(instructions).toContain('origin top-left, y down, angles deg clockwise, integer px');
+    expect(instructions).toContain('"confirm": true');
+  });
+
+  it('keeps required fields, enums and the confirm field in the listed schemas', async () => {
+    const f = await mcpFixture();
+    const { tools } = await f.client.listTools();
+    const frame = tools.find((t) => t.name === 'rig_bake');
+    expect(frame?.inputSchema.required).toEqual(expect.arrayContaining(['doc']));
+    expect(frame?.inputSchema.properties).toHaveProperty('confirm');
+    expect(frame?.description).toContain('confirm');
+    expect(frame?.annotations?.destructiveHint).toBe(true);
+    expect(JSON.stringify(tools)).toContain('"enum"');
   });
 });
 

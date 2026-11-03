@@ -1965,7 +1965,7 @@
   {
     "name": "lint",
     "title": "lint.run",
-    "description": "Check the document and list findings (palette, orphan pixels, joint gaps, stale overrides, empty frames).\n\nFindings come sorted by rule, then document order. Narrow the check with enable, disable, animations or skins. Severity \"error\" means an invariant is broken; fix warnings before a delivery. count 0 is not a visual pass: lint does not see holes inside rotated parts or art cut off at the canvas edge, and rig.jointGap only sweeps around rest. Look at render_contact_sheet too.\n\nRead-only. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Lint the hero, joint and palette rules only): {\"doc\":\"doc_g1ed5q\",\"enable\":[\"rig.jointGap\",\"palette.offPalette\"]}",
+    "description": "Lint the document: palette, orphan pixels, joint gaps, stale overrides, empty frames, clipping, holes.\n\nSorted by rule, then document order. Narrow with enable, disable, animations or skins. \"error\" means a broken invariant; fix warnings before delivery. pixels.clipped: part art cut off at the canvas edge. rig.partHole: 1 px holes in rotated parts. count 0 is not a visual pass (jointGap checks rest only): see render_contact_sheet.\n\nRead-only. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Lint the hero, joint and palette rules only): {\"doc\":\"doc_g1ed5q\",\"enable\":[\"rig.jointGap\",\"palette.offPalette\"]}",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1983,7 +1983,9 @@
               "palette.offPalette",
               "palette.opacityInLocked",
               "pixels.orphan",
+              "pixels.clipped",
               "rig.jointGap",
+              "rig.partHole",
               "rig.staleOverride",
               "rig.overrideError",
               "rig.rotationResidual",
@@ -2001,7 +2003,9 @@
               "palette.offPalette",
               "palette.opacityInLocked",
               "pixels.orphan",
+              "pixels.clipped",
               "rig.jointGap",
+              "rig.partHole",
               "rig.staleOverride",
               "rig.overrideError",
               "rig.rotationResidual",
@@ -2080,7 +2084,9 @@
                   "palette.offPalette",
                   "palette.opacityInLocked",
                   "pixels.orphan",
+                  "pixels.clipped",
                   "rig.jointGap",
+                  "rig.partHole",
                   "rig.staleOverride",
                   "rig.overrideError",
                   "rig.rotationResidual",
@@ -2774,6 +2780,127 @@
     }
   },
   {
+    "name": "part_paint_variant",
+    "title": "part.paintVariant",
+    "description": "Paint a text grid into a part variant's own image.\n\n\".\" transparent, \"_\" keeps. x, y are in the variant image; negative grows it (the pivot moves, the part stays put). Fixes a cut for every pose. Frame overrides of the part go stale (override_list). Locked palettes: palette colours only.\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Restore two forearm pixels): {\"doc\":\"doc_g1ed5q\",\"part\":\"lower_arm_r\",\"x\":0,\"y\":0,\"rows\":[\"11\"],\"legend\":{\"1\":\"#e8be96\"}}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id from doc_open or doc_create."
+        },
+        "part": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Part: its part-layer name (e.g. \"head\"), part id (\"prt_...\") or layer id."
+        },
+        "variant": {
+          "default": "default",
+          "type": "string",
+          "minLength": 1,
+          "description": "Variant name (e.g. \"default\", \"sleeve\") or id (\"var_...\")."
+        },
+        "x": {
+          "description": "Column of the grid in the variant image (default 0).",
+          "type": "integer"
+        },
+        "y": {
+          "description": "Row (default 0).",
+          "type": "integer"
+        },
+        "rows": {
+          "minItems": 1,
+          "maxItems": 32,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "description": "Equal-length rows, at most 32x32 symbols."
+        },
+        "legend": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+          },
+          "description": "Symbol (0-9A-Za-z) to \"#rrggbb[aa]\"."
+        }
+      },
+      "required": ["doc", "part", "rows", "legend"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "part": {
+          "type": "string",
+          "description": "Part layer name."
+        },
+        "variant": {
+          "type": "string",
+          "description": "Variant id."
+        },
+        "changed": {
+          "type": "integer",
+          "description": "Pixels whose colour changed (0: nothing was written)."
+        },
+        "grew": {
+          "type": "object",
+          "properties": {
+            "left": {
+              "type": "integer"
+            },
+            "top": {
+              "type": "integer"
+            },
+            "right": {
+              "type": "integer"
+            },
+            "bottom": {
+              "type": "integer"
+            }
+          },
+          "required": ["left", "top", "right", "bottom"],
+          "additionalProperties": false,
+          "description": "Pixels the image grew on each side."
+        },
+        "pivot": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "integer"
+            },
+            "y": {
+              "type": "integer"
+            }
+          },
+          "required": ["x", "y"],
+          "additionalProperties": false,
+          "description": "Pivot afterwards."
+        }
+      },
+      "required": ["part", "variant", "changed", "grew", "pivot"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "part.paintVariant",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "part.paintVariant",
+      "pixel-forge/safety": "mutate"
+    }
+  },
+  {
     "name": "part_split",
     "title": "part.split",
     "description": "Split a region (rect, lasso or flood) of a flat layer's cel into a new layer bound to a bone.\n\nFit the bones first: the part keeps the bone pivot of this moment. partName (\"part:upper_arm_r\") binds it, else overlap, else it stays a pixel layer. The part draws in every frame of every animation: key visible false (rig_set_pose) where other art shows. Refused: rig-block-order (a pixel layer covers the part), duplicate-variant (a second cut into one part: undo, recut it whole).\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Cut the head rectangle of a flat run frame into the head part): {\"doc\":\"doc_g1ed5q\",\"layer\":\"body\",\"animation\":{\"group\":\"run\"},\"frame\":0,\"selection\":{\"kind\":\"rect\",\"x\":24,\"y\":16,\"w\":18,\"h\":12},\"partName\":\"part:head\"}",
@@ -2998,7 +3125,7 @@
           "minLength": 1
         },
         "zByBone": {
-          "description": "Default z of the new part by part-layer name, then bone name; higher draws on top. Set once, at creation: plan the draw order before the first split.",
+          "description": "Default z of the new part by part-layer name, then bone name; higher draws on top. Set at creation; change later with rig_set_part_z.",
           "type": "object",
           "propertyNames": {
             "type": "string"
@@ -3847,6 +3974,164 @@
     }
   },
   {
+    "name": "rig_apply_preset",
+    "title": "rig.applyPreset",
+    "description": "Generate a motion preset (walk, run, jump, idle-breathe, swing) as an animation.\n\nNeeds the humanoid template bone names. Writes animation <group>/side (group defaults to the preset); an existing one needs replace:true and loses its bone keys. Output: the resolved params, rootMotion and labels per frame. Next: render_contact_sheet.\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (A 10-frame walk): {\"doc\":\"doc_g1ed5q\",\"preset\":\"walk\",\"frames\":10}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id from doc_open or doc_create."
+        },
+        "preset": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Preset name: idle-breathe, jump, run, swing, walk."
+        },
+        "params": {
+          "description": "Numeric parameters (defaults in the output).",
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "group": {
+          "description": "Default: the preset name.",
+          "type": "string",
+          "pattern": "^[a-z0-9_-]{1,48}$"
+        },
+        "direction": {
+          "description": "Default \"side\".",
+          "type": "string",
+          "pattern": "^[a-z0-9_-]{1,48}$"
+        },
+        "frames": {
+          "description": "Same as params.frames.",
+          "type": "integer"
+        },
+        "durationMs": {
+          "description": "Frame ms (default 100).",
+          "type": "integer",
+          "minimum": 1
+        },
+        "view": {
+          "description": "Character view; only \"side\" (default).",
+          "type": "string"
+        },
+        "replace": {
+          "description": "Overwrite an existing animation.",
+          "type": "boolean"
+        }
+      },
+      "required": ["doc", "preset"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "animation": {
+          "type": "string",
+          "description": "Animation id."
+        },
+        "label": {
+          "type": "string",
+          "description": "\"group/direction\"."
+        },
+        "created": {
+          "type": "boolean",
+          "description": "False when an existing animation was replaced."
+        },
+        "frames": {
+          "type": "integer",
+          "description": "Frame count."
+        },
+        "loop": {
+          "type": "string",
+          "description": "Loop mode of the preset."
+        },
+        "angleQuantum": {
+          "type": "number",
+          "description": "Angle quantum the keys use, deg."
+        },
+        "params": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Every parameter with defaults filled in."
+        },
+        "rootMotion": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "dx": {
+                "type": "integer"
+              },
+              "dy": {
+                "type": "integer"
+              }
+            },
+            "required": ["dx", "dy"],
+            "additionalProperties": false
+          },
+          "description": "Root motion per frame, px (also stored on the frames)."
+        },
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "description": "Labels per frame, e.g. foot_l."
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "animation",
+        "label",
+        "created",
+        "frames",
+        "loop",
+        "angleQuantum",
+        "params",
+        "rootMotion",
+        "labels",
+        "warnings"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "rig.applyPreset",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "rig.applyPreset",
+      "pixel-forge/safety": "mutate"
+    }
+  },
+  {
     "name": "rig_apply_template",
     "title": "rig.applyTemplate",
     "description": "Apply a humanoid skeleton template: bones matched by name are reused, missing ones are created.\n\nTemplates: humanoid-side (view \"side\"), humanoid-front (\"front\"), humanoid-back (\"back\"). Without view a new view is created (named after the template, or viewName); with view the rest pose is set there. The template origin is the document origin. Rest: pelvis -90 (up), limbs 180 relative to it (down). Proportions are generic: compare with render_frame (bones) and refit with rig_edit_bones before any part_split. Bones that exist with another parent are refused.\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Set the rest pose of the hero in its existing side view): {\"doc\":\"doc_g1ed5q\",\"template\":\"humanoid-side\",\"view\":\"side\"}",
@@ -4097,7 +4382,7 @@
           "minLength": 1
         },
         "zByBone": {
-          "description": "Default z of new parts by part-layer name, then bone name; higher draws on top. Set once, at creation.",
+          "description": "Default z of new parts by part-layer name, then bone name; higher draws on top. Set at creation; change later with rig_set_part_z.",
           "type": "object",
           "propertyNames": {
             "type": "string"
@@ -4512,9 +4797,340 @@
     }
   },
   {
+    "name": "rig_fit_pose",
+    "title": "rig.fitPose",
+    "description": "Find the bone angles (deg, relative to rest) and part variants whose render of one frame matches a target image.\n\nTarget: file (PNG, canvas size) or targetFrame. Searches each bone angle within ±range and each listed part variant. Pass the output bones and parts to rig_set_pose to apply them. exact: no pixel differs; else error counts them. Seeded: the same input gives the same result. A miss is not proof that no pose fits: raise maxRenders or narrow range.\n\nFile I/O. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Pose the right arm like a reference image): {\"doc\":\"doc_g1ed5q\",\"animation\":{\"group\":\"default\"},\"frame\":0,\"file\":\"/work/reference.png\",\"bones\":[\"upper_arm_r\",\"lower_arm_r\"],\"parts\":[\"lower_arm_r\"]}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id from doc_open or doc_create."
+        },
+        "animation": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "group": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                },
+                "direction": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                }
+              },
+              "required": ["group"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^anm_[0-9a-z]{1,24}$"
+                }
+              },
+              "required": ["id"],
+              "additionalProperties": false
+            }
+          ],
+          "description": "Animation: {\"group\": \"run\", \"direction\": \"side\"} ({\"group\": \"idle\"} for an undirected one) or {\"id\": \"anm_...\"}."
+        },
+        "frame": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^frm_[0-9a-z]{1,24}$"
+            }
+          ],
+          "description": "The frame to pose; its other keys stay as they are."
+        },
+        "file": {
+          "description": "Target PNG, the size of the canvas.",
+          "type": "string",
+          "minLength": 1
+        },
+        "targetFrame": {
+          "description": "Target: another frame of this animation, rendered.",
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^frm_[0-9a-z]{1,24}$"
+            }
+          ]
+        },
+        "bones": {
+          "description": "Bones whose angle to search (names or ids; default: every bone).",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "parts": {
+          "description": "Parts whose variant to search (default: none).",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "range": {
+          "description": "Search each angle within ±range deg of rest (default 180).",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 180
+        },
+        "seed": {
+          "description": "Seed of the random restarts (default 1).",
+          "type": "integer"
+        },
+        "maxRenders": {
+          "description": "Most renders (default 3000).",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20000
+        }
+      },
+      "required": ["doc", "animation", "frame"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "animation": {
+          "type": "string",
+          "description": "\"group/direction\" of the animation."
+        },
+        "frameIndex": {
+          "type": "integer",
+          "description": "The frame that was fitted."
+        },
+        "exact": {
+          "type": "boolean",
+          "description": "True when the render equals the target (error 0)."
+        },
+        "error": {
+          "type": "integer",
+          "description": "Pixels that differ from the target at the best pose."
+        },
+        "renders": {
+          "type": "integer",
+          "description": "Renders used."
+        },
+        "bones": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "angle": {
+                "type": "number"
+              }
+            },
+            "required": ["angle"],
+            "additionalProperties": false
+          },
+          "description": "Best angle by bone name: the bones input of rig_set_pose."
+        },
+        "parts": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "variant": {
+                "type": "string"
+              }
+            },
+            "required": ["variant"],
+            "additionalProperties": false
+          },
+          "description": "Best variant by part name: the parts input of rig_set_pose."
+        }
+      },
+      "required": ["animation", "frameIndex", "exact", "error", "renders", "bones", "parts"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "rig.fitPose",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "rig.fitPose",
+      "pixel-forge/safety": "io"
+    }
+  },
+  {
+    "name": "rig_fit_template",
+    "title": "rig.fitTemplate",
+    "description": "Fit a humanoid template to landmark points: lengths and rest pose in one call.\n\nLike rig_apply_template, but sizes the bones from landmarks (canvas px, arms hanging): headTop, hips, feet (between the soles; becomes the root), optional handL/handR fingertips. Existing bones are resized. Check with render_frame (bones), then touch up with rig_edit_bones.\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Fit the side template to a 47 px character): {\"doc\":\"doc_g1ed5q\",\"template\":\"humanoid-side\",\"view\":\"side\",\"landmarks\":{\"headTop\":{\"x\":31,\"y\":16},\"hips\":{\"x\":30,\"y\":44},\"feet\":{\"x\":30,\"y\":63},\"handR\":{\"x\":38,\"y\":47}}}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id from doc_open or doc_create."
+        },
+        "template": {
+          "type": "string",
+          "enum": ["humanoid-side", "humanoid-front", "humanoid-back"],
+          "description": "Skeleton template."
+        },
+        "landmarks": {
+          "type": "object",
+          "properties": {
+            "headTop": {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "integer"
+                },
+                "y": {
+                  "type": "integer"
+                }
+              },
+              "required": ["x", "y"],
+              "additionalProperties": false,
+              "description": "Top pixel of the head."
+            },
+            "hips": {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "integer"
+                },
+                "y": {
+                  "type": "integer"
+                }
+              },
+              "required": ["x", "y"],
+              "additionalProperties": false,
+              "description": "Hip joint (thigh pivot); between headTop and feet."
+            },
+            "feet": {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "integer"
+                },
+                "y": {
+                  "type": "integer"
+                }
+              },
+              "required": ["x", "y"],
+              "additionalProperties": false,
+              "description": "Between the feet on the sole row: the root pivot."
+            },
+            "handL": {
+              "description": "Fingertip of the left hand (+x in front view).",
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "integer"
+                },
+                "y": {
+                  "type": "integer"
+                }
+              },
+              "required": ["x", "y"],
+              "additionalProperties": false
+            },
+            "handR": {
+              "description": "Fingertip of the right hand; one hand serves both.",
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "integer"
+                },
+                "y": {
+                  "type": "integer"
+                }
+              },
+              "required": ["x", "y"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["headTop", "hips", "feet"],
+          "additionalProperties": false,
+          "description": "Landmarks in canvas px."
+        },
+        "view": {
+          "description": "Existing view to set the rest pose in (default: new).",
+          "type": "string",
+          "minLength": 1
+        },
+        "viewName": {
+          "description": "Name of the new view; ignored with view.",
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": ["doc", "template", "landmarks"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "viewId": {
+          "type": "string",
+          "description": "Id of the view the fit was written to."
+        },
+        "height": {
+          "type": "integer",
+          "description": "Character height, px."
+        },
+        "created": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Names of the bones that were created."
+        },
+        "resized": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Names of the existing bones whose length changed."
+        }
+      },
+      "required": ["viewId", "height", "created", "resized"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "rig.fitTemplate",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "rig.fitTemplate",
+      "pixel-forge/safety": "mutate"
+    }
+  },
+  {
     "name": "rig_joint_check",
     "title": "rig.jointCheck",
-    "description": "Sweep each joint of one rig view and report the pixel gaps that open on the outer side of a bend.\n\nA rig passes when summary.gapCount is 0. The output is long, about 400 characters per joint even when clean: for pass or fail alone use lint with enable [\"rig.jointGap\"]. The sweep moves one joint at a time, rangeDeg around rest (default 30): a pose beyond that is not checked, so look at the render. Fix gaps with part_paint_overlap, or by moving part pivots, then check again. Checks the view that draws the first direction of the given view (default: the first view).\n\nRead-only. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Check the first view of the hero): {\"doc\":\"doc_g1ed5q\"}",
+    "description": "Sweep each joint of one rig view and report the pixel gaps that open on the outer side of a bend.\n\nA rig passes when summary.gapCount is 0. The full output is about 400 characters per joint: pass compact for a short form, or use lint with enable [\"rig.jointGap\"] for pass or fail. The sweep moves one joint at a time, rangeDeg around rest (default 30): a pose beyond that is not checked, so look at the render. Fix gaps with part_paint_overlap, or by moving part pivots, then check again. Checks the view that draws the first direction of the given view (default: the first view).\n\nRead-only. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Check the first view of the hero): {\"doc\":\"doc_g1ed5q\"}",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -4542,6 +5158,10 @@
           "description": "Window radius of the check, px.",
           "type": "integer",
           "minimum": 1
+        },
+        "compact": {
+          "description": "Short form: summary and problems, no joints.",
+          "type": "boolean"
         }
       },
       "required": ["doc"],
@@ -4574,6 +5194,7 @@
           "additionalProperties": false
         },
         "joints": {
+          "description": "One entry per joint, sorted by bone name. Absent when compact.",
           "type": "array",
           "items": {
             "type": "object",
@@ -4661,8 +5282,35 @@
             },
             "required": ["bone", "parent", "pivot", "gapCount", "union", "angles"],
             "additionalProperties": false
-          },
-          "description": "One entry per joint, sorted by bone name."
+          }
+        },
+        "problems": {
+          "description": "Joints with gaps. Only when compact.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "bone": {
+                "type": "string",
+                "description": "Child bone name."
+              },
+              "kind": {
+                "type": "string",
+                "const": "gap",
+                "description": "Kind of problem."
+              },
+              "gapCount": {
+                "type": "integer",
+                "description": "Gap pixels summed over the sweep."
+              },
+              "unionCount": {
+                "type": "integer",
+                "description": "Distinct gap pixels."
+              }
+            },
+            "required": ["bone", "kind", "gapCount", "unionCount"],
+            "additionalProperties": false
+          }
         },
         "summary": {
           "type": "object",
@@ -4685,7 +5333,7 @@
           "additionalProperties": false
         }
       },
-      "required": ["view", "params", "joints", "summary"],
+      "required": ["view", "params", "summary"],
       "additionalProperties": false
     },
     "annotations": {
@@ -4778,6 +5426,195 @@
     },
     "_meta": {
       "pixel-forge/op": "rig.mirrorAnimation",
+      "pixel-forge/safety": "mutate"
+    }
+  },
+  {
+    "name": "rig_read_pose",
+    "title": "rig.readPose",
+    "description": "Read one frame: bone and part values, and which are real keys (the rest are interpolated or held).\n\nOutput matches rig_set_pose input: pass bones and parts back unchanged. Lists only bones and channels that some frame keys; the rest are at rest. keyed names the real keys on this frame (\"bones.<name>.<channel>\"); other values are interpolated or held. Writing a value back makes it a key: this frame renders the same, other frames may change, so write back only what you mean to key. Mirror animations: read the source.\n\nRead-only. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Read frame 2 of the run cycle): {\"doc\":\"doc_g1ed5q\",\"animation\":{\"group\":\"run\",\"direction\":\"side\"},\"frame\":2}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id from doc_open or doc_create."
+        },
+        "animation": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "group": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                },
+                "direction": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                }
+              },
+              "required": ["group"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^anm_[0-9a-z]{1,24}$"
+                }
+              },
+              "required": ["id"],
+              "additionalProperties": false
+            }
+          ],
+          "description": "Animation: {\"group\": \"run\", \"direction\": \"side\"} ({\"group\": \"idle\"} for an undirected one) or {\"id\": \"anm_...\"}."
+        },
+        "frame": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^frm_[0-9a-z]{1,24}$"
+            }
+          ],
+          "description": "Frame: 0-based index or frame id (\"frm_...\")."
+        }
+      },
+      "required": ["doc", "animation", "frame"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "animation": {
+          "type": "string"
+        },
+        "frameIndex": {
+          "type": "integer"
+        },
+        "frameId": {
+          "type": "string"
+        },
+        "bones": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "description": "By bone name: angle, offset {x,y}, flipX, and interp of the stored key."
+        },
+        "parts": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "description": "By part name: variant name or \"auto\", z, visible."
+        },
+        "keyed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["animation", "frameIndex", "frameId", "bones", "parts", "keyed"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "rig.readPose",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "rig.readPose",
+      "pixel-forge/safety": "read"
+    }
+  },
+  {
+    "name": "rig_set_part_z",
+    "title": "rig.setPartZ",
+    "description": "Set a part's default z (draw order) after creation.\n\nHigher z draws on top (default 0). Replaces per-frame z keys of rig_set_pose. A frame z key still wins: keyedFrames counts them. rig_joint_check and part_paint_overlap use the new order.\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Draw the right forearm above the torso): {\"doc\":\"doc_g1ed5q\",\"part\":\"lower_arm_r\",\"z\":5}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id from doc_open or doc_create."
+        },
+        "part": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Part: its part-layer name (e.g. \"head\"), part id (\"prt_...\") or layer id."
+        },
+        "z": {
+          "type": "integer",
+          "description": "New default z."
+        },
+        "view": {
+          "description": "View (default: the first).",
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": ["doc", "part", "z"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "part": {
+          "type": "string",
+          "description": "Part layer name."
+        },
+        "view": {
+          "type": "string",
+          "description": "View id."
+        },
+        "z": {
+          "type": "integer",
+          "description": "Default z afterwards."
+        },
+        "previous": {
+          "type": "integer",
+          "description": "Default z before."
+        },
+        "keyedFrames": {
+          "type": "integer",
+          "description": "Frames with their own z key for this part."
+        }
+      },
+      "required": ["part", "view", "z", "previous", "keyedFrames"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "rig.setPartZ",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "rig.setPartZ",
       "pixel-forge/safety": "mutate"
     }
   },
@@ -4884,7 +5721,7 @@
   {
     "name": "rig_set_pose",
     "title": "rig.setPose",
-    "description": "Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z, visible) on one frame.\n\nChannels you pass replace the stored ones; null removes the whole key of that bone or part. Angles are from rest and compose down the hierarchy. A channel with no key here interpolates between its keys on other frames (wrapping in a loop), not back to rest: key offsets on every frame or on none. Part keys hold both ways: set z or visible once per animation. Art past the canvas edge is cut off. Next: render_contact_sheet.\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Raise the right arm on frame 0): {\"doc\":\"doc_g1ed5q\",\"animation\":{\"group\":\"default\"},\"frame\":0,\"bones\":{\"upper_arm_r\":{\"angle\":-45},\"lower_arm_r\":{\"angle\":-30}}}",
+    "description": "Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z, visible) on one frame or many.\n\nChannels you pass replace the stored ones; null removes a bone or part key. A channel not keyed here interpolates between keys on other frames, not to rest: key offsets on every frame or none. Part keys hold both ways: set z or visible once. \"frames\" poses many frames as one undo step. targets {bone:{x,y}}: IK sets parent angles (wins over bones, earlier targets); reached: within 1 px. Output keyed: bones keyed; interpolated: keyed elsewhere, not on a posed frame (keyAll keys them at rest). Off-canvas art is cut. Next: render_contact_sheet.\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Raise the right arm on frame 0): {\"doc\":\"doc_g1ed5q\",\"animation\":{\"group\":\"default\"},\"frame\":0,\"bones\":{\"upper_arm_r\":{\"angle\":-45},\"lower_arm_r\":{\"angle\":-30}}}",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -4950,11 +5787,11 @@
                 "type": "object",
                 "properties": {
                   "angle": {
-                    "description": "Rotation from the rest angle, degrees clockwise (child bones follow, FK).",
+                    "description": "Degrees clockwise from rest; child bones follow (FK).",
                     "type": "number"
                   },
                   "offset": {
-                    "description": "Pivot translation from its rest position, integer px.",
+                    "description": "Pivot shift from rest, integer px.",
                     "type": "object",
                     "properties": {
                       "x": {
@@ -4972,7 +5809,7 @@
                     "type": "boolean"
                   },
                   "interp": {
-                    "description": "Interpolation from this key to the next: \"linear\" (default), \"step\", \"ease-in-out\".",
+                    "description": "To the next key: \"linear\" (default), \"step\", \"ease-in-out\".",
                     "type": "string",
                     "enum": ["step", "linear", "ease-in-out"]
                   }
@@ -5003,7 +5840,7 @@
                     "minLength": 1
                   },
                   "z": {
-                    "description": "Draw order in this animation; holds until the next key; higher draws on top (default: the view's).",
+                    "description": "Draw order, held until the next key; higher on top (default: the view's).",
                     "type": "integer"
                   },
                   "visible": {
@@ -5018,9 +5855,92 @@
               }
             ]
           }
+        },
+        "frames": {
+          "description": "Many frames, instead of frame.",
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "frame": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^frm_[0-9a-z]{1,24}$"
+                  }
+                ]
+              },
+              "bones": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              },
+              "parts": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              },
+              "targets": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              }
+            },
+            "required": ["frame"],
+            "additionalProperties": false
+          }
+        },
+        "targets": {
+          "description": "End-effector targets by bone name (or id).",
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "integer",
+                "description": "Canvas pixel x."
+              },
+              "y": {
+                "type": "integer",
+                "description": "Canvas pixel y."
+              },
+              "chain": {
+                "description": "Parent bones that turn (default 2, e.g. upper and lower arm).",
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 64
+              },
+              "bend": {
+                "description": "Joint side, chain 2 only (default: keep the current side, else cw).",
+                "type": "string",
+                "enum": ["cw", "ccw"]
+              }
+            },
+            "required": ["x", "y"],
+            "additionalProperties": false
+          }
+        },
+        "keyAll": {
+          "description": "Also key all other bones at rest on posed frames.",
+          "type": "boolean"
         }
       },
-      "required": ["doc", "animation", "frame"],
+      "required": ["doc", "animation"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -5031,10 +5951,18 @@
           "description": "\"group/direction\" of the posed animation."
         },
         "frameIndex": {
-          "type": "integer"
+          "type": "integer",
+          "description": "The posed frame; the first with \"frames\"."
         },
         "frameId": {
           "type": "string"
+        },
+        "frames": {
+          "description": "Posed frame indexes, with \"frames\".",
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
         },
         "changed": {
           "type": "array",
@@ -5042,9 +5970,78 @@
             "type": "string"
           },
           "description": "Keys that changed, as \"bones.<name>\" / \"parts.<name>\"; empty when nothing did."
+        },
+        "keyed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Bones this call keys."
+        },
+        "interpolated": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Bones that interpolate on a posed frame."
+        },
+        "targets": {
+          "description": "One entry per end-effector target.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "frame": {
+                "type": "integer"
+              },
+              "bone": {
+                "type": "string"
+              },
+              "target": {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "integer"
+                  },
+                  "y": {
+                    "type": "integer"
+                  }
+                },
+                "required": ["x", "y"],
+                "additionalProperties": false
+              },
+              "effector": {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "integer"
+                  },
+                  "y": {
+                    "type": "integer"
+                  }
+                },
+                "required": ["x", "y"],
+                "additionalProperties": false,
+                "description": "Where the pivot lands."
+              },
+              "reached": {
+                "type": "boolean",
+                "description": "Pivot within 1 px of the target."
+              },
+              "keyed": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Parent bones keyed by the solve."
+              }
+            },
+            "required": ["frame", "bone", "target", "effector", "reached", "keyed"],
+            "additionalProperties": false
+          }
         }
       },
-      "required": ["animation", "frameIndex", "frameId", "changed"],
+      "required": ["animation", "frameIndex", "frameId", "changed", "keyed", "interpolated"],
       "additionalProperties": false
     },
     "annotations": {

@@ -3,8 +3,10 @@
  * @packageDocumentation
  */
 import { jsonEqual } from '@pixel-forge/core';
-import { AUTO_VARIANT, Interpolation } from '@pixel-forge/schema';
-import type { BoneKey, PartKey, VariantChoice } from '@pixel-forge/schema';
+import { resolvePose, solveIk } from '@pixel-forge/rig';
+import type { PoseKey } from '@pixel-forge/rig';
+import { AUTO_VARIANT, FrameRef as FrameIndex, Interpolation } from '@pixel-forge/schema';
+import type { BoneId, BoneKey, PartId, PartKey, VariantChoice } from '@pixel-forge/schema';
 import { z } from 'zod';
 import { defineOp } from '../define.js';
 import { OpError } from '../errors.js';
@@ -14,6 +16,7 @@ import {
   FrameRef,
   animationLabel,
   resolveAuthoredAnimation,
+  requireRig,
   resolveBone,
   partResolver,
   resolveFrame,
@@ -24,17 +27,14 @@ import {
 /** A bone key to merge into the frame's key: the channels given replace the stored ones. */
 export const BoneKeyInput = z
   .strictObject({
-    angle: z
-      .number()
-      .optional()
-      .describe('Rotation from the rest angle, degrees clockwise (child bones follow, FK).'),
+    angle: z.number().optional().describe('Degrees clockwise from rest; child bones follow (FK).'),
     offset: z
       .strictObject({ x: z.int(), y: z.int() })
       .optional()
-      .describe('Pivot translation from its rest position, integer px.'),
+      .describe('Pivot shift from rest, integer px.'),
     flipX: z.boolean().optional().describe('Mirror the bone horizontally about its pivot.'),
     interp: Interpolation.optional().describe(
-      'Interpolation from this key to the next: "linear" (default), "step", "ease-in-out".',
+      'To the next key: "linear" (default), "step", "ease-in-out".',
     ),
   })
   .refine(
@@ -57,15 +57,29 @@ export const PartKeyInput = z
     z: z
       .int()
       .optional()
-      .describe(
-        "Draw order in this animation; holds until the next key; higher draws on top (default: the view's).",
-      ),
+      .describe("Draw order, held until the next key; higher on top (default: the view's)."),
     visible: z.boolean().optional().describe('Show or hide the part from this frame on.'),
   })
   .refine(
     (k) => k.variant !== undefined || k.z !== undefined || k.visible !== undefined,
     'set at least one of variant, z, visible (or null to remove the key)',
   );
+
+/** An end-effector target (FR-AI-17): put the bone's pivot at a canvas pixel; IK keys its parents. */
+export const EffectorTarget = z.strictObject({
+  x: z.int().describe('Canvas pixel x.'),
+  y: z.int().describe('Canvas pixel y.'),
+  chain: z
+    .int()
+    .min(1)
+    .max(64)
+    .optional()
+    .describe('Parent bones that turn (default 2, e.g. upper and lower arm).'),
+  bend: z
+    .enum(['cw', 'ccw'])
+    .optional()
+    .describe('Joint side, chain 2 only (default: keep the current side, else cw).'),
+});
 
 const keyName = (kind: 'bones' | 'parts', name: string): string => `${kind}.${name}`;
 
@@ -101,34 +115,106 @@ function mergePartKey(
   };
 }
 
+/** One frame of the multi-frame form: the same shape as the top-level frame, bones and parts. */
+const FramePose = z.strictObject({
+  frame: FrameIndex,
+  bones: z.record(z.string(), z.unknown()).optional(),
+  parts: z.record(z.string(), z.unknown()).optional(),
+  targets: z.record(z.string(), z.unknown()).optional(),
+});
+
+const BoneKeys = z.record(z.string().min(1), BoneKeyInput.nullable());
+const PartKeys = z.record(z.string().min(1), PartKeyInput.nullable());
+const Targets = z.record(z.string().min(1), EffectorTarget);
+
+interface TargetResult {
+  frame: number;
+  bone: string;
+  target: { x: number; y: number };
+  effector: { x: number; y: number };
+  reached: boolean;
+  keyed: string[];
+}
+
+/** Parses a loosely typed `bones` or `parts` map of a `frames` item with the strict schema. */
+function strictMap<T>(schema: z.ZodType<T>, value: unknown, path: string): T | undefined {
+  if (value === undefined) return undefined;
+  const r = schema.safeParse(value);
+  if (r.success) return r.data;
+  throw new OpError('BAD_INPUT', `invalid ${path}`, {
+    issues: r.error.issues.map((i) => ({
+      path: [path, ...i.path.map(String)].join('.'),
+      message: i.message,
+    })),
+  });
+}
+
+interface BoneEdit {
+  id: BoneId;
+  name: string;
+  stored: Readonly<BoneKey> | undefined;
+  next: BoneKey | undefined;
+}
+interface PartEdit {
+  id: PartId;
+  name: string;
+  stored: Readonly<PartKey> | undefined;
+  next: PartKey | undefined;
+}
+interface FramePlan {
+  targets: TargetResult[];
+  frameIndex: number;
+  frameId: string;
+  bones: BoneEdit[];
+  parts: PartEdit[];
+}
+
+const hasChannel = (k: Readonly<BoneKey> | undefined): boolean =>
+  k !== undefined && (k.angle !== undefined || k.offset !== undefined || k.flipX !== undefined);
+
 /** `rig.setPose` (MCP `rig_set_pose`, CLI `pf rig set-pose`). */
 export const rigSetPose = defineOp({
   name: 'rig.setPose',
   safety: 'mutate',
   summary:
-    'Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z, visible) on one frame.',
+    'Set bone keys (angle deg clockwise, offset int px) and/or part keys (variant, z, visible) on one frame or many.',
   description:
-    'Channels you pass replace the stored ones; null removes the whole key of that bone or part. Angles are from rest and compose down the hierarchy. A channel with no key here interpolates between its keys on other frames (wrapping in a loop), not back to rest: key offsets on every frame or on none. Part keys hold both ways: set z or visible once per animation. Art past the canvas edge is cut off. Next: render_contact_sheet.',
+    'Channels you pass replace the stored ones; null removes a bone or part key. A channel not keyed here interpolates between keys on other frames, not to rest: key offsets on every frame or none. Part keys hold both ways: set z or visible once. "frames" poses many frames as one undo step. targets {bone:{x,y}}: IK sets parent angles (wins over bones, earlier targets); reached: within 1 px. Output keyed: bones keyed; interpolated: keyed elsewhere, not on a posed frame (keyAll keys them at rest). Off-canvas art is cut. Next: render_contact_sheet.',
   input: z.strictObject({
     doc: DocRef,
     animation: AnimRef,
-    frame: FrameRef,
-    bones: z
-      .record(z.string().min(1), BoneKeyInput.nullable())
-      .optional()
-      .describe('Bone keys by bone name (or id); null removes the key.'),
-    parts: z
-      .record(z.string().min(1), PartKeyInput.nullable())
-      .optional()
-      .describe('Part keys by part-layer name (or part id); null removes the key.'),
+    frame: FrameRef.optional(),
+    bones: BoneKeys.optional().describe('Bone keys by bone name (or id); null removes the key.'),
+    parts: PartKeys.optional().describe(
+      'Part keys by part-layer name (or part id); null removes the key.',
+    ),
+    frames: z.array(FramePose).min(1).optional().describe('Many frames, instead of frame.'),
+    targets: Targets.optional().describe('End-effector targets by bone name (or id).'),
+    keyAll: z.boolean().optional().describe('Also key all other bones at rest on posed frames.'),
   }),
   output: z.strictObject({
     animation: z.string().describe('"group/direction" of the posed animation.'),
-    frameIndex: z.int(),
+    frameIndex: z.int().describe('The posed frame; the first with "frames".'),
     frameId: z.string(),
+    frames: z.array(z.int()).optional().describe('Posed frame indexes, with "frames".'),
     changed: z
       .array(z.string())
       .describe('Keys that changed, as "bones.<name>" / "parts.<name>"; empty when nothing did.'),
+    keyed: z.array(z.string()).describe('Bones this call keys.'),
+    interpolated: z.array(z.string()).describe('Bones that interpolate on a posed frame.'),
+    targets: z
+      .array(
+        z.strictObject({
+          frame: z.int(),
+          bone: z.string(),
+          target: z.strictObject({ x: z.int(), y: z.int() }),
+          effector: z.strictObject({ x: z.int(), y: z.int() }).describe('Where the pivot lands.'),
+          reached: z.boolean().describe('Pivot within 1 px of the target.'),
+          keyed: z.array(z.string()).describe('Parent bones keyed by the solve.'),
+        }),
+      )
+      .optional()
+      .describe('One entry per end-effector target.'),
   }),
   examples: [
     {
@@ -144,6 +230,17 @@ export const rigSetPose = defineOp({
         frameIndex: 0,
         frameId: 'frm_j83g8j',
         changed: ['bones.lower_arm_r', 'bones.upper_arm_r'],
+        keyed: ['lower_arm_r', 'upper_arm_r'],
+        interpolated: [],
+      },
+    },
+    {
+      title: 'Put the right hand at (24,30) by IK',
+      input: {
+        doc: 'doc_g1ed5q',
+        animation: { group: 'default' },
+        frame: 0,
+        targets: { hand_r: { x: 24, y: 30 } },
       },
     },
     {
@@ -160,91 +257,262 @@ export const rigSetPose = defineOp({
   handler: (ctx, input) => {
     const doc = ctx.doc;
     const { index: animIndex, animation } = resolveAuthoredAnimation(doc, input.animation);
-    const { index: frameIndex, frame } = resolveFrame(animation, input.frame);
-    const bones = Object.entries(input.bones ?? {});
-    const parts = Object.entries(input.parts ?? {});
-    if (bones.length === 0 && parts.length === 0) {
-      throw new OpError('BAD_INPUT', 'rig.setPose needs "bones" or "parts"', {
-        issues: [{ path: '', message: 'give at least one bone or part key' }],
+    const multi = input.frames !== undefined;
+    if (multi && (input.frame !== undefined || input.bones || input.parts || input.targets)) {
+      throw new OpError('BAD_INPUT', 'give "frames", or frame with bones and parts, not both', {
+        issues: [
+          { path: 'frames', message: 'frame, bones, parts and targets go inside each item' },
+        ],
+      });
+    }
+    if (input.frames === undefined && input.frame === undefined) {
+      throw new OpError('BAD_INPUT', 'rig.setPose needs "frame" (or "frames")', {
+        issues: [{ path: 'frame', message: 'required without "frames"' }],
+      });
+    }
+    const items =
+      input.frames !== undefined
+        ? input.frames.map((f, i) => ({
+            path: `frames.${String(i)}.`,
+            frame: f.frame,
+            bones: strictMap(BoneKeys, f.bones, `frames.${String(i)}.bones`),
+            parts: strictMap(PartKeys, f.parts, `frames.${String(i)}.parts`),
+            targets: strictMap(Targets, f.targets, `frames.${String(i)}.targets`),
+          }))
+        : [
+            {
+              path: '',
+              frame: input.frame ?? 0,
+              bones: input.bones,
+              parts: input.parts,
+              targets: input.targets,
+            },
+          ];
+    const hasTargets = items.some((it) => Object.keys(it.targets ?? {}).length > 0);
+    const keyAll = input.keyAll === true;
+    const rig = keyAll || hasTargets ? requireRig(doc) : doc.rig;
+    const viewId = items.some((it) => Object.keys(it.parts ?? {}).length > 0)
+      ? viewForAnimation(doc, animation).id
+      : undefined;
+    const resolvePart = partResolver(doc);
+    const frameSeen = new Set<number>();
+
+    // Resolve every reference before touching the document.
+    const seenByFrame: Set<string>[] = [];
+    const targetsByPlan: [string, z.output<typeof EffectorTarget>][][] = [];
+    const plans: FramePlan[] = items.map((it) => {
+      const { index: frameIndex, frame } = resolveFrame(animation, it.frame);
+      if (frameSeen.has(frameIndex)) {
+        throw new OpError('BAD_INPUT', `${it.path}frame names a frame that is already posed`, {
+          issues: [{ path: `${it.path}frame`, message: 'the same frame appears twice' }],
+        });
+      }
+      frameSeen.add(frameIndex);
+      const bones = Object.entries(it.bones ?? {});
+      const parts = Object.entries(it.parts ?? {});
+      const targets = Object.entries(it.targets ?? {});
+      if (bones.length === 0 && parts.length === 0 && targets.length === 0) {
+        throw new OpError('BAD_INPUT', 'rig.setPose needs "bones", "parts" or "targets"', {
+          issues: [{ path: it.path, message: 'give at least one bone key, part key or target' }],
+        });
+      }
+      const seen = new Set<string>();
+      seenByFrame.push(seen);
+      const unique = (id: string, path: string): void => {
+        if (seen.has(id)) {
+          throw new OpError('BAD_INPUT', `${path} names an entity that is already keyed`, {
+            issues: [{ path, message: 'the same bone or part appears twice (by name and id)' }],
+          });
+        }
+        seen.add(id);
+      };
+      const boneEdits: BoneEdit[] = bones.map(([ref, key]) => {
+        const bone = resolveBone(doc, ref);
+        unique(bone.id, it.path + keyName('bones', ref));
+        const stored = frame.boneKeys[bone.id];
+        const next = key === null ? undefined : mergeBoneKey(stored, key);
+        if (
+          next !== undefined &&
+          next.angle === undefined &&
+          next.offset === undefined &&
+          next.flipX === undefined
+        ) {
+          throw new OpError(
+            'REFUSED',
+            `bone ${bone.name} has no stored key to attach "interp" to; give angle, offset or flipX`,
+            { reason: 'empty-key', bone: bone.name },
+          );
+        }
+        return { id: bone.id, name: bone.name, stored, next };
+      });
+      const partEdits: PartEdit[] = parts.map(([ref, key]) => {
+        const { part, name } = resolvePart(ref);
+        unique(part.id, it.path + keyName('parts', ref));
+        const stored = frame.partKeys[part.id];
+        let next: PartKey | undefined;
+        if (key !== null) {
+          const variant =
+            key.variant === undefined
+              ? undefined
+              : key.variant === AUTO_VARIANT
+                ? AUTO_VARIANT
+                : resolveVariant(part, key.variant, viewId).id;
+          next = mergePartKey(stored, variant, key);
+        }
+        return { id: part.id, name, stored, next };
+      });
+      targetsByPlan.push(targets);
+      return {
+        frameIndex,
+        frameId: frame.id,
+        bones: boneEdits,
+        parts: partEdits,
+        targets: [],
+      };
+    });
+
+    if (rig !== undefined && hasTargets) {
+      // The solver starts from a copy of the animation with every explicit bone edit of this call
+      // applied on all frames (a null removes the key), so interpolation sees the whole call. Each
+      // solve is written back into the copy before the next target, on this frame or a later one.
+      const working = {
+        ...animation,
+        frames: animation.frames.map((f) => ({ ...f, boneKeys: { ...f.boneKeys } })),
+      };
+      plans.forEach((p) => {
+        const wf = working.frames[p.frameIndex];
+        if (wf === undefined) return;
+        for (const e of p.bones) {
+          if (e.next === undefined) Reflect.deleteProperty(wf.boneKeys, e.id);
+          else wf.boneKeys[e.id] = e.next;
+        }
+      });
+      const view = viewForAnimation(doc, animation);
+      plans.forEach((p, i) => {
+        const wf = working.frames[p.frameIndex];
+        const frame = animation.frames[p.frameIndex];
+        if (wf === undefined || frame === undefined) return;
+        for (const [ref, t] of targetsByPlan[i] ?? []) {
+          const effector = resolveBone(doc, ref);
+          const sol = solveIk({
+            rig,
+            view,
+            pose: new Map<BoneId, PoseKey>(resolvePose(rig, working, p.frameIndex)),
+            effector: effector.id,
+            target: { x: t.x, y: t.y },
+            angleQuantum: animation.angleQuantum ?? 1,
+            ...(t.chain === undefined ? {} : { chainLength: t.chain }),
+            ...(t.bend === undefined ? {} : { bend: t.bend }),
+          });
+          const keyedNames: string[] = [];
+          for (const [id, angle] of sol.angles) {
+            const bone = resolveBone(doc, id);
+            // A solved angle replaces an explicit or earlier angle on the same bone; its other
+            // channels stay.
+            const edit = p.bones.find((e) => e.id === bone.id);
+            const next = mergeBoneKey(edit === undefined ? frame.boneKeys[bone.id] : edit.next, {
+              angle,
+            });
+            if (edit === undefined) {
+              p.bones.push({ id: bone.id, name: bone.name, stored: frame.boneKeys[bone.id], next });
+            } else edit.next = next;
+            wf.boneKeys[bone.id] = next;
+            seenByFrame[i]?.add(bone.id);
+            keyedNames.push(bone.name);
+          }
+          p.targets.push({
+            frame: p.frameIndex,
+            bone: effector.name,
+            target: { x: t.x, y: t.y },
+            effector: { x: sol.effector.x, y: sol.effector.y },
+            reached: sol.reached,
+            keyed: keyedNames,
+          });
+        }
       });
     }
 
-    // Resolve every reference before touching the document.
-    const seen = new Set<string>();
-    const unique = (id: string, path: string): void => {
-      if (seen.has(id)) {
-        throw new OpError('BAD_INPUT', `${path} names an entity that is already keyed`, {
-          issues: [{ path, message: 'the same bone or part appears twice (by name and id)' }],
-        });
+    if (rig !== undefined && keyAll) {
+      // Key every bone the call did not name, at rest. Offsets only for bones whose offset is keyed
+      // somewhere in the animation or by this call (an offset on some frames only interpolates).
+      const offsetBones = new Set<string>();
+      for (const b of rig.bones) {
+        if (animation.frames.some((f) => f.boneKeys[b.id]?.offset !== undefined)) {
+          offsetBones.add(b.id);
+        }
       }
-      seen.add(id);
-    };
-    const boneEdits = bones.map(([ref, key]) => {
-      const bone = resolveBone(doc, ref);
-      unique(bone.id, keyName('bones', ref));
-      const stored = frame.boneKeys[bone.id];
-      const next = key === null ? undefined : mergeBoneKey(stored, key);
-      if (
-        next !== undefined &&
-        next.angle === undefined &&
-        next.offset === undefined &&
-        next.flipX === undefined
-      ) {
-        throw new OpError(
-          'REFUSED',
-          `bone ${bone.name} has no stored key to attach "interp" to; give angle, offset or flipX`,
-          { reason: 'empty-key', bone: bone.name },
-        );
-      }
-      return { id: bone.id, name: bone.name, stored, next };
-    });
-    const viewId = parts.length === 0 ? undefined : viewForAnimation(doc, animation).id;
-    const resolvePart = partResolver(doc);
-    const partEdits = parts.map(([ref, key]) => {
-      const { part, name } = resolvePart(ref);
-      unique(part.id, keyName('parts', ref));
-      const stored = frame.partKeys[part.id];
-      let next: PartKey | undefined;
-      if (key !== null) {
-        const variant =
-          key.variant === undefined
-            ? undefined
-            : key.variant === AUTO_VARIANT
-              ? AUTO_VARIANT
-              : resolveVariant(part, key.variant, viewId).id;
-        next = mergePartKey(stored, variant, key);
-      }
-      return { id: part.id, name, stored, next };
-    });
+      for (const p of plans) for (const e of p.bones) if (e.next?.offset) offsetBones.add(e.id);
+      plans.forEach((p, i) => {
+        const frame = animation.frames[p.frameIndex];
+        for (const b of rig.bones) {
+          if (seenByFrame[i]?.has(b.id)) continue;
+          const stored = frame?.boneKeys[b.id];
+          const next = mergeBoneKey(stored, {
+            angle: stored?.angle ?? 0,
+            ...(offsetBones.has(b.id) && stored?.offset === undefined
+              ? { offset: { x: 0, y: 0 } }
+              : {}),
+          });
+          p.bones.push({ id: b.id, name: b.name, stored, next });
+        }
+      });
+    }
 
-    const changed = [
-      ...boneEdits
-        .filter((e) => !jsonEqual(e.stored ?? null, e.next ?? null))
-        .map((e) => keyName('bones', e.name)),
-      ...partEdits
-        .filter((e) => !jsonEqual(e.stored ?? null, e.next ?? null))
-        .map((e) => keyName('parts', e.name)),
-    ].sort();
+    const names = new Set<string>();
+    for (const p of plans) {
+      for (const e of p.bones) {
+        if (!jsonEqual(e.stored ?? null, e.next ?? null)) names.add(keyName('bones', e.name));
+      }
+      for (const e of p.parts) {
+        if (!jsonEqual(e.stored ?? null, e.next ?? null)) names.add(keyName('parts', e.name));
+      }
+    }
+    const changed = [...names].sort();
+
+    // The trap: a bone keyed on some frames but not on a posed one interpolates there.
+    const keyed = new Set<string>();
+    const interpolated = new Set<string>();
+    for (const bone of rig?.bones ?? []) {
+      const keyedAt = animation.frames.map((f, i) => {
+        const edit = plans.find((p) => p.frameIndex === i)?.bones.find((e) => e.id === bone.id);
+        return edit === undefined ? hasChannel(f.boneKeys[bone.id]) : hasChannel(edit.next);
+      });
+      if (plans.some((p) => p.bones.some((e) => e.id === bone.id && hasChannel(e.next)))) {
+        keyed.add(bone.name);
+      }
+      if (keyedAt.some(Boolean) && plans.some((p) => keyedAt[p.frameIndex] !== true)) {
+        interpolated.add(bone.name);
+      }
+    }
+
     if (changed.length > 0) {
       ctx.tx.update((d) => {
         const anim = d.animations[animIndex];
-        const target = anim !== undefined && 'frames' in anim ? anim.frames[frameIndex] : undefined;
-        if (target === undefined) return;
-        for (const e of boneEdits) {
-          if (e.next === undefined) Reflect.deleteProperty(target.boneKeys, e.id);
-          else target.boneKeys[e.id] = e.next;
-        }
-        for (const e of partEdits) {
-          if (e.next === undefined) Reflect.deleteProperty(target.partKeys, e.id);
-          else target.partKeys[e.id] = e.next;
+        if (anim === undefined || !('frames' in anim)) return;
+        for (const p of plans) {
+          const target = anim.frames[p.frameIndex];
+          if (target === undefined) continue;
+          for (const e of p.bones) {
+            if (e.next === undefined) Reflect.deleteProperty(target.boneKeys, e.id);
+            else target.boneKeys[e.id] = e.next;
+          }
+          for (const e of p.parts) {
+            if (e.next === undefined) Reflect.deleteProperty(target.partKeys, e.id);
+            else target.partKeys[e.id] = e.next;
+          }
         }
       });
     }
+    const first = plans[0];
     return {
       animation: animationLabel(animation),
-      frameIndex,
-      frameId: frame.id,
+      frameIndex: first?.frameIndex ?? 0,
+      frameId: first?.frameId ?? '',
+      ...(multi ? { frames: plans.map((p) => p.frameIndex) } : {}),
+      ...(hasTargets ? { targets: plans.flatMap((p) => p.targets) } : {}),
       changed,
+      keyed: [...keyed].sort(),
+      interpolated: [...interpolated].sort(),
     };
   },
 });

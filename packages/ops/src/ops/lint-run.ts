@@ -53,9 +53,9 @@ export const lintRun = defineOp({
   name: 'lint.run',
   safety: 'read',
   summary:
-    'Check the document and list findings (palette, orphan pixels, joint gaps, stale overrides, empty frames).',
+    'Lint the document: palette, orphan pixels, joint gaps, stale overrides, empty frames, clipping, holes.',
   description:
-    'Findings come sorted by rule, then document order. Narrow the check with enable, disable, animations or skins. Severity "error" means an invariant is broken; fix warnings before a delivery. count 0 is not a visual pass: lint does not see holes inside rotated parts or art cut off at the canvas edge, and rig.jointGap only sweeps around rest. Look at render_contact_sheet too.',
+    'Sorted by rule, then document order. Narrow with enable, disable, animations or skins. "error" means a broken invariant; fix warnings before delivery. pixels.clipped: part art cut off at the canvas edge. rig.partHole: 1 px holes in rotated parts. count 0 is not a visual pass (jointGap checks rest only): see render_contact_sheet.',
   mcp: { name: 'lint' },
   cli: { command: ['lint'] },
   input: z.strictObject({

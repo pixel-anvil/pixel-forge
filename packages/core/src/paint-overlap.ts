@@ -41,7 +41,9 @@ export interface PaintOverlapOptions {
   readonly bones?: readonly BoneId[];
   /**
    * What to paint: an `Rgba` in an RGBA document, a palette index in an indexed one. Default: the
-   * most frequent opaque colour of the painted variant (ties: the smaller packed value).
+   * most frequent opaque colour of the painted variant that is not its outline colour (RIG-08;
+   * ties: the smaller packed value). The outline colour is the darkest colour that touches a
+   * transparent pixel or the image edge. A variant with no other colour uses the most frequent one.
    */
   readonly color?: Rgba | number;
 }
@@ -97,34 +99,79 @@ function partLayerOpacity(
   return out;
 }
 
-/** The most frequent opaque colour (RGBA) or index of an image, or `undefined` when it has none. */
-function dominant(img: StoredImage): Rgba | number | undefined {
-  const counts = new Map<number, number>();
+/**
+ * The most frequent opaque colour (RGBA) or index of an image, ignoring its outline colour, or
+ * `undefined` when it has no opaque pixel. The outline colour is the darkest colour (lowest
+ * luma; ties: the smaller key) that has a pixel next to a transparent pixel or the image edge.
+ * When that leaves no colour, the plain most frequent one is returned.
+ */
+function dominant(
+  img: StoredImage,
+  palette: readonly Rgba[] | undefined,
+): Rgba | number | undefined {
+  const w = img.width;
+  const h = img.height;
+  const keys = new Uint32Array(w * h); // packed RGBA, or the index; opaque only
+  const opaque = new Uint8Array(w * h);
   if (img instanceof IndexedImage) {
-    for (const ix of img.toIndices()) {
-      if (ix !== img.transparentIndex) counts.set(ix, (counts.get(ix) ?? 0) + 1);
+    const ix = img.toIndices();
+    for (let i = 0; i < ix.length; i++) {
+      if (ix[i] !== img.transparentIndex) {
+        opaque[i] = 1;
+        keys[i] = ix[i] ?? 0;
+      }
     }
   } else {
     const { data } = img.toRGBA();
-    for (let o = 0; o < data.length; o += 4) {
+    for (let i = 0; i < w * h; i++) {
+      const o = i * 4;
       if ((data[o + 3] ?? 0) === 0) continue;
-      const key =
+      opaque[i] = 1;
+      keys[i] =
         (((data[o] ?? 0) << 24) |
           ((data[o + 1] ?? 0) << 16) |
           ((data[o + 2] ?? 0) << 8) |
           (data[o + 3] ?? 0)) >>>
         0;
-      counts.set(key, (counts.get(key) ?? 0) + 1);
     }
   }
-  let best: number | undefined;
-  for (const [k, n] of [...counts].sort((a, b) => a[0] - b[0])) {
-    if (best === undefined || n > (counts.get(best) ?? 0)) best = k;
+  const counts = new Map<number, number>();
+  const edge = new Set<number>(); // colours with a pixel next to transparency
+  const clear = (x: number, y: number): boolean =>
+    x < 0 || y < 0 || x >= w || y >= h || opaque[y * w + x] === 0;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      if (opaque[i] === 0) continue;
+      const k = keys[i] ?? 0;
+      counts.set(k, (counts.get(k) ?? 0) + 1);
+      if (clear(x - 1, y) || clear(x + 1, y) || clear(x, y - 1) || clear(x, y + 1)) edge.add(k);
+    }
   }
+  const rgba = (k: number): Rgba =>
+    img instanceof IndexedImage
+      ? (palette?.[k] ?? [0, 0, 0, 255])
+      : [(k >>> 24) & 255, (k >>> 16) & 255, (k >>> 8) & 255, k & 255];
+  const luma = (k: number): number => {
+    const c = rgba(k);
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  };
+  const sorted = [...counts.keys()].sort((a, b) => a - b);
+  let outline: number | undefined;
+  for (const k of sorted) {
+    if (edge.has(k) && (outline === undefined || luma(k) < luma(outline))) outline = k;
+  }
+  const pick = (skip: number | undefined): number | undefined => {
+    let best: number | undefined;
+    for (const k of sorted) {
+      if (k === skip) continue;
+      if (best === undefined || (counts.get(k) ?? 0) > (counts.get(best) ?? 0)) best = k;
+    }
+    return best;
+  };
+  const best = pick(outline) ?? pick(undefined);
   if (best === undefined) return undefined;
-  return img instanceof IndexedImage
-    ? best
-    : [(best >>> 24) & 255, (best >>> 16) & 255, (best >>> 8) & 255, best & 255];
+  return img instanceof IndexedImage ? best : rgba(best);
 }
 
 /**
@@ -207,7 +254,7 @@ export function paintOverlapTx(
     if (variant === undefined || old === undefined) {
       throw new CoreError('IMAGE_MISSING', `variant ${g.variantId} has no stored image`);
     }
-    const color = opts.color ?? dominant(old);
+    const color = opts.color ?? dominant(old, palette);
     if (color === undefined) {
       throw refuse('bad-color', `variant ${g.variantId} has no colour to copy; pass "color"`);
     }

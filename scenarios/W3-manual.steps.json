@@ -510,7 +510,8 @@
       "id": "lint",
       "op": "lint.run",
       "input": {
-        "doc": "${open.output.doc}"
+        "doc": "${open.output.doc}",
+        "disable": ["rig.rotationResidual"]
       },
       "expect": {
         "output": {

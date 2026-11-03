@@ -1,8 +1,8 @@
 /**
  * `@pixel-forge/rig`: pure functions over schema types. This release: forward kinematics, key
  * interpolation and quantisation, hierarchical snapping, templates and binding, and the part render
- * pipeline with overrides and staleness, and edit attribution (FR-RIG-10/11/12, FR-RIG-20 steps 1–4,
- * FR-RIG-21/22/24).
+ * pipeline with overrides and staleness, edit attribution, and IK baked to FK keys (FR-RIG-10/11/12/13,
+ * FR-RIG-20 steps 1–4, FR-RIG-21/22/24).
  * No Node built-ins, no clock, no randomness, and no floating-point trig: rotations use raster's Q16
  * table and angles are exact rationals until they are rounded (NFR-02, ADR-010, ADR-012).
  * @packageDocumentation
@@ -63,6 +63,7 @@ export {
   PART_RENDER_KEY,
   PART_RENDER_VERSION,
   createPartCache,
+  partResiduals,
   partTarget,
   renderParts,
 } from './render.js';
@@ -72,6 +73,8 @@ export type {
   PartFrame,
   PartRender,
   PartRenderCache,
+  PartResidual,
+  PartResidualsInput,
   PartRig,
   PartVariant,
   PartView,
@@ -125,3 +128,63 @@ export type {
   OverlapReport,
   OverlapSkipped,
 } from './overlap.js';
+export { fitHumanoid } from './fit-template.js';
+export type { FittedTemplate, Landmark, TemplateKind, TemplateLandmarks } from './fit-template.js';
+export {
+  FIT_POSE_COARSE,
+  FIT_POSE_MAX_RENDERS,
+  FIT_POSE_RESTARTS,
+  fitPose,
+  pixelMismatch,
+} from './fit-pose.js';
+export { IK_ITERATIONS_DEFAULT, IK_MAX_BONES, solveFabrik, solveIk, solveTwoBone } from './ik.js';
+export type {
+  IkBend,
+  IkChain,
+  IkInput,
+  IkOptions,
+  IkPoseSolution,
+  IkSolution,
+  IkSolver,
+} from './ik.js';
+export type {
+  FitBone,
+  FitImage,
+  FitPoseCandidate,
+  FitPoseInput,
+  FitPoseResult,
+  FitVariantSlot,
+} from './fit-pose.js';
+export {
+  CYCLE_UNITS,
+  commonParams,
+  divRound,
+  param,
+  placeLeg,
+  presetAnimation,
+  presetContext,
+  resolveParams,
+  restLength,
+  scaleAngle,
+  scaleInt,
+  turnCos,
+  turnSin,
+} from './preset.js';
+export type {
+  LegPlacement,
+  Preset,
+  PresetBone,
+  PresetContext,
+  PresetFrame,
+  PresetParamSpec,
+  PresetParamSpecs,
+  PresetParams,
+  PresetResult,
+  PresetRig,
+} from './preset.js';
+export { WALK_PARAMS, walk } from './walk.js';
+export { RUN_PARAMS, run } from './run.js';
+export { JUMP_PARAMS, JUMP_PHASES, jump } from './jump.js';
+export { PRESETS, PRESET_NAMES, getPreset } from './presets.js';
+export { IDLE_BREATHE_PARAMS, idleBreathe } from './idle-breathe.js';
+export { SWING_PARAMS, swing } from './swing.js';

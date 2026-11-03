@@ -30,6 +30,43 @@ describe('rig.jointCheck', () => {
     expect(hero.store.historyInfo().entries).toHaveLength(0);
   });
 
+  it('compact form: the clean hero is under 500 bytes and says what was checked', async () => {
+    const { run } = await openHero();
+    const out = await registry.execute('rig.jointCheck', { doc: HERO_ID, compact: true }, run);
+    expect(Buffer.byteLength(JSON.stringify(out))).toBeLessThan(500);
+    expect(out).toMatchObject({
+      view: 'side',
+      summary: { joints: 15, jointsWithGaps: 0, gapCount: 0 },
+      problems: [],
+    });
+    expect(out).not.toHaveProperty('joints');
+  });
+
+  it('compact form names the joints with gaps and agrees with the full form', async () => {
+    const { run } = await openHero();
+    // A tiny radius-1 window and a wide sweep is not guaranteed to open gaps, so compare in general.
+    const args = { doc: HERO_ID, rangeDeg: 90, stepDeg: 45, radius: 1 };
+    const full = (await registry.execute('rig.jointCheck', args, run)) as {
+      joints: { bone: string; gapCount: number; union: unknown[] }[];
+      summary: unknown;
+    };
+    const compact = (await registry.execute('rig.jointCheck', { ...args, compact: true }, run)) as {
+      problems: { bone: string; kind: string; gapCount: number; unionCount: number }[];
+      summary: unknown;
+    };
+    expect(compact.summary).toEqual(full.summary);
+    expect(compact.problems).toEqual(
+      full.joints
+        .filter((j) => j.gapCount > 0)
+        .map((j) => ({
+          bone: j.bone,
+          kind: 'gap',
+          gapCount: j.gapCount,
+          unionCount: j.union.length,
+        })),
+    );
+  });
+
   it('checks the view it is given, the same as the default view', async () => {
     const { run } = await openHero();
     const byDefault = await registry.execute('rig.jointCheck', { doc: HERO_ID }, run);

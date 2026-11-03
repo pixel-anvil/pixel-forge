@@ -1,0 +1,50 @@
+{
+  "steps": [
+    { "id": "open", "op": "doc.open", "input": { "path": "hero_joints.pxf" } },
+    {
+      "id": "walk",
+      "op": "rig.applyPreset",
+      "input": { "doc": "${open.output.doc}", "preset": "walk" },
+      "expect": { "output": { "label": "walk/side", "created": true } }
+    },
+    {
+      "id": "run",
+      "op": "rig.applyPreset",
+      "input": { "doc": "${open.output.doc}", "preset": "run" },
+      "expect": { "output": { "label": "run/side", "created": true } }
+    },
+    {
+      "id": "jump",
+      "op": "rig.applyPreset",
+      "input": { "doc": "${open.output.doc}", "preset": "jump" },
+      "expect": { "output": { "label": "jump/side", "created": true } }
+    },
+    {
+      "id": "idle",
+      "op": "rig.applyPreset",
+      "input": { "doc": "${open.output.doc}", "preset": "idle-breathe" },
+      "expect": { "output": { "label": "idle-breathe/side", "created": true } }
+    },
+    {
+      "id": "swing",
+      "op": "rig.applyPreset",
+      "input": { "doc": "${open.output.doc}", "preset": "swing" },
+      "expect": { "output": { "label": "swing/side", "created": true } }
+    },
+    {
+      "id": "sheet",
+      "op": "render.contactSheet",
+      "input": {
+        "doc": "${open.output.doc}",
+        "animations": [
+          { "group": "walk", "direction": "side" },
+          { "group": "run", "direction": "side" },
+          { "group": "jump", "direction": "side" },
+          { "group": "idle-breathe", "direction": "side" },
+          { "group": "swing", "direction": "side" }
+        ],
+        "scale": 3
+      }
+    }
+  ]
+}

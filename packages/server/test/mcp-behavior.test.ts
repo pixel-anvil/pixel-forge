@@ -61,6 +61,44 @@ describe('results', () => {
   });
 });
 
+describe('rig_set_pose end-effector targets', () => {
+  it('solves a target to plain FK keys, in one undo step, and reports reached', async () => {
+    const f = await mcpFixture();
+    await f.call('doc_open', { path: f.hero });
+    const r = await f.call('rig_set_pose', {
+      doc: HERO_ID,
+      animation: frame0,
+      frame: 0,
+      targets: { hand_r: { x: 30, y: 22 } },
+    });
+    expect(r.isError, r.text).toBe(false);
+    expect(r.json.output).toMatchObject({
+      keyed: ['lower_arm_r', 'upper_arm_r'],
+      targets: [{ bone: 'hand_r', target: { x: 30, y: 22 }, reached: true }],
+    });
+    const pose = await f.call('rig_read_pose', { doc: HERO_ID, animation: frame0, frame: 0 });
+    expect(Object.keys((pose.json.output as { bones: object }).bones).sort()).toEqual([
+      'lower_arm_r',
+      'upper_arm_r',
+    ]);
+    expect(f.labels(HERO_ID)).toHaveLength(1);
+    const far = await f.call('rig_set_pose', {
+      doc: HERO_ID,
+      animation: frame0,
+      frame: 0,
+      targets: { hand_r: { x: 60, y: 30 } },
+    });
+    expect(far.json.output).toMatchObject({ targets: [{ reached: false }] });
+    const bad = await f.call('rig_set_pose', {
+      doc: HERO_ID,
+      animation: frame0,
+      frame: 0,
+      targets: { hand_r: { x: 30, y: 22, chain: 3, bend: 'cw' } },
+    });
+    expect(bad.isError).toBe(true);
+  });
+});
+
 describe('images', () => {
   it.each([
     ['render_frame', { animation: frame0, frame: 0, scale: 8, bones: true, pivots: true }],

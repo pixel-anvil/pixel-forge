@@ -67,9 +67,12 @@ export function exampleInput(op: AnyOp, input: unknown): unknown {
     : input;
 }
 
+/** The safety note of a `mutate` op; the MCP server states it once in its instructions instead. */
+export const MUTATE_NOTE = 'Edit: one undo step.';
+
 const SAFETY_NOTE: Readonly<Record<Safety, string>> = {
   read: 'Read-only.',
-  mutate: 'Edit: one undo step.',
+  mutate: MUTATE_NOTE,
   destructive: 'Destructive: pass "confirm": true. One undo step.',
   io: 'File I/O.',
 };

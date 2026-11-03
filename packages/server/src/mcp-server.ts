@@ -26,7 +26,7 @@ import {
   ListToolsRequestSchema,
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { OpError, mcpTools, toOpError } from '@pixel-forge/ops';
+import { CONVENTIONS, OpError, mcpTools, toOpError } from '@pixel-forge/ops';
 import type { McpToolDefinition, OpErrorJson, OpHost, OpRegistry } from '@pixel-forge/ops';
 import type { Readable, Writable } from 'node:stream';
 import { SERVER_PROTOCOL_VERSION, discoverServer } from './discovery.js';
@@ -87,9 +87,12 @@ export interface McpServerHandle {
   close(): Promise<void>;
 }
 
-const INSTRUCTIONS =
+/** Sent once at initialize: what every tool shares, so tool descriptions do not repeat it. */
+export const INSTRUCTIONS =
+  `${CONVENTIONS} ` +
   'pixel-forge edits .pxf pixel-art documents with rigs and animations. Start with doc_open (or doc_create) and doc_summary; ' +
   'the names in the summary are what the other tools take. Edits apply directly, one undo step each, labelled "AI: <op>": use undo to revert. ' +
+  'Clients prefix tool names (mcp__pf__undo): tools here are named without the prefix. ' +
   'Destructive tools need "confirm": true. Check results with render_frame / render_contact_sheet (vision) and lint / rig_joint_check (precision). ' +
   'Files are limited to the workspace roots. Resources: pf://docs and pf://doc/{id}/summary|palette|rig|animations/{group}/{direction}.';
 

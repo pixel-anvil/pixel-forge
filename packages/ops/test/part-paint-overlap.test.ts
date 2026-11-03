@@ -96,6 +96,53 @@ describe('part.paintOverlap', () => {
     expect(await gaps()).toBe(0);
   });
 
+  it('fills with the most frequent colour that is not the outline (RIG-08)', async () => {
+    const { hero, run, gaps } = await withElbowGap();
+    const upper = (): NonNullable<typeof hero.store.doc.rig>['parts'][number] => {
+      const layer = need(hero.store.doc.layers.find((l) => l.name === 'upper_arm_r'));
+      return need(hero.store.doc.rig?.parts.find((p) => p.layerId === layer.id));
+    };
+    const part = upper();
+    const variant = need(part.variants[0]);
+    const img = need(hero.store.image(variant.imageId));
+    const { width, height } = img;
+    // An outlined part: a black ring (the most frequent colour) around a few red pixels.
+    const rows: string[] = [];
+    for (let y = 0; y < height; y++) {
+      let row = '';
+      for (let x = 0; x < width; x++) {
+        const rim = x === 0 || y === 0 || x === width - 1 || y === height - 1;
+        row += rim || x + y > width + height - 4 ? '1' : '2';
+      }
+      rows.push(row);
+    }
+    await registry.execute(
+      'part.paintVariant',
+      { doc: HERO_ID, part: 'upper_arm_r', rows, legend: { '1': '#000000', '2': '#ff0000' } },
+      run,
+    );
+    const count = (c: string): number => rows.join('').split(c).length - 1;
+    expect(count('1')).toBeGreaterThan(count('2')); // the outline is the most frequent colour
+    await registry.execute('part.paintOverlap', { doc: HERO_ID }, run);
+    expect(await gaps()).toBe(0);
+    const after = hero.store.image(need(upper().variants[0]).imageId) as {
+      toRGBA(): { data: Uint8Array; width: number };
+    };
+    const { data } = after.toRGBA();
+    const seen = new Set<string>();
+    for (let o = 0; o < data.length; o += 4) {
+      if (data[o + 3] !== 0) seen.add(String([data[o], data[o + 1], data[o + 2]]));
+    }
+    expect(seen.has('255,0,0')).toBe(true);
+    // black pixels are only the ring written above: the new fill is red, so the count of
+    // black pixels did not grow beyond the grid's own ring
+    let black = 0;
+    for (let o = 0; o < data.length; o += 4) {
+      if (data[o + 3] !== 0 && data[o] === 0 && data[o + 1] === 0 && data[o + 2] === 0) black++;
+    }
+    expect(black).toBeLessThanOrEqual(count('1'));
+  });
+
   it('is a no-op on a clean rig, and reports unknown names', async () => {
     const { hero, run } = await openHero();
     const clean = await registry.call('part.paintOverlap', { doc: HERO_ID }, run);

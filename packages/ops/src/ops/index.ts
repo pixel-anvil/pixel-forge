@@ -20,11 +20,13 @@ import { overrideList } from './override-list.js';
 import { pxfPack, pxfUnpack } from './pxf-pack.js';
 import { overrideResolve } from './override-resolve.js';
 import { partPaintOverlap } from './part-paint-overlap.js';
+import { partPaintVariant } from './part-paint-variant.js';
 import { partSplit } from './part-split.js';
 import { rigBake } from './rig-bake.js';
 import { rigBindParts } from './rig-bind-parts.js';
 import { rigEditBones } from './rig-edit-bones.js';
 import { rigMirrorAnimation } from './rig-mirror-animation.js';
+import { rigSetPartZ } from './rig-set-part-z.js';
 import { rigSetPivot } from './rig-set-pivot.js';
 import { docOpen } from './doc-open.js';
 import { docRedo } from './doc-redo.js';
@@ -35,12 +37,16 @@ import { frameDelete } from './frame-delete.js';
 import { frameDuplicate } from './frame-duplicate.js';
 import { lintRun } from './lint-run.js';
 import { rigApplyTemplate } from './rig-apply-template.js';
+import { rigFitTemplate } from './rig-fit-template.js';
+import { rigApplyPreset } from './rig-apply-preset.js';
 import { rigJointCheck } from './rig-joint-check.js';
+import { rigReadPose } from './rig-read-pose.js';
 import { rigSetPose } from './rig-set-pose.js';
 import { pixelsReadGrid } from './pixels-read-grid.js';
 import { pixelsWriteGrid } from './pixels-write-grid.js';
 import { renderContactSheet } from './render-contact-sheet.js';
 import { renderFrame } from './render-frame.js';
+import { rigFitPose } from './rig-fit-pose.js';
 
 export { animCreate } from './anim-create.js';
 export { animUpdate } from './anim-update.js';
@@ -57,11 +63,13 @@ export { overrideList } from './override-list.js';
 export { pxfPack, pxfUnpack } from './pxf-pack.js';
 export { overrideResolve } from './override-resolve.js';
 export { partPaintOverlap } from './part-paint-overlap.js';
+export { partPaintVariant } from './part-paint-variant.js';
 export { SplitSelectionInput, partSplit } from './part-split.js';
 export { rigBake } from './rig-bake.js';
 export { rigBindParts } from './rig-bind-parts.js';
 export { BoneEdit, rigEditBones } from './rig-edit-bones.js';
 export { rigMirrorAnimation } from './rig-mirror-animation.js';
+export { rigSetPartZ } from './rig-set-part-z.js';
 export { rigSetPivot } from './rig-set-pivot.js';
 export { docOpen } from './doc-open.js';
 export { docRedo } from './doc-redo.js';
@@ -72,12 +80,16 @@ export { frameDelete } from './frame-delete.js';
 export { frameDuplicate } from './frame-duplicate.js';
 export { lintRun } from './lint-run.js';
 export { rigApplyTemplate } from './rig-apply-template.js';
+export { rigFitTemplate } from './rig-fit-template.js';
+export { rigApplyPreset } from './rig-apply-preset.js';
 export { rigJointCheck } from './rig-joint-check.js';
+export { rigReadPose } from './rig-read-pose.js';
 export { BoneKeyInput, PartKeyInput, rigSetPose } from './rig-set-pose.js';
 export { pixelsReadGrid } from './pixels-read-grid.js';
 export { pixelsWriteGrid } from './pixels-write-grid.js';
 export { renderContactSheet } from './render-contact-sheet.js';
 export { OverlayBone, renderFrame } from './render-frame.js';
+export { rigFitPose } from './rig-fit-pose.js';
 
 /** The built-in ops. */
 export const ALL_OPS: readonly AnyOp[] = [
@@ -97,12 +109,14 @@ export const ALL_OPS: readonly AnyOp[] = [
   pxfPack,
   pxfUnpack,
   partPaintOverlap,
+  partPaintVariant,
   partSplit,
   rigBake,
   rigBindParts,
   rigEditBones,
   rigMirrorAnimation,
   rigSetPivot,
+  rigSetPartZ,
   docOpen,
   docRedo,
   docSummary,
@@ -112,12 +126,16 @@ export const ALL_OPS: readonly AnyOp[] = [
   frameDuplicate,
   lintRun,
   rigApplyTemplate,
+  rigFitTemplate,
   rigJointCheck,
+  rigReadPose,
   rigSetPose,
   pixelsReadGrid,
   pixelsWriteGrid,
   renderContactSheet,
   renderFrame,
+  rigFitPose,
+  rigApplyPreset,
 ];
 
 /** The registry of the built-in ops, shared by the MCP server, the CLI and the harness. */

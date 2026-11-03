@@ -79,6 +79,7 @@ The order that worked in the T5.8 evaluation for a sprite sheet with no parts:
 - **Rig a character:** "Open `hero.pxf` and import `hero_parts.aseprite`. Apply the humanoid-side template with `rig_apply_template`, bind the layers with `rig_bind_parts`, set the pivots with `rig_set_pivot`, then run `rig_joint_check` and fix any gaps."
 - **Six-frame run:** "Create a `run` animation with `anim_create`, pose its frames with `rig_set_pose` for a side-view run at 12 fps, render a `render_contact_sheet` and tell me what looks wrong, then run `lint`."
 - **Fix 3 px on frame 2:** "Read the area around the eye on frame 2 with `pixels_read_grid`, then paint the three pixels with `pixels_write_grid` using a legend. Check with `render_frame`, then `doc_save`."
+- **Match a reference pose:** "Fit the `upper_arm_r` and `lower_arm_r` angles of frame 0 to `reference.png` with `rig_fit_pose` (also `parts: [\"lower_arm_r\"]` for the sleeve), then pass its `bones` and `parts` to `rig_set_pose` and compare with `render_frame`." `exact: false` is not proof that no pose fits (KNOWN_ISSUES FIT-01): fit the parents first, narrow `range`, or raise `maxRenders`.
 - **Bake for export:** "Bake the `idle` animation as a new animation with `rig_bake` (with `confirm: true`), then render a contact sheet."
 
 ## Troubleshooting
@@ -91,7 +92,8 @@ The order that worked in the T5.8 evaluation for a sprite sheet with no parts:
 ## Known gaps
 
 - Tool calls run one at a time, with no cancellation (KNOWN_ISSUES MCP-02).
-- The rig resource does not list bone or part keys, so the agent reads poses through `render_frame` or `pixels_read_grid` (KNOWN_ISSUES MCP-03). `render_frame` with `bones: true` returns pivots and tips as numbers; no tool shows which keys a frame holds.
+- To put a hand or foot on a pixel, pass `targets: {hand_r: {x, y}}` to `rig_set_pose`: IK keys the parent bones (plain angles) and `reached` says if the pivot is within 1 px. A target on the straight line of a folded chain of 3 or more bones can stall (`reached: false`): nudge it 1 px sideways.
+- To read a pose, call `rig_read_pose` (or read `pf://doc/{id}/animations/{group}/{direction}/pose/{frame}`). It gives the bone and part values of one frame in the form `rig_set_pose` takes, and `keyed` says which are real keys. The rig resource shows the skeleton only. `render_frame` with `bones: true` returns pivots and tips as numbers.
 - No tool changes a part's default z or paints a part's own art (KNOWN_ISSUES RIG-07).
 
 The evidence for this guide is in `docs/ai/MCP_EVAL_M1a.md`.

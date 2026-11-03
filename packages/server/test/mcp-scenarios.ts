@@ -187,6 +187,16 @@ export const SCENARIOS: Record<string, Scenario> = {
     args: ({ doc }) => ({ doc, bones: ['lower_arm_r'] }),
     entry: 'one',
   },
+  part_paint_variant: {
+    base: 'hero',
+    args: ({ doc }) => ({
+      doc,
+      part: 'lower_arm_r',
+      rows: ['11'],
+      legend: { '1': '#ff00ff' },
+    }),
+    entry: 'one',
+  },
   part_split: {
     base: 'flatRig',
     args: ({ doc }) => ({
@@ -254,6 +264,26 @@ export const SCENARIOS: Record<string, Scenario> = {
     args: ({ doc }) => ({ doc, template: 'humanoid-side', viewName: 'side', height: 60 }),
     entry: 'one',
   },
+  rig_fit_template: {
+    base: 'flatRig',
+    args: ({ doc }) => ({
+      doc,
+      template: 'humanoid-side',
+      view: 'side',
+      landmarks: {
+        headTop: { x: 31, y: 16 },
+        hips: { x: 30, y: 44 },
+        feet: { x: 30, y: 63 },
+        handR: { x: 38, y: 47 },
+      },
+    }),
+    entry: 'one',
+  },
+  rig_apply_preset: {
+    base: 'hero',
+    args: ({ doc }) => ({ doc, preset: 'walk', frames: 6 }),
+    entry: 'one',
+  },
   rig_bake: {
     base: 'hero',
     args: ({ doc }) => ({ doc, animation: frame0, mode: 'new', confirm: true }),
@@ -293,6 +323,43 @@ export const SCENARIOS: Record<string, Scenario> = {
     base: 'hero',
     args: ({ doc }) => ({ doc, source: frame0, direction: 'left' }),
     entry: 'one',
+  },
+  rig_set_part_z: {
+    base: 'hero',
+    args: ({ doc }) => ({ doc, part: 'lower_arm_r', z: 5 }),
+    entry: 'one',
+  },
+  rig_read_pose: {
+    base: 'hero',
+    args: ({ doc }) => ({ doc, animation: frame0, frame: 0 }),
+    entry: READ,
+  },
+  rig_fit_pose: {
+    base: 'hero',
+    setup: async (f, doc) => {
+      // frame 0 at rest, frame 1 posed: fit frame 0 to the render of frame 1
+      await f.call('frame_duplicate', { doc, animation: frame0, frame: 0 });
+      await f.call('rig_set_pose', {
+        doc,
+        animation: frame0,
+        frame: 0,
+        bones: { upper_arm_r: { angle: 0 } },
+      });
+      await f.call('rig_set_pose', {
+        doc,
+        animation: frame0,
+        frame: 1,
+        bones: { upper_arm_r: { angle: -40 } },
+      });
+    },
+    args: ({ doc }) => ({
+      doc,
+      animation: frame0,
+      frame: 0,
+      targetFrame: 1,
+      bones: ['upper_arm_r'],
+    }),
+    entry: READ,
   },
   rig_set_pivot: {
     base: 'hero',

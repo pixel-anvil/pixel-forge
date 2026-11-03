@@ -22,7 +22,7 @@ export const rigJointCheck = defineOp({
   summary:
     'Sweep each joint of one rig view and report the pixel gaps that open on the outer side of a bend.',
   description:
-    'A rig passes when summary.gapCount is 0. The output is long, about 400 characters per joint even when clean: for pass or fail alone use lint with enable ["rig.jointGap"]. The sweep moves one joint at a time, rangeDeg around rest (default 30): a pose beyond that is not checked, so look at the render. Fix gaps with part_paint_overlap, or by moving part pivots, then check again. Checks the view that draws the first direction of the given view (default: the first view).',
+    'A rig passes when summary.gapCount is 0. The full output is about 400 characters per joint: pass compact for a short form, or use lint with enable ["rig.jointGap"] for pass or fail. The sweep moves one joint at a time, rangeDeg around rest (default 30): a pose beyond that is not checked, so look at the render. Fix gaps with part_paint_overlap, or by moving part pivots, then check again. Checks the view that draws the first direction of the given view (default: the first view).',
   mcp: { name: 'rig_joint_check' },
   input: z.strictObject({
     doc: DocRef,
@@ -34,6 +34,7 @@ export const rigJointCheck = defineOp({
       .describe('Sweep range, degrees either side of rest.'),
     stepDeg: z.number().positive().optional().describe('Sweep step, degrees.'),
     radius: z.int().min(1).optional().describe('Window radius of the check, px.'),
+    compact: z.boolean().optional().describe('Short form: summary and problems, no joints.'),
   }),
   output: z.strictObject({
     view: z.string().describe('Name of the checked view.'),
@@ -53,7 +54,19 @@ export const rigJointCheck = defineOp({
           angles: z.array(AngleGaps).describe('Every checked angle, ascending.'),
         }),
       )
-      .describe('One entry per joint, sorted by bone name.'),
+      .optional()
+      .describe('One entry per joint, sorted by bone name. Absent when compact.'),
+    problems: z
+      .array(
+        z.strictObject({
+          bone: z.string().describe('Child bone name.'),
+          kind: z.literal('gap').describe('Kind of problem.'),
+          gapCount: z.int().describe('Gap pixels summed over the sweep.'),
+          unionCount: z.int().describe('Distinct gap pixels.'),
+        }),
+      )
+      .optional()
+      .describe('Joints with gaps. Only when compact.'),
     summary: z.strictObject({
       joints: z.int(),
       jointsWithGaps: z.int(),
@@ -94,6 +107,21 @@ export const rigJointCheck = defineOp({
     });
     // The report's pixels are readonly tuples; the output wants plain arrays (same values).
     const px = (p: readonly [number, number]): [number, number] => [p[0], p[1]];
+    if (input.compact === true) {
+      return {
+        view: report.view,
+        params: { ...report.params },
+        summary: { ...report.summary },
+        problems: report.joints
+          .filter((j) => j.gapCount > 0)
+          .map((j) => ({
+            bone: j.bone,
+            kind: 'gap' as const,
+            gapCount: j.gapCount,
+            unionCount: j.union.length,
+          })),
+      };
+    }
     return {
       view: report.view,
       params: { ...report.params },
