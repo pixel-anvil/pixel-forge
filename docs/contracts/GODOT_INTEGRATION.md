@@ -89,6 +89,18 @@ Decisions the sections above leave open; the code is `godot/addons/pixel_forge/`
 - **Index checks:** the reader rejects an index with `schemaVersion` newer than 1, a missing `base` skin, a mirror whose source
   is not an authored direction of the same group, or frames with a missing image, a non-positive duration or malformed markers.
 
+### 2.2 `PixelForgeSpriteFrames` (E8.1, FR-GD-06)
+
+`godot/addons/pixel_forge/pixel_forge_sprite_frames.gd`: static builders from a `PixelForgeAsset` to Godot `SpriteFrames`, one per direction. It is a runtime API; the importer does not call it (the import saves one `.res`, and `SpriteFrames` is cheap to build from the asset).
+
+- `build(asset, direction, skin = &"base", report = {}) -> SpriteFrames`: one animation per group, taken from `asset.resolve(group, direction)` (so `direction_fallback` and `default` apply). Groups with no entry are left out. Null and `report.errors` for an unknown skin.
+- `build_all(asset, skin = &"base", report = {}) -> Dictionary` and `directions(asset)`: every authored direction (`default` included) and every `direction_fallback` key.
+- Frames are `AtlasTexture`s of the skin's atlas; `margin` restores the trim offset, so each frame is canvas sized.
+- Timing: speed is `1000 / g` fps, `g` = gcd of the frame durations in ms; frame duration is `duration_ms / g`. One pass takes exactly `asset.duration_ms(...)`.
+- Loop: `loop` and `pingpong` give `loop = true`, `once` gives `false`. `pingpong` lists `0..n-1, n-2..1` (the driver's sequence).
+- Mirror: a `mirrorOf` direction lists its source frames; `PixelForgeSpriteFrames.is_mirrored(sprite_frames, animation)` says the node must set `flip_h`. Also in meta `pixel_forge_mirror`, `pixel_forge_direction`, `pixel_forge_skin`.
+- Not covered: markers, events and root motion (use the asset and the driver). The nodes that play these are E8.2.
+
 ## 3. `PixelForgeDriver` (T6.2)
 
 A `Node`. It is the only clock: nothing else picks frames. It drives one target node through an adapter

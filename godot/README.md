@@ -65,6 +65,19 @@ var hand := driver.marker_metres(&"hand_r")   # metres, y up, from the node orig
   `pixel_size` alone. Import such an asset with trim off (contract section 8.3).
 - The details and the rules are in the contract, sections 3, 4 and 8.
 
+## SpriteFrames
+
+```gdscript
+var asset := load("res://hero.pxf") as PixelForgeAsset
+var frames := PixelForgeSpriteFrames.build(asset, &"side")          # base skin
+var alt := PixelForgeSpriteFrames.build(asset, &"side", &"swap")    # another skin
+var all := PixelForgeSpriteFrames.build_all(asset)                  # {direction: SpriteFrames}
+$AnimatedSprite2D.sprite_frames = frames
+$AnimatedSprite2D.flip_h = PixelForgeSpriteFrames.is_mirrored(frames, &"walk")
+```
+
+One animation per group, following `direction_fallback`. See contract section 2.2 for timing, loop and mirror rules.
+
 ## Demo
 
 `godot/demo/` is a minimal Godot 4.6 project: `main.gd` loads `walker.pxf` and plays it on a `Sprite2D` with
