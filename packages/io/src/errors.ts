@@ -23,6 +23,9 @@
  * - `SYMLINK`: `pack` found a symbolic link inside the `.pxfd` folder where it would read a file;
  *   following it could pack a file from outside the folder (NFR-06).
  * - `EXISTS`: `unpack` was asked to write into a folder that already exists.
+ * - `BAD_PALETTE_FILE`: a palette file (`.hex`, `.gpl`, `.pal`, PNG strip) is malformed: bad header,
+ *   bad line, bad value, count mismatch, an undecodable PNG, or no colours at all (FR-PAL-02).
+ * - `PALETTE_TOO_LARGE`: a palette has more than 256 colours (`MAX_PALETTE_COLORS`) (FR-PAL-02).
  */
 export type IoErrorCode =
   | 'BAD_INPUT'
@@ -38,7 +41,9 @@ export type IoErrorCode =
   | 'RIG_REQUIRED'
   | 'FS_FAILED'
   | 'SYMLINK'
-  | 'EXISTS';
+  | 'EXISTS'
+  | 'BAD_PALETTE_FILE'
+  | 'PALETTE_TOO_LARGE';
 
 /** The error type thrown by `@pixel-forge/io`. Branch on `code`. */
 export class IoError extends Error {

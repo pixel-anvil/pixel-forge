@@ -41,6 +41,19 @@ export {
 export type { ContactSheetOptions, ContactSheetPlan, ContactSheetTile } from './contact-sheet.js';
 export * from './aseprite/index.js';
 
+// Palette files (FR-PAL-02): `.hex`, `.gpl`, `.pal` (JASC-PAL) and PNG strips.
+export {
+  parseGplPalette,
+  parseHexPalette,
+  parseJascPalette,
+  parsePngStripPalette,
+  writeGplPalette,
+  writeHexPalette,
+  writeJascPalette,
+  writePngStripPalette,
+} from './palette-files.js';
+export type { PaletteFile } from './palette-files.js';
+
 // `.pxf` read/write, migrations, render cache, atomic save, pack/unpack, FileSystem and Clock ports (T4.2).
 export { MemoryFileSystem, dirnameOf, fixedClock, joinPath, steppedClock } from './fs.js';
 export type { Clock, DirEntry, FileSystem, MemoryFileSystemOptions, MemoryFsOp } from './fs.js';

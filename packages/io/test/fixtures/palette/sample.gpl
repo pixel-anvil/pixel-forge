@@ -1,0 +1,8 @@
+GIMP Palette
+Name: Sample Three
+# a comment
+Columns: 3
+#
+  0   0   0	Black
+255   0   0	Red Dot
+ 10 200  30

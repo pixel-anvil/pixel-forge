@@ -141,6 +141,8 @@ const IO_CODES: Readonly<Record<IoErrorCode, OpErrorCode>> = {
   FS_FAILED: 'IO_FAILED',
   SYMLINK: 'NOT_ALLOWED',
   EXISTS: 'CONFLICT',
+  BAD_PALETTE_FILE: 'BAD_FILE',
+  PALETTE_TOO_LARGE: 'REFUSED',
 };
 
 const RIG_CODES: Readonly<Record<RigErrorCode, OpErrorCode>> = {
