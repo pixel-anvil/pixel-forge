@@ -51,7 +51,8 @@ export interface QuantizeResult {
   readonly indices: Int16Array;
 }
 
-function colorsOf(
+/** The colour list of an explicit palette or of an object with `colors`. Internal to the package. */
+export function colorsOf(
   palette: readonly RGBA8[] | { readonly colors: readonly RGBA8[] },
 ): readonly RGBA8[] {
   return 'colors' in palette ? palette.colors : palette;
@@ -226,4 +227,46 @@ export function quantize(
     out[i * 4 + 3] = 255;
   }
   return { image: { width, height, data: out }, indices };
+}
+
+/**
+ * A default ordered-dither `spread` derived from a palette: the mean distance from each visible
+ * colour to its nearest other colour (Euclidean in 8-bit sRGB), divided by `sqrt(3)` and rounded,
+ * clamped to 1..255. The ordered offset is added equally to R, G and B, so a grey shift of `d` moves a
+ * colour by `d * sqrt(3)`; a threshold range that spans the gap between neighbouring palette colours
+ * is the one that mixes them. Checks: a black and white palette gives 255 (the value advised for two
+ * colours), a grey ramp with step `s` gives `s`. It is a heuristic of this project, not from a paper;
+ * it ignores palette shape, so strongly clustered palettes still want a hand-set `spread`.
+ * Duplicate colours count once; entries with alpha 0 are ignored. With fewer than two distinct visible
+ * colours it returns {@link DEFAULT_DITHER_SPREAD}. Only integer maths and one `Math.sqrt` per colour
+ * and one division, so it is the same on every platform. {@link quantize} itself keeps its fixed
+ * default; the recipe runner uses this function when `spread` is `'auto'`.
+ */
+export function autoDitherSpread(
+  palette: readonly RGBA8[] | { readonly colors: readonly RGBA8[] },
+): number {
+  const colors = colorsOf(palette).filter((c) => c[3] !== 0);
+  let sum = 0;
+  let n = 0;
+  for (let i = 0; i < colors.length; i++) {
+    const a = colors[i];
+    if (a === undefined) continue;
+    let best = Infinity;
+    for (let j = 0; j < colors.length; j++) {
+      const b = colors[j];
+      if (i === j || b === undefined) continue;
+      const dr = a[0] - b[0];
+      const dg = a[1] - b[1];
+      const db = a[2] - b[2];
+      const d = dr * dr + dg * dg + db * db;
+      if (d > 0 && d < best) best = d;
+    }
+    if (best !== Infinity) {
+      sum += Math.sqrt(best);
+      n++;
+    }
+  }
+  if (n === 0) return DEFAULT_DITHER_SPREAD;
+  const v = Math.round(sum / n / Math.sqrt(3));
+  return v < 1 ? 1 : v > 255 ? 255 : v;
 }

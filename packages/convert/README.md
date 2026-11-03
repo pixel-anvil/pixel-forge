@@ -20,9 +20,12 @@ convert to PNG first.
 | Quantise   | `quantize(img, palette, opts)` | Nearest colour in OKLab, optional dither. Returns image + index map. |
 | Grid       | `detectGrid(img, opts?)`       | Cell size and phase of upscaled art, or a clear "no grid".           |
 | Downscale  | `downscale(img, opts)`         | `box`, `kcentroid`, `nearest`, `mode`; by size or by grid.           |
+| Clean-up   | `cleanup(img, opts)`           | One alpha threshold, orphan removal, optional 1 px outline.          |
+| Recipe     | `runRecipe(img, recipe, ctx?)` | The whole pipeline from one JSON `ConvertRecipe`.                    |
+| Variants   | `runVariants`, `variantSheet`  | Parameter grid over one recipe, and a contact sheet of the results.  |
 
-Option types (`CropOptions`, `BackgroundOptions`, `DetectGridOptions`, `DownscaleOptions`) are named
-so the ConvertRecipe (E4.4) can reuse them.
+The option types of the single steps (`CropOptions`, `BackgroundOptions`, `DetectGridOptions`,
+`DownscaleOptions`) are the field types of the recipe.
 
 ### Background removal
 
@@ -114,6 +117,81 @@ Round trip: art upscaled by whole numbers at any phase, downscaled by its grid, 
 exactly with every method (`box` too, because the cells are uniform), as long as each cropped edge
 cell keeps at least half of its size (thinner remnants are dropped, see above).
 
+### Clean-up (FR-CONV-07)
+
+`cleanup(img, { alphaThreshold, orphanMinSize, connectivity, outline })` returns
+`{ image, removedPixels, outlinePixels, offset }`. Steps in this order:
+
+1. **Alpha threshold.** One cut: alpha >= `alphaThreshold` becomes 255 (RGB kept), the rest `0,0,0,0`.
+   The default is `DEFAULT_ALPHA_THRESHOLD` (128), the same value `downscale` and `quantize` use. A
+   recipe has one `alphaThreshold` and passes it to all three.
+2. **Orphans.** Components of visible pixels with fewer than `orphanMinSize` pixels are removed.
+   Default 2 (isolated pixels go); 1 removes nothing. Connectivity defaults to **8**: a 1 px diagonal
+   line is one component, so it is kept. With `connectivity: 4` every pixel of such a line is alone and
+   goes. Size counts pixels whatever their colour. (Labelling after Rosenfeld 1970.)
+3. **Outline** (optional). An outer 1 px outline built on `outline` of `@pixel-forge/raster`: a
+   transparent pixel next to a visible one that is connected to the outside through transparent
+   pixels. Holes are not outlined and visible pixels are never overwritten. `color` is an RGB triple or
+   `'darken'` (default): the mean colour of the touching visible pixels scaled to `shade` percent
+   (default 35). `corners: 'round'` (default) uses 4 neighbours, `'square'` fills the diagonals. The
+   canvas **grows** by 1 px on each side (`canvas: 'grow'`, default; input `(x, y)` is output
+   `(x + 1, y + 1)`, `offset` says so). `canvas: 'keep'` crops back and loses outline outside the old
+   canvas.
+
+### ConvertRecipe (FR-CONV-09)
+
+A recipe is plain JSON. Steps run in this order and each is optional: `crop`, `background`,
+`downscale`, `cleanup`, `quantize`.
+
+```json
+{
+  "version": 1,
+  "alphaThreshold": 128,
+  "crop": { "x": 0, "y": 0, "w": 256, "h": 256 },
+  "background": { "mode": "flood", "color": "auto", "tolerance": 24 },
+  "downscale": { "method": "mode", "grid": "auto", "detect": { "square": true } },
+  "cleanup": { "orphanMinSize": 2, "outline": { "color": "darken" } },
+  "quantize": { "dither": "bayer4", "strength": 0.75, "spread": "auto" }
+}
+```
+
+- `validateRecipe(value)` is strict: an unknown key at any level, a wrong type, a bad range or a
+  `version` other than 1 throws `BAD_RECIPE` with the field path. It returns a clean copy.
+- `runRecipe(img, recipe, { palette })` validates, runs, and returns `{ image, report }`. The palette
+  of a `quantize` step is its own `palette`, else the context palette, else `BAD_PALETTE`.
+- `downscale` needs a `method` and exactly one target: `width` and/or `height`, an explicit `grid`
+  (`cellWidth`, `cellHeight`, `offsetX`, `offsetY`), or `grid: 'auto'` (`detectGrid` on the image as it
+  is after background removal). With `'auto'` and no grid: `NO_GRID` is thrown, or the step is skipped
+  with `onNoGrid: 'skip'` (for art that is already pixel size).
+- Outline colours are made before quantising, so a `quantize` step snaps them to the palette.
+- `spread: 'auto'` (default in a recipe) is `autoDitherSpread(palette)`: the mean nearest-neighbour
+  distance in sRGB divided by sqrt(3), 1..255. A black and white palette gives 255, a grey ramp gives
+  its step. `quantize` called directly keeps its fixed default of 64.
+- Flood over transparent pixels: a flood treats already transparent pixels as background and passes
+  through them, so it can reach matching colour behind a transparent gap. Use `key` to avoid that.
+- The report holds the input size, the size after each step that ran (`steps`), the grid detection
+  and the grid used, clean-up counts and offset, the palette size, the dither spread and `indices`
+  (an `Int16Array`, -1 transparent; the only part that is not JSON).
+
+### Variant grid (FR-CONV-08)
+
+`runVariants(img, baseRecipe, axes, { palette, maxVariants })` runs the cartesian product of the
+`axes` and returns `{ index, label, params, recipe, image, report }` per variant.
+
+- Axes: `method`, `k` (need `downscale`), `palette` (list of `{ name, colors }`), `dither`, `strength`,
+  `spread` (need `quantize`, which may be `{}`), `orphanMinSize` (needs `cleanup`). An axis the base
+  recipe has no step for is `BAD_AXES`, as are empty lists, duplicates and unknown axes.
+- Order is fixed: axes run in the order above whatever the order of the object's keys, the last given
+  axis changes fastest, values keep their list order. Labels read `method=box dither=bayer4`; no axes
+  gives one variant labelled `base`.
+- Cap: 64 variants by default (`DEFAULT_MAX_VARIANTS`); more throws `TOO_MANY_VARIANTS` before anything
+  runs. `maxVariants` can be set from 1 to 256.
+- `variantSheet(results, { columns, gap, background })` returns `{ image, columns, rows, cell, tiles }`:
+  tiles row by row in equal cells (the largest result), centred, no scaling and no blending. There is
+  no text in the pixels; `tiles` gives each tile's position and label so a caller can draw labels.
+- `pnpm convert:sheet` writes a labelled review sheet to `~/pf-work/sheets-e44/` (not committed).
+
 ## Errors
 
-`ConvertError` with `code`: `BAD_IMAGE`, `BAD_RECT`, `BAD_OPTION`, `BAD_PALETTE`.
+`ConvertError` with `code`: `BAD_IMAGE`, `BAD_RECT`, `BAD_OPTION`, `BAD_PALETTE`, `BAD_RECIPE`,
+`NO_GRID`, `BAD_AXES`, `TOO_MANY_VARIANTS`.

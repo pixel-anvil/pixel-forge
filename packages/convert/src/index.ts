@@ -28,6 +28,7 @@ export {
   DEFAULT_DITHER_SPREAD,
   MAX_QUANTIZE_COLORS,
   TRANSPARENT_INDEX,
+  autoDitherSpread,
   quantize,
 } from './quantize.js';
 export type { DitherMode, QuantizeOptions, QuantizeResult } from './quantize.js';
@@ -57,3 +58,35 @@ export {
   downscale,
 } from './downscale.js';
 export type { DownscaleMethod, DownscaleOptions } from './downscale.js';
+
+export { DEFAULT_ORPHAN_MIN_SIZE, DEFAULT_OUTLINE_SHADE, cleanup } from './cleanup.js';
+export type { CleanupOptions, CleanupOutline, CleanupResult } from './cleanup.js';
+export { RECIPE_VERSION, runRecipe, validateRecipe } from './recipe.js';
+export type {
+  ConvertRecipe,
+  RecipeCleanup,
+  RecipeDownscale,
+  RecipeQuantize,
+  RecipeReport,
+  RecipeResult,
+  RecipeStepName,
+  RunRecipeContext,
+  StepReport,
+} from './recipe.js';
+export {
+  DEFAULT_MAX_VARIANTS,
+  MAX_SHEET_SIDE,
+  MAX_VARIANTS_LIMIT,
+  VARIANT_AXIS_ORDER,
+  runVariants,
+  variantSheet,
+} from './variants.js';
+export type {
+  NamedPalette,
+  RunVariantsOptions,
+  SheetTile,
+  VariantAxes,
+  VariantResult,
+  VariantSheet,
+  VariantSheetOptions,
+} from './variants.js';
