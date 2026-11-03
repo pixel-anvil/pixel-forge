@@ -146,6 +146,7 @@ const IO_CODES: Readonly<Record<IoErrorCode, OpErrorCode>> = {
   BAD_PALETTE_FILE: 'BAD_FILE',
   PALETTE_TOO_LARGE: 'REFUSED',
   UNSUPPORTED_IMAGE: 'REFUSED',
+  BAD_GIF: 'BAD_FILE',
 };
 
 const CONVERT_CODES: Readonly<Record<ConvertErrorCode, OpErrorCode>> = {

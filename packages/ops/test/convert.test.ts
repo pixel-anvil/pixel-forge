@@ -200,6 +200,19 @@ describe('convert.imageToSprite', () => {
     expect(host.list()).toHaveLength(0);
   });
 
+  it('refuses GIF: the converter accepts PNG only, and the message points at import_file', async () => {
+    const { host, fs, run } = convertHost();
+    fs.seed('/work/a.gif', new TextEncoder().encode('GIF89a\x01\0\x01\0\0\0\0;'));
+    const e = await rejection(
+      registry.execute('convert.imageToSprite', { file: '/work/a.gif', height: 8 }, run),
+    );
+    expect(e.code).toBe('REFUSED');
+    expect(e.message).toContain('GIF');
+    expect(e.message).toContain('PNG only');
+    expect(e.message).toContain('import_file');
+    expect(host.list()).toHaveLength(0);
+  });
+
   it('refuses a path outside the roots, a missing file and a file that is not an image', async () => {
     const { fs, run } = convertHost();
     fs.seed('/work/note.txt', new TextEncoder().encode('hello'));

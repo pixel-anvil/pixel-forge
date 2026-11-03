@@ -19,3 +19,4 @@ third-party game art. Prettier and ESLint ignore this folder.
 - `generated/hero.pxf`: the synthetic 48x48 humanoid (T3.9) from `src/hero.ts`. Its Aseprite twin is
   `aseprite/hero_parts.aseprite` (`src/aseprite/hero_parts.lua`).
 - `photo_ball.png`: the W1 source image (card E4.5), a 192x192 rendered "photo-like" red ball on a wall and floor, made by `src/photo-ball.ts` (shaded sphere, highlight, soft shadow, noise). Licence: made for this repository and released under CC0 1.0; it contains no third-party pixels. Used by `../scenarios/W1.steps.json`.
+- `gif/`: GIFs written by other tools (Pillow, macOS ImageIO, `sips`) for the GIF decoder (E6.1), with the scripts that wrote them, expected frame hashes and a licence note (made for this repository, CC0 1.0). See `gif/README.md`.

@@ -9,6 +9,10 @@ export const ioPackage = '@pixel-forge/io' as const;
 
 export { IoError } from './errors.js';
 export { decodeImageFile } from './image-input.js';
+export { DEFAULT_GIF_LIMITS, decodeGif, isGif } from './gif.js';
+export type { DecodedGif, GifFrame, GifLimits, GifOptions } from './gif.js';
+export { createDocumentFromGif, gifLoopMode, importGifTx } from './gif-import.js';
+export type { GifImportInput, GifImportResult } from './gif-import.js';
 export type { IoErrorCode } from './errors.js';
 export {
   DEFAULT_FRAME_MS,

@@ -256,3 +256,87 @@ describe('io.import (aseprite)', () => {
     expect(out).toMatchObject({ format: 'aseprite', frames: 4 });
   });
 });
+
+describe('io.import (gif)', () => {
+  const gifInput = (extra: Record<string, unknown> = {}) => ({
+    doc: HERO_ID,
+    file: '/work/anim.gif',
+    ...extra,
+  });
+
+  it('imports a GIF as a new animation: one frame per GIF frame, delays kept, one undo step', async () => {
+    const { hosted, store, fs, run } = await flatHost();
+    fs.seed('/work/anim.gif', fixtureBytes('gif/pil_opaque.gif'));
+    const before = documentHash(store);
+    const out = (await registry.execute('io.import', gifInput({ group: 'spin' }), run)) as {
+      format: string;
+      animations: string[];
+      layers: string[];
+      frames: number;
+      images: number;
+      warnings: string[];
+    };
+    expect(out).toMatchObject({
+      format: 'gif',
+      animations: ['spin'],
+      layers: ['body'],
+      frames: 3,
+      images: 3,
+    });
+    expect(out.warnings).toHaveLength(1);
+    expect(out.warnings[0]).toContain('20x16');
+    const anim = store.doc.animations.find((a) => a.group === 'spin');
+    expect(anim !== undefined && 'frames' in anim && anim.frames.map((f) => f.durationMs)).toEqual([
+      60, 120, 200,
+    ]);
+    expect(anim).toMatchObject({ loop: 'loop' });
+    expect(stepLabels(hosted)).toEqual(['AI: io.import']);
+    expect(errors(store)).toEqual([]);
+    store.undo();
+    expect(documentHash(store)).toBe(before);
+  });
+
+  it('uses group "gif" by default; a GIF without a loop extension plays once; the second import of the same group is refused', async () => {
+    const { store, fs, run } = await flatHost();
+    fs.seed('/work/anim.gif', fixtureBytes('gif/sips_static.gif'));
+    await registry.execute('io.import', gifInput(), run);
+    expect(store.doc.animations.find((a) => a.group === 'gif')).toMatchObject({ loop: 'once' });
+    const before = documentHash(store);
+    const again = await rejection(registry.execute('io.import', gifInput(), run));
+    expect(again.code).toBe('REFUSED');
+    expect(documentHash(store)).toBe(before);
+  });
+
+  it('refuses a damaged or oversized GIF and changes nothing', async () => {
+    const { store, fs, run } = await flatHost();
+    const good = fixtureBytes('gif/pil_opaque.gif');
+    fs.seed('/work/cut.gif', good.subarray(0, good.length - 40));
+    fs.seed(
+      '/work/huge.gif',
+      Uint8Array.from([...good.subarray(0, 6), 255, 255, 255, 255, ...good.subarray(10)]),
+    );
+    const before = documentHash(store);
+    const cut = await rejection(
+      registry.execute('io.import', gifInput({ file: '/work/cut.gif' }), run),
+    );
+    expect(cut.code).toBe('BAD_FILE');
+    const huge = await rejection(
+      registry.execute('io.import', gifInput({ file: '/work/huge.gif' }), run),
+    );
+    expect(huge.code).toBe('REFUSED');
+    expect(huge.message).toContain('too large');
+    expect(documentHash(store)).toBe(before);
+  });
+
+  it('takes the format from the .gif extension, or from "format"', async () => {
+    const { store, fs, run } = await flatHost();
+    fs.seed('/work/anim.dat', fixtureBytes('gif/pil_opaque.gif'));
+    const out = (await registry.execute(
+      'io.import',
+      gifInput({ file: '/work/anim.dat', format: 'gif', group: 'dat' }),
+      run,
+    )) as { format: string };
+    expect(out.format).toBe('gif');
+    expect(store.doc.animations.some((a) => a.group === 'dat')).toBe(true);
+  });
+});

@@ -74,7 +74,7 @@ Every failure is `{"code", "message", "details"}`, identical on every transport.
 | [`frame.duplicate`](#frameduplicate) | core | mutate | `frame_duplicate` | `pf frame duplicate` | Duplicate one frame; the copy goes right after it, with linked cels and copied keys. |
 | [`frame.setMeta`](#framesetmeta) | core | mutate | `frame_set_meta` | `pf frame set-meta` | Set one frame's duration (ms), markers (name -> int px), events (names) and root motion (int px). |
 | [`io.export`](#ioexport) | core | io | `export` | `pf export` | Export animations as a spritesheet PNG plus a JSON description (Aseprite hash format). |
-| [`io.import`](#ioimport) | core | io | `import_file` | `pf import` | Import a PNG spritesheet (cells per animation) or an .aseprite file into a document. |
+| [`io.import`](#ioimport) | core | io | `import_file` | `pf import` | Import a PNG spritesheet (cells per animation), a GIF (one frame per GIF frame) or an .aseprite file into a document. |
 | [`layer.update`](#layerupdate) | core | mutate | `layer_update` | `pf layer update` | Rename a layer, or set its visible flag, opacity (0..255) or export flag. |
 | [`lint.run`](#lintrun) | core | read | `lint` | `pf lint` | Lint the document: palette, orphan pixels, joint gaps, stale overrides, empty frames, clipping, holes. |
 | [`override.import`](#overrideimport) | rig | io | `override_import` | `pf override import` | Import an edited PNG of a rig frame: the pixels that differ from the render become overrides. |
@@ -829,9 +829,9 @@ Output:
 
 ## io.import
 
-Import a PNG spritesheet (cells per animation) or an .aseprite file into a document.
+Import a PNG spritesheet (cells per animation), a GIF (one frame per GIF frame) or an .aseprite file into a document.
 
-Spritesheet: animations maps cells to animations; repeated cells become linked cels; the cell's bottom-centre lands on the document origin. To keep the sheet as a reference, import the frame to cut again as its own animation and layer. Aseprite: run rig_apply_template first or part layers stay unbound; adds layers, tags (as animations) and the palette; the canvas must equal the document's.
+Spritesheet: animations maps cells to animations; repeated cells become linked cels; the cell's bottom-centre lands on the document origin. To keep the sheet as a reference, import the frame to cut again as its own animation and layer. GIF: a new animation, one frame per GIF frame with its delay (0 gives defaultDurationMs); the GIF is placed like one cell. Aseprite: run rig_apply_template first or part layers stay unbound; adds layers, tags (as animations) and the palette; the canvas must equal the document's.
 
 - Group: `core`
 - Safety: `io`
@@ -844,13 +844,14 @@ Spritesheet: animations maps cells to animations; repeated cells become linked c
 | --- | --- | --- | --- |
 | `doc` | string | yes | Document id from doc_open or doc_create. |
 | `file` | string | yes | Path of the file (absolute, inside the workspace roots). |
-| `format` | "spritesheet" \| "aseprite" | no | Default: from the file extension. |
+| `format` | "spritesheet" \| "aseprite" \| "gif" | no | Default: from the file extension. |
 | `cell` | array | no | spritesheet: cell size [w, h] px (default: the whole image is one cell). |
 | `animations` | {group, direction, cells, durationMs, fps, loop}[] | no | spritesheet: the animations to cut (required for a spritesheet). |
 | `outlineFile` | string | no | spritesheet: matching outline sheet, same size. |
-| `layerName` | string | no | spritesheet: layer for the cels (default "body"; reused if it exists). |
+| `layerName` | string | no | spritesheet, gif: layer for the cels (default "body"; reused if it exists). |
+| `group` | string | no | gif: animation group (default "gif"). |
 | `outlineLayerName` | string | no | spritesheet: layer of the outline sheet (default "outline"). |
-| `defaultDurationMs` | integer >= 1 | no | spritesheet: frame duration when an animation gives none (default 100). |
+| `defaultDurationMs` | integer >= 1 | no | spritesheet, gif: frame duration when none is given (default 100). |
 | `reimport` | boolean | no | aseprite: update a file imported earlier instead of adding (default false). |
 | `view` | string | no | aseprite: rig view for "part:" layers without #view (default: the first). |
 | `paletteName` | string | no | aseprite: name of the imported palette. |
@@ -859,7 +860,7 @@ Spritesheet: animations maps cells to animations; repeated cells become linked c
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `format` | "spritesheet" \| "aseprite" | yes |  |
+| `format` | "spritesheet" \| "aseprite" \| "gif" | yes |  |
 | `animations` | string[] | yes | Animations created or matched, as "group/direction". |
 | `layers` | string[] | yes | Layers that received the pixels (names). |
 | `frames` | integer | yes | Frames created (re-import: frames in the file). |

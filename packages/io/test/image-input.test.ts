@@ -36,6 +36,14 @@ describe('decodeImageFile', () => {
     expect(() => decodeImageFile(webp)).toThrow(/WebP.*convert the image to PNG/);
   });
 
+  it('refuses GIF (the converter takes PNG only) and says how to import it instead', () => {
+    for (const head of ['GIF87a', 'GIF89a']) {
+      const gif = new TextEncoder().encode(head + '\x01\0\x01\0\0\0\0;');
+      expect(ioCode(() => decodeImageFile(gif))).toBe('UNSUPPORTED_IMAGE');
+      expect(() => decodeImageFile(gif)).toThrow(/GIF.*PNG only.*import_file/);
+    }
+  });
+
   it('refuses unknown and empty data', () => {
     expect(ioCode(() => decodeImageFile(Uint8Array.of(1, 2, 3)))).toBe('UNSUPPORTED_IMAGE');
     expect(ioCode(() => decodeImageFile(new Uint8Array(0)))).toBe('UNSUPPORTED_IMAGE');

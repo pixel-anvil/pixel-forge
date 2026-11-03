@@ -26,8 +26,10 @@
  * - `BAD_PALETTE_FILE`: a palette file (`.hex`, `.gpl`, `.pal`, PNG strip) is malformed: bad header,
  *   bad line, bad value, count mismatch, an undecodable PNG, or no colours at all (FR-PAL-02).
  * - `PALETTE_TOO_LARGE`: a palette has more than 256 colours (`MAX_PALETTE_COLORS`) (FR-PAL-02).
- * - `UNSUPPORTED_IMAGE`: the converter input is JPEG, WebP or another non-PNG format
+ * - `UNSUPPORTED_IMAGE`: the converter input is JPEG, WebP, GIF or another non-PNG format
  *   (PNG only in M1b, FR-CONV-01).
+ * - `BAD_GIF`: the bytes are not a readable GIF: no signature, truncated, a bad block, a bad LZW code,
+ *   a missing colour table or no frames (FR-DOC-05, E6.1). A GIF over a size limit is `TOO_LARGE`.
  */
 export type IoErrorCode =
   | 'BAD_INPUT'
@@ -46,7 +48,8 @@ export type IoErrorCode =
   | 'EXISTS'
   | 'BAD_PALETTE_FILE'
   | 'PALETTE_TOO_LARGE'
-  | 'UNSUPPORTED_IMAGE';
+  | 'UNSUPPORTED_IMAGE'
+  | 'BAD_GIF';
 
 /** The error type thrown by `@pixel-forge/io`. Branch on `code`. */
 export class IoError extends Error {

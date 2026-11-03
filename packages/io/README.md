@@ -29,6 +29,29 @@ store.transact('More', (tx) => importSpritesheetTx(tx, { png: other, cell: [64, 
 - `cc0SheetInputs(json, readPng, opts)` adapts `fixtures/cc0` `sheet.json` (`{cell, animations: {name: {file, frames}}}`, one PNG per animation) into one input per animation; import them all into one document.
 - Errors are `IoError` (`BAD_INPUT`, `CELL_OUT_OF_RANGE`, `SIZE_MISMATCH`, `DUPLICATE_ANIMATION`, `TOO_LARGE`); input is validated before the transaction is touched.
 
+## GIF import (FR-DOC-05, E6.1)
+
+`decodeGif(bytes, { limits, zeroDelayMs })` is a clean-room GIF87a/89a decoder (no dependency; LZW from the GIF89a
+specification, Appendix F). It returns composed full-canvas RGBA frames, durations in ms and the `NETSCAPE2.0` loop
+count. `importGifTx(tx, { gif, group, layerName })` and `createDocumentFromGif(input)` turn it into one animation with
+one frame per GIF frame (the GIF is placed like one spritesheet cell; a frame equal to an earlier one links to it; a
+fully transparent frame has no cel). The op is `io.import` (`import_file`, `.gif` extension or `format: "gif"`).
+
+Choices the specification leaves open: delay 0 becomes 100 ms (as in browsers; `zeroDelayMs`), other delays are kept
+(centiseconds x 10); disposal 2 clears the frame rectangle to transparent (the background colour index is ignored),
+disposal 3 restores the canvas before the frame, 4..7 act as 0; a pixel index outside the colour table draws nothing;
+a frame larger than the screen is refused, one that starts inside and ends outside is clipped; no `NETSCAPE2.0` means the
+GIF plays once (loop mode `once`), a count of 0 means `loop`, a finite count also becomes `loop` (with a warning); the
+trailer byte is required.
+
+Hostile input: all sizes come from the file, so none is trusted. `GifLimits` caps the screen (default 2048 x 2048
+pixels), the frames (1000) and the composed pixels over all frames (33.5 million, 134 MB). The LZW output of a frame is
+capped by its rectangle (at most the screen), so extra data is ignored and missing data is an error; the code table has
+4096 entries and cannot grow. Failures are `IoError`: `BAD_GIF` (malformed, truncated, bad code or block, no colour
+table, no frames) or `TOO_LARGE` (a limit). `decodeImageFile` (the converter's reader) still takes PNG only and refuses a
+GIF with a message that says so. Oracle files: `fixtures/gif/` (Pillow, macOS ImageIO and `sips`) plus hand-built files
+with ASCII expectations.
+
 ## Spritesheet export (FR-DOC-06)
 
 `exportSpritesheet(view, { animations?, layout: 'rows' | 'packed', scale = 1, skin?, exportOnly = true, imageName? }) -> { png, json }`.

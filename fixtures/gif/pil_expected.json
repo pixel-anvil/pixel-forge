@@ -1,0 +1,96 @@
+{
+ "pil_interlaced": {
+  "durationsMs": [
+   100
+  ],
+  "hashes": [
+   "9d4c4d04724649c3fae6d8d11a826df1e22ca3b42696148691db12ccf2c398f5"
+  ],
+  "height": 16,
+  "loopCount": null,
+  "width": 20
+ },
+ "pil_opaque": {
+  "durationsMs": [
+   60,
+   120,
+   200
+  ],
+  "hashes": [
+   "0e7601a105582b98c99a46cac09eb508a7b9edfefd02cfb5b33650edbd716a4e",
+   "1cd8382573aabe57281d5131a9f5fcf4542b714ffd3409ad891c47ba212dc4f0",
+   "0cd3e162ffaca7432f70e92880fcc66facff55efeed2a50c2e70f015b6e0b020"
+  ],
+  "height": 16,
+  "loopCount": 0,
+  "width": 20
+ },
+ "pil_sprite_disposal0": {
+  "durationsMs": [
+   80,
+   80,
+   80,
+   80
+  ],
+  "hashes": [
+   "08d0baced0a92cc998ce6ef486c75f3dcdd8a9602620c53e704ec8521a6f99da",
+   "805e6c8f9ae6b9a8c9c651e52430124d8e1af862679b33ee59738902f096f2e7",
+   "a84108035183d3f0205af3d54b2ca24400b79a75dcee5982ecd35785c2cca291",
+   "3566d16b6525bd2c6cd3dd3e6e671bac386b6d0b9a000be9587a2c44b6914ebb"
+  ],
+  "height": 16,
+  "loopCount": 0,
+  "width": 20
+ },
+ "pil_sprite_disposal1": {
+  "durationsMs": [
+   80,
+   80,
+   80,
+   80
+  ],
+  "hashes": [
+   "08d0baced0a92cc998ce6ef486c75f3dcdd8a9602620c53e704ec8521a6f99da",
+   "805e6c8f9ae6b9a8c9c651e52430124d8e1af862679b33ee59738902f096f2e7",
+   "a84108035183d3f0205af3d54b2ca24400b79a75dcee5982ecd35785c2cca291",
+   "3566d16b6525bd2c6cd3dd3e6e671bac386b6d0b9a000be9587a2c44b6914ebb"
+  ],
+  "height": 16,
+  "loopCount": 0,
+  "width": 20
+ },
+ "pil_sprite_disposal2": {
+  "durationsMs": [
+   80,
+   80,
+   80,
+   80
+  ],
+  "hashes": [
+   "08d0baced0a92cc998ce6ef486c75f3dcdd8a9602620c53e704ec8521a6f99da",
+   "2c67bece03de2c2913d53e053a258c721c991597c8ea0b5973e6aec166dc6fbb",
+   "74e7fd50977beb0622f45e99a856d84314f95af0762ec3184b7fb55f0afedec3",
+   "122afb5b80e236c2f5410c74a65758532fa54152c995b5588ed84d1e1c989e26"
+  ],
+  "height": 16,
+  "loopCount": 0,
+  "width": 20
+ },
+ "pil_sprite_disposal3": {
+  "durationsMs": [
+   80,
+   80,
+   80,
+   80
+  ],
+  "hashes": [
+   "08d0baced0a92cc998ce6ef486c75f3dcdd8a9602620c53e704ec8521a6f99da",
+   "2c67bece03de2c2913d53e053a258c721c991597c8ea0b5973e6aec166dc6fbb",
+   "74e7fd50977beb0622f45e99a856d84314f95af0762ec3184b7fb55f0afedec3",
+   "122afb5b80e236c2f5410c74a65758532fa54152c995b5588ed84d1e1c989e26"
+  ],
+  "height": 16,
+  "loopCount": 0,
+  "width": 20
+ }
+}

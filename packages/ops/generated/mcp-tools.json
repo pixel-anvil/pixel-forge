@@ -2208,7 +2208,7 @@
   {
     "name": "import_file",
     "title": "io.import",
-    "description": "Import a PNG spritesheet (cells per animation) or an .aseprite file into a document.\n\nSpritesheet: animations maps cells to animations; repeated cells become linked cels; the cell's bottom-centre lands on the document origin. To keep the sheet as a reference, import the frame to cut again as its own animation and layer. Aseprite: run rig_apply_template first or part layers stay unbound; adds layers, tags (as animations) and the palette; the canvas must equal the document's.\n\nFile I/O. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Cut row 0, columns 0 to 2 of a 64x64 sheet into move_gather at 12 fps): {\"doc\":\"doc_g1ed5q\",\"file\":\"/work/run.png\",\"cell\":[64,64],\"animations\":[{\"group\":\"move_gather\",\"cells\":[{\"row\":0,\"col\":\"0-2\"}],\"fps\":12}]}",
+    "description": "Import a PNG spritesheet (cells per animation), a GIF (one frame per GIF frame) or an .aseprite file into a document.\n\nSpritesheet: animations maps cells to animations; repeated cells become linked cels; the cell's bottom-centre lands on the document origin. To keep the sheet as a reference, import the frame to cut again as its own animation and layer. GIF: a new animation, one frame per GIF frame with its delay (0 gives defaultDurationMs); the GIF is placed like one cell. Aseprite: run rig_apply_template first or part layers stay unbound; adds layers, tags (as animations) and the palette; the canvas must equal the document's.\n\nFile I/O. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Cut row 0, columns 0 to 2 of a 64x64 sheet into move_gather at 12 fps): {\"doc\":\"doc_g1ed5q\",\"file\":\"/work/run.png\",\"cell\":[64,64],\"animations\":[{\"group\":\"move_gather\",\"cells\":[{\"row\":0,\"col\":\"0-2\"}],\"fps\":12}]}",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -2225,7 +2225,7 @@
         "format": {
           "description": "Default: from the file extension.",
           "type": "string",
-          "enum": ["spritesheet", "aseprite"]
+          "enum": ["spritesheet", "aseprite", "gif"]
         },
         "cell": {
           "description": "spritesheet: cell size [w, h] px (default: the whole image is one cell).",
@@ -2345,7 +2345,12 @@
           "minLength": 1
         },
         "layerName": {
-          "description": "spritesheet: layer for the cels (default \"body\"; reused if it exists).",
+          "description": "spritesheet, gif: layer for the cels (default \"body\"; reused if it exists).",
+          "type": "string",
+          "pattern": "^[a-z0-9_-]{1,48}$"
+        },
+        "group": {
+          "description": "gif: animation group (default \"gif\").",
           "type": "string",
           "pattern": "^[a-z0-9_-]{1,48}$"
         },
@@ -2355,7 +2360,7 @@
           "pattern": "^[a-z0-9_-]{1,48}$"
         },
         "defaultDurationMs": {
-          "description": "spritesheet: frame duration when an animation gives none (default 100).",
+          "description": "spritesheet, gif: frame duration when none is given (default 100).",
           "type": "integer",
           "minimum": 1
         },
@@ -2383,7 +2388,7 @@
       "properties": {
         "format": {
           "type": "string",
-          "enum": ["spritesheet", "aseprite"]
+          "enum": ["spritesheet", "aseprite", "gif"]
         },
         "animations": {
           "type": "array",

@@ -1,8 +1,13 @@
 /**
- * `io.import`: import a PNG, a grid spritesheet (with cell ranges) or an `.aseprite` file into a document.
+ * `io.import`: import a PNG, a grid spritesheet (with cell ranges), a GIF or an `.aseprite` file into a document.
  * @packageDocumentation
  */
-import { importAsepriteTx, importSpritesheetTx, reimportAsepriteTx } from '@pixel-forge/io';
+import {
+  importAsepriteTx,
+  importGifTx,
+  importSpritesheetTx,
+  reimportAsepriteTx,
+} from '@pixel-forge/io';
 import type { SheetAnimationSpec } from '@pixel-forge/io';
 import { DirectionName, LoopMode, Name } from '@pixel-forge/schema';
 import { z } from 'zod';
@@ -83,16 +88,17 @@ const AnimationSpec = z.strictObject({
   loop: LoopMode.optional().describe('"loop" (default), "once" or "pingpong".'),
 });
 
-const FORMATS = ['spritesheet', 'aseprite'] as const;
+const FORMATS = ['spritesheet', 'aseprite', 'gif'] as const;
 
 /** `io.import` (MCP `import_file`, CLI `pf import`). */
 export const ioImport = defineOp({
   name: 'io.import',
   safety: 'io',
   group: 'core',
-  summary: 'Import a PNG spritesheet (cells per animation) or an .aseprite file into a document.',
+  summary:
+    'Import a PNG spritesheet (cells per animation), a GIF (one frame per GIF frame) or an .aseprite file into a document.',
   description:
-    "Spritesheet: animations maps cells to animations; repeated cells become linked cels; the cell's bottom-centre lands on the document origin. To keep the sheet as a reference, import the frame to cut again as its own animation and layer. Aseprite: run rig_apply_template first or part layers stay unbound; adds layers, tags (as animations) and the palette; the canvas must equal the document's.",
+    "Spritesheet: animations maps cells to animations; repeated cells become linked cels; the cell's bottom-centre lands on the document origin. To keep the sheet as a reference, import the frame to cut again as its own animation and layer. GIF: a new animation, one frame per GIF frame with its delay (0 gives defaultDurationMs); the GIF is placed like one cell. Aseprite: run rig_apply_template first or part layers stay unbound; adds layers, tags (as animations) and the palette; the canvas must equal the document's.",
   mcp: { name: 'import_file' },
   cli: { command: ['import'] },
   input: z.strictObject({
@@ -114,8 +120,9 @@ export const ioImport = defineOp({
       .optional()
       .describe('spritesheet: matching outline sheet, same size.'),
     layerName: Name.optional().describe(
-      'spritesheet: layer for the cels (default "body"; reused if it exists).',
+      'spritesheet, gif: layer for the cels (default "body"; reused if it exists).',
     ),
+    group: Name.optional().describe('gif: animation group (default "gif").'),
     outlineLayerName: Name.optional().describe(
       'spritesheet: layer of the outline sheet (default "outline").',
     ),
@@ -123,7 +130,7 @@ export const ioImport = defineOp({
       .int()
       .min(1)
       .optional()
-      .describe('spritesheet: frame duration when an animation gives none (default 100).'),
+      .describe('spritesheet, gif: frame duration when none is given (default 100).'),
     reimport: z
       .boolean()
       .default(false)
@@ -168,7 +175,9 @@ export const ioImport = defineOp({
         ? 'spritesheet'
         : ext === 'aseprite' || ext === 'ase'
           ? 'aseprite'
-          : undefined);
+          : ext === 'gif'
+            ? 'gif'
+            : undefined);
     if (format === undefined) {
       throw new OpError('BAD_INPUT', `cannot tell the format of ${path}; pass "format"`, {
         issues: [{ path: 'format', message: 'required for this extension' }],
@@ -200,6 +209,30 @@ export const ioImport = defineOp({
           unbound: report.parts.unbound.length,
         },
         warnings: [...report.warnings],
+      };
+    }
+
+    if (format === 'gif') {
+      const bytes = await readBytes(ctx, path);
+      const run = ctx.transact((tx) =>
+        importGifTx(tx, {
+          gif: bytes,
+          ...(input.group === undefined ? {} : { group: input.group }),
+          ...(input.layerName === undefined ? {} : { layerName: input.layerName }),
+          ...(input.defaultDurationMs === undefined
+            ? {}
+            : { zeroDelayMs: input.defaultDurationMs }),
+        }),
+      );
+      const doc = ctx.doc;
+      const animation = doc.animations.find((x) => x.id === run.animation);
+      return {
+        format,
+        animations: [animation === undefined ? run.animation : animationLabel(animation)],
+        layers: [walkLayers(doc).find((l) => l.layer.id === run.layer)?.layer.name ?? run.layer],
+        frames: run.frames,
+        images: run.imageCels,
+        warnings: run.warnings,
       };
     }
 

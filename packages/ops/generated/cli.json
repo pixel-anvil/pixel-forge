@@ -845,7 +845,7 @@
     {
       "op": "io.import",
       "command": ["import"],
-      "summary": "Import a PNG spritesheet (cells per animation) or an .aseprite file into a document.",
+      "summary": "Import a PNG spritesheet (cells per animation), a GIF (one frame per GIF frame) or an .aseprite file into a document.",
       "safety": "io",
       "options": [
         {
@@ -868,7 +868,7 @@
           "kind": "string",
           "required": false,
           "description": "Default: from the file extension.",
-          "choices": ["spritesheet", "aseprite"]
+          "choices": ["spritesheet", "aseprite", "gif"]
         },
         {
           "name": "cell",
@@ -896,7 +896,14 @@
           "flag": "--layer-name",
           "kind": "string",
           "required": false,
-          "description": "spritesheet: layer for the cels (default \"body\"; reused if it exists)."
+          "description": "spritesheet, gif: layer for the cels (default \"body\"; reused if it exists)."
+        },
+        {
+          "name": "group",
+          "flag": "--group",
+          "kind": "string",
+          "required": false,
+          "description": "gif: animation group (default \"gif\")."
         },
         {
           "name": "outlineLayerName",
@@ -910,7 +917,7 @@
           "flag": "--default-duration-ms",
           "kind": "integer",
           "required": false,
-          "description": "spritesheet: frame duration when an animation gives none (default 100)."
+          "description": "spritesheet, gif: frame duration when none is given (default 100)."
         },
         {
           "name": "reimport",
