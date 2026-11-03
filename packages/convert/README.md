@@ -60,7 +60,8 @@ pixel art" with whole-pixel cells).
 
 1. Edge histogram: per axis, the difference of neighbour pixels (sum of the 4 channel differences,
    0..1020; alpha 0 reads as `0,0,0,0`). Only local maxima along the line count (1-D non-maximum
-   suppression, Canny 1986), less `noiseFloor` (default 24).
+   suppression, Canny 1986), less `noiseFloor` (default 24). A run of equal differences counts once,
+   at its first boundary, when it is higher than both neighbours.
 2. Period and phase: the histogram is folded modulo each trial size `p` (2..`maxCell`, default 64),
    "epoch folding" (Leahy et al. 1983). The score is the share of edge energy on the best comb, above
    chance: 1 for a perfect grid, about 0 for no grid.
@@ -71,7 +72,11 @@ pixel art" with whole-pixel cells).
 The result is `{ found: true, cellWidth, cellHeight, offsetX, offsetY, confidence, ... }`, or
 `{ found: false, reason }` with `reason` `too-small`, `flat` or `no-period`. A "no grid" answer is
 definite: native pixel art and photos give it. Without `square` each axis is found alone (non-square
-cells work) and both must succeed; `square: true` pools both axes into one size.
+cells work) and every axis with edges must succeed; `square: true` pools both axes into one size.
+An axis with no edge at all (bars in one direction only, a strip one pixel high) does not block the
+other: it gets the other axis' cell size, offset 0 and score 0 (`confidenceX` or `confidenceY` is 0,
+and `confidence` is the score of the axis with edges). `flat` means neither axis has an edge.
+`too-small` means both sides are shorter than 6 pixels.
 
 Offsets: cells start at `offsetX + k * cellWidth`, so a non-zero offset means a partial cell at the
 left. Limit: fractional or drifting cell sizes are not modelled (they give "no grid").
@@ -82,8 +87,10 @@ Target: `width` and/or `height` (one alone keeps the aspect, rounded), or `grid`
 `GridSpec`). A target larger than the source is refused: downscale never upscales.
 
 - Size cells: output column `i` of `W` covers `floor(i*w/W) .. floor((i+1)*w/W) - 1`.
-- Grid cells: partial cells at the edges are kept by default (`edges: 'keep'`), so no source pixel is
-  lost; `edges: 'drop'` leaves them out.
+- Grid cells: a partial cell at an edge is kept by default (`edges: 'keep'`) when it covers at least
+  half a cell; a thinner sliver (for example a 1 pixel remnant of a 4 pixel cell) is dropped, so it
+  never becomes a spurious output pixel. If no cell of an axis would remain, the whole axis is one
+  cell. `edges: 'drop'` leaves out every partial cell.
 
 Alpha, the same for every method: a pixel is visible when alpha >= `alphaThreshold` (default 128).
 A cell with fewer than half visible pixels becomes `0,0,0,0` (a tie keeps the cell). Colours come
@@ -97,11 +104,15 @@ from visible pixels only.
 | `kcentroid` | k-means in OKLab (`k` default 2, max 8), centroid of the heaviest cluster.          |
 
 `kcentroid` follows the public description of Astropulse's "K-Centroid" downscale; it is Lloyd's
-k-means (1982) with deterministic farthest-point seeding (Gonzalez 1985). A cluster of one distinct
-colour returns that colour exactly. All of it is written here from those descriptions.
+k-means (1982) with deterministic farthest-point seeding (Gonzalez 1985). Colours are counted per
+RGB (the same RGB at different alphas is one colour). A cluster of one distinct RGB returns that RGB
+exactly, with the mean alpha of its pixels. The heaviest cluster and its centroid come from one final
+assignment against the final centres, also when the 16-iteration cap ends the loop. All of it is
+written here from those descriptions.
 
 Round trip: art upscaled by whole numbers at any phase, downscaled by its grid, gives the source back
-exactly with every method (`box` too, because the cells are uniform).
+exactly with every method (`box` too, because the cells are uniform), as long as each cropped edge
+cell keeps at least half of its size (thinner remnants are dropped, see above).
 
 ## Errors
 

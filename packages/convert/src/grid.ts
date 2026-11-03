@@ -7,7 +7,9 @@
  *    sum of the absolute RGBA channel differences (0..1020; a pixel with alpha 0 counts as
  *    `0,0,0,0`). Along each row (for x) or column (for y) only local maxima are kept: non-maximum
  *    suppression in one dimension, as in Canny, "A Computational Approach to Edge Detection", IEEE
- *    PAMI 8(6), 1986. A blurred or ringing boundary then counts once, at its strongest step. Each
+ *    PAMI 8(6), 1986. A blurred or ringing boundary then counts once, at its strongest step. A run of
+ *    equal differences (a plateau) that is higher than both its neighbours counts once, at its first
+ *    boundary; a plateau next to a higher value is not a maximum. Each
  *    kept difference above `noiseFloor` adds `difference - noiseFloor` to the histogram bin of its
  *    boundary. Bin `i` (1..n-1) is the boundary between pixels `i - 1` and `i`.
  * 2. **Period and phase.** For each trial cell size `p` the histogram is folded modulo `p` and the
@@ -47,7 +49,10 @@ export interface GridSpec {
 /** A grid was found. Pass it as `grid` to `downscale`. */
 export interface GridFound extends GridSpec {
   readonly found: true;
-  /** The smaller of the two axis scores (or the combined score with `square`), 0..1, 3 decimals. */
+  /**
+   * The smaller of the two axis scores (or the combined score with `square`), 0..1, 3 decimals.
+   * When one axis has no edges at all (score 0), it is the score of the other axis.
+   */
   readonly confidence: number;
   /** Score of the x axis at the chosen cell width, 0..1 (0 when the axis has no edges). */
   readonly confidenceX: number;
@@ -57,8 +62,9 @@ export interface GridFound extends GridSpec {
 
 /**
  * Why no grid was found.
- * - `too-small`: the image is too small to see {@link MIN_GRID_LINES} grid lines of cell size 2.
- * - `flat`: an axis (both with `square`) has no edge above the noise floor.
+ * - `too-small`: the image is too small to see {@link MIN_GRID_LINES} grid lines of cell size 2 on
+ *   either axis (both sides shorter than {@link MIN_GRID_LINES} * 2).
+ * - `flat`: both axes have no edge above the noise floor.
  * - `no-period`: there are edges but no cell size >= 2 explains them well enough (ordinary images,
  *   photos, art already at 1 pixel per cell).
  */
@@ -68,7 +74,7 @@ export type GridNoneReason = 'too-small' | 'flat' | 'no-period';
 export interface GridNone {
   readonly found: false;
   readonly reason: GridNoneReason;
-  /** Best score seen (the weaker axis without `square`), 0..1, 3 decimals; 0 for `too-small` and `flat`. */
+  /** Best score seen (the weaker axis with edges, without `square`), 0..1, 3 decimals; 0 for `too-small` and `flat`. */
   readonly confidence: number;
 }
 
@@ -83,7 +89,7 @@ export interface DetectGridOptions {
   readonly minConfidence?: number;
   /** Pixel differences up to this (sum of 4 channel differences, integer 0..1020) are noise. Default {@link DEFAULT_NOISE_FLOOR}. */
   readonly noiseFloor?: number;
-  /** Force square cells: both axes vote for one size (each keeps its own phase). Default false: each axis is detected alone and both must succeed. */
+  /** Force square cells: both axes vote for one size (each keeps its own phase). Default false: each axis is detected alone and every axis that has edges must succeed. */
   readonly square?: boolean;
 }
 
@@ -131,9 +137,13 @@ function edgeHistogram(img: RgbaImage, axis: 'x' | 'y', noiseFloor: number): num
     for (let i = 1; i < n; i++) diffs[i] = pixelDiff(data, base + (i - 1) * step, base + i * step);
     for (let i = 1; i < n; i++) {
       const v = diffs[i] ?? 0;
-      if (v > noiseFloor && v > (diffs[i - 1] ?? 0) && v >= (diffs[i + 1] ?? 0)) {
-        hist[i] = (hist[i] ?? 0) + v - noiseFloor;
-      }
+      // A local maximum is a run of equal differences (a plateau, possibly one boundary long) that
+      // is higher than the value before it and higher than the value after it. The run counts once,
+      // at its first boundary.
+      if (v <= noiseFloor || v <= (diffs[i - 1] ?? 0)) continue;
+      let j = i;
+      while (j + 1 < n && diffs[j + 1] === v) j++;
+      if (v > (diffs[j + 1] ?? 0)) hist[i] = (hist[i] ?? 0) + v - noiseFloor;
     }
   }
   return hist;
@@ -257,49 +267,55 @@ function axisCandidates(a: AxisData, maxCell: number): Candidate[] {
  * detail. Ordinary images, native pixel art (1 pixel per cell) and images with too few edges give
  * `found: false` with a reason instead of a guess.
  *
- * Without `square` each axis is detected on its own (cells may be non-square) and both must find a
- * grid. With `square: true` both histograms vote for one cell size; an axis without edges then gets
- * phase 0.
+ * Without `square` each axis is detected on its own (cells may be non-square) and every axis that has
+ * edges must find a grid. An axis with no edge at all (bars in one direction only, a strip one pixel
+ * high) does not block the other: it gets the other axis' cell size, offset 0 and score 0
+ * (`confidenceX` or `confidenceY` is 0, and `confidence` is the score of the axis with edges). With
+ * `square: true` both histograms vote for one cell size; an axis without edges then also gets offset 0.
  * @throws ConvertError `BAD_OPTION` for an option out of range; `BAD_IMAGE`
  */
 export function detectGrid(img: RgbaImage, opts: DetectGridOptions = {}): GridDetection {
   assertImage(img);
   const { maxCell, minConfidence, noiseFloor } = checkOptions(opts);
   const square = opts.square ?? false;
-  const small = square
-    ? Math.max(img.width, img.height) < MIN_AXIS
-    : Math.min(img.width, img.height) < MIN_AXIS;
-  if (small) return { found: false, reason: 'too-small', confidence: 0 };
+  if (Math.max(img.width, img.height) < MIN_AXIS) {
+    return { found: false, reason: 'too-small', confidence: 0 };
+  }
   const ax = axisData(img, 'x', noiseFloor);
   const ay = axisData(img, 'y', noiseFloor);
-  const flat = square ? ax.total === 0 && ay.total === 0 : ax.total === 0 || ay.total === 0;
-  if (flat) return { found: false, reason: 'flat', confidence: 0 };
+  if (ax.total === 0 && ay.total === 0) return { found: false, reason: 'flat', confidence: 0 };
 
   if (!square) {
+    // An axis without edges (bars in one direction only, a strip one pixel high) carries no
+    // information, so it does not block the other axis. It takes the other axis' cell size, offset 0
+    // and score 0, and `confidence` is the score of the axis that has edges.
+    const emptyX = ax.total === 0;
+    const emptyY = ay.total === 0;
     const cx = axisCandidates(ax, maxCell);
     const cy = axisCandidates(ay, maxCell);
     const kx = choose(cx, minConfidence);
     const ky = choose(cy, minConfidence);
-    if (kx === undefined || ky === undefined) {
+    if ((!emptyX && kx === undefined) || (!emptyY && ky === undefined)) {
       const bestOf = (cs: readonly Candidate[]): number =>
         cs.reduce((m, k) => (k.c > m ? k.c : m), 0);
-      return {
-        found: false,
-        reason: 'no-period',
-        confidence: round3(Math.min(bestOf(cx), bestOf(cy))),
-      };
+      const scores = [...(emptyX ? [] : [bestOf(cx)]), ...(emptyY ? [] : [bestOf(cy)])];
+      return { found: false, reason: 'no-period', confidence: round3(Math.min(...scores)) };
     }
-    const sx = axisScoreAt(ax, kx.p);
-    const sy = axisScoreAt(ay, ky.p);
+    const cellW = kx?.p ?? ky?.p ?? 0;
+    const cellH = ky?.p ?? kx?.p ?? 0;
+    const scoreX = kx?.c ?? 0;
+    const scoreY = ky?.c ?? 0;
     return {
       found: true,
-      cellWidth: kx.p,
-      cellHeight: ky.p,
-      offsetX: sx.phase,
-      offsetY: sy.phase,
-      confidence: round3(Math.min(kx.c, ky.c)),
-      confidenceX: round3(kx.c),
-      confidenceY: round3(ky.c),
+      cellWidth: cellW,
+      cellHeight: cellH,
+      offsetX: kx === undefined ? 0 : axisScoreAt(ax, cellW).phase,
+      offsetY: ky === undefined ? 0 : axisScoreAt(ay, cellH).phase,
+      confidence: round3(
+        kx === undefined ? scoreY : ky === undefined ? scoreX : Math.min(scoreX, scoreY),
+      ),
+      confidenceX: round3(scoreX),
+      confidenceY: round3(scoreY),
     };
   }
 

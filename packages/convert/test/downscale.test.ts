@@ -40,7 +40,8 @@ const EXACT: readonly DownscaleMethod[] = ['nearest', 'mode', 'kcentroid'];
 
 describe('downscale: round trip of upscaled art (oracle: the source)', () => {
   const cases: [number, number, number, number][] = [];
-  for (let s = 2; s <= 12; s++) cases.push([s, s, s >> 1, (s * 5) % s]);
+  // A left or top remnant is at least half a cell (ceil(s/2)): thinner slivers are dropped (below).
+  for (let s = 2; s <= 12; s++) cases.push([s, s, (s + 1) >> 1, (s * 5) % s]);
   cases.push([2, 3, 1, 0], [3, 5, 2, 4], [7, 4, 0, 3], [12, 6, 11, 5]);
 
   it.each(cases)(
@@ -59,7 +60,7 @@ describe('downscale: round trip of upscaled art (oracle: the source)', () => {
 
   it.each([2, 3, 4, 6, 9, 12])('detect then downscale, cell %i', (s) => {
     const src = randomArt(16, 12, 40 + s);
-    const up = upscaleWithPhase(src, s, s, s - 1, 1 % s);
+    const up = upscaleWithPhase(src, s, s, s - 1, (s + 1) >> 1);
     const d = detectGrid(up);
     if (!d.found) throw new Error('grid not found');
     for (const method of DOWNSCALE_METHODS)
@@ -141,16 +142,54 @@ describe('downscale: cells and targets', () => {
     expect(code(() => downscale(tiny, { method: 'mode', grid, edges: 'drop' }))).toBe('BAD_OPTION');
   });
 
-  it('edges: keep keeps partial cells, drop removes them', () => {
-    // 7 columns, cell 3, offset 1: cells [0,1) [1,4) [4,7) -> keep 3, drop 2 (the right one is full).
-    const row = img(7, 1, [G, R, R, R, B, B, B]);
-    const grid = { cellWidth: 3, cellHeight: 1, offsetX: 1, offsetY: 0 };
+  it('edges: keep keeps partial cells of at least half a cell, drop removes all of them', () => {
+    // 7 columns, cell 3, offset 2: cells [0,2) [2,5) [5,7) -> keep 3 (2 px >= 1.5), drop 1.
+    const row = img(7, 1, [G, G, R, R, R, B, B]);
+    const grid = { cellWidth: 3, cellHeight: 1, offsetX: 2, offsetY: 0 };
     expect(pixels(downscale(row, { method: 'mode', grid }))).toEqual([G, R, B]);
-    expect(pixels(downscale(row, { method: 'mode', grid, edges: 'drop' }))).toEqual([R, B]);
-    // 8 columns: a 1-pixel partial cell on the right too.
-    const row8 = img(8, 1, [G, R, R, R, B, B, B, G]);
-    expect(pixels(downscale(row8, { method: 'mode', grid }))).toEqual([G, R, B, G]);
-    expect(pixels(downscale(row8, { method: 'mode', grid, edges: 'drop' }))).toEqual([R, B]);
+    expect(pixels(downscale(row, { method: 'mode', grid, edges: 'drop' }))).toEqual([R]);
+    // Cell 4: a half cell (2 px) is kept, 1 px is a sliver.
+    const half = { cellWidth: 4, cellHeight: 1, offsetX: 2, offsetY: 0 };
+    expect(
+      pixels(downscale(img(6, 1, [G, G, R, R, R, R]), { method: 'mode', grid: half })),
+    ).toEqual([G, R]);
+    expect(
+      pixels(downscale(img(7, 1, [G, G, R, R, R, R, B]), { method: 'mode', grid: half })),
+    ).toEqual([G, R]);
+  });
+
+  it('edges: keep drops a sliver of less than half a cell (no spurious extra pixel)', () => {
+    // 41 columns, cell 4, offset 0: ten full cells and a 1 px remnant.
+    const row = img(
+      41,
+      1,
+      Array.from({ length: 41 }, (_, i) => (i === 40 ? B : (i >> 2) % 2 === 0 ? R : G)),
+    );
+    const grid = { cellWidth: 4, cellHeight: 1, offsetX: 0, offsetY: 0 };
+    for (const method of DOWNSCALE_METHODS) {
+      const out = downscale(row, { method, grid });
+      expect(out.width, method).toBe(10);
+      expect(pixels(downscale(row, { method, grid, edges: 'drop' })), method).toEqual(pixels(out));
+    }
+    // The same on the left (offset 1 of cell 4) and on both axes.
+    const tall = img(
+      2,
+      9,
+      Array.from({ length: 18 }, (_, i) => (i >> 1 === 0 ? B : R)),
+    );
+    const col = downscale(tall, {
+      method: 'mode',
+      grid: { cellWidth: 2, cellHeight: 4, offsetX: 0, offsetY: 1 },
+    });
+    expect([col.width, col.height]).toEqual([1, 2]);
+  });
+
+  it('edges: keep with no cell left on an axis makes the whole axis one cell', () => {
+    // 5 columns, cell 8, offset 3: two slivers (3 and 2 px, both under 4) -> one cell.
+    const row = img(5, 1, [G, G, G, R, R]);
+    const grid = { cellWidth: 8, cellHeight: 1, offsetX: 3, offsetY: 0 };
+    expect(pixels(downscale(row, { method: 'mode', grid }))).toEqual([G]);
+    expect(code(() => downscale(row, { method: 'mode', grid, edges: 'drop' }))).toBe('BAD_OPTION');
   });
 
   it.each<[string, Partial<DownscaleOptions>]>([
@@ -305,6 +344,91 @@ describe('downscale: methods on hand-written cells', () => {
     ]);
     expect(pixels(downscale(cell, { method: 'kcentroid', width: 1 }))).toEqual([[10, 20, 30, 200]]);
   });
+
+  it('kcentroid counts one RGB at several alphas as one colour: exact RGB, mean alpha', () => {
+    const RA = [255, 0, 0, 200];
+    // R has weight 1 + 2 = 3 and ties with G (3): the tie goes to the colour seen first, R. (Counted
+    // per RGBA, G with 3 would have been the single heaviest colour and won.)
+    const cell = img(3, 2, [R, G, RA, G, RA, G]);
+    expect(pixels(downscale(cell, { method: 'kcentroid', width: 1 }))).toEqual([[255, 0, 0, 218]]);
+    expect(pixels(downscale(cell, { method: 'kcentroid', width: 1, k: 1 }))[0]?.[3]).toBe(
+      Math.round((255 + 2 * 200 + 3 * 255) / 6),
+    );
+    // Only one RGB, three alphas: that RGB exactly.
+    const solid = img(3, 1, [
+      [12, 200, 77, 255],
+      [12, 200, 77, 200],
+      [12, 200, 77, 130],
+    ]);
+    expect(pixels(downscale(solid, { method: 'kcentroid', width: 1 }))).toEqual([
+      [12, 200, 77, 195],
+    ]);
+  });
+
+  it('kcentroid assigns once more against the final centres when the iteration cap ends the loop', () => {
+    // A 7x7 cell of near-random colours with k=4 does not converge in 16 iterations. Before the
+    // final assignment the weights and the centre of the heaviest cluster came from the previous
+    // assignment (old result 168,228,137).
+    const px = [
+      [139, 10, 132],
+      [219, 241, 212],
+      [69, 233, 33],
+      [55, 216, 6],
+      [133, 4, 105],
+      [109, 36, 136],
+      [102, 242, 143],
+      [106, 62, 122],
+      [206, 50, 141],
+      [196, 241, 198],
+      [194, 200, 102],
+      [44, 181, 76],
+      [1, 171, 71],
+      [151, 251, 54],
+      [23, 163, 84],
+      [202, 7, 168],
+      [186, 112, 171],
+      [187, 204, 203],
+      [237, 48, 106],
+      [24, 28, 81],
+      [13, 70, 0],
+      [122, 182, 158],
+      [92, 74, 148],
+      [210, 212, 153],
+      [243, 190, 217],
+      [91, 129, 75],
+      [127, 163, 102],
+      [194, 97, 131],
+      [183, 75, 150],
+      [50, 245, 96],
+      [133, 224, 67],
+      [145, 222, 126],
+      [61, 189, 49],
+      [217, 230, 148],
+      [101, 160, 160],
+      [212, 174, 200],
+      [247, 12, 181],
+      [112, 106, 90],
+      [223, 135, 132],
+      [193, 255, 132],
+      [235, 62, 209],
+      [247, 48, 132],
+      [137, 122, 130],
+      [224, 32, 116],
+      [69, 127, 34],
+      [19, 66, 16],
+      [245, 4, 136],
+      [44, 67, 86],
+      [208, 11, 150],
+    ];
+    const cell = img(
+      7,
+      7,
+      px.map((c) => [...c, 255]),
+    );
+    expect(pixels(downscale(cell, { method: 'kcentroid', width: 1, k: 4 }))).toEqual([
+      [172, 225, 142, 255],
+    ]);
+  });
 });
 
 describe('downscale: determinism', () => {
@@ -331,11 +455,11 @@ describe('downscale: determinism', () => {
 });
 
 const EXPECTED: string[] = [
-  '{"found":true,"cellWidth":5,"cellHeight":5,"offsetX":2,"offsetY":3,"confidence":0.989,"confidenceX":0.989,"confidenceY":0.989}',
-  '1a5ee518be0ee1d5856719f1963d2779ae438dc4a671dc6283808084adcd74e1', // grid, box
-  '6b15ecd3b21dc9e4d425ae75fc207f9678ff3930cfda9dc8e94d85b5581b4ff8', // grid, kcentroid
-  'fb4df20922289d9c675b29ff8398b5439d62320810c152854086d7cba729cae9', // grid, nearest
-  'fe1131a57aad18202080cbf6283eaacc15048d3925ea9a18c662376b158e1724', // grid, mode
+  '{"found":true,"cellWidth":5,"cellHeight":5,"offsetX":2,"offsetY":3,"confidence":0.989,"confidenceX":0.989,"confidenceY":0.99}',
+  '394c132a5ed30128e6130d52cb7d2809d5d2bac9ea02b36fb6280f33de0a50ed', // grid, box
+  '0f4349e8edda92904271d2fe0b0414baf0fc223b2025e71c84a64964d4346c41', // grid, kcentroid
+  '6fbeec9b1034e1b50154458636bddfddb49efc38aae38bdde9e97793388a4773', // grid, nearest
+  '2b24acd5ae4b13892ea94b3e1dfb230eefc1370ec7014e8ba7428e87b3aa5776', // grid, mode
   'cfde3aadb3d37de3399e927505fe38077e724ecbdd8d1bb22ea4f1fef287d10c', // width 31, box
   '6c39fa332f831c924a9cc565e6f925226a93cb1aa9b0d1c0e043babd5b216bff', // width 31, kcentroid
   '4a626c20bbecf48c31229401a2c9f2ee7757e968a42a2a3eb33e4cd55be15171', // width 31, nearest

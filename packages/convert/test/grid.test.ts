@@ -155,18 +155,49 @@ describe('detectGrid: no grid', () => {
     });
   });
 
-  it('stripes in one direction are flat without square, found with square', () => {
+  it('bars in one direction: the axis without edges does not block the other', () => {
     const src = randomArt(12, 1, 6);
     const tall: RgbaImage = upscale(src, 4, 20);
-    expect(detectGrid(tall)).toMatchObject({ found: false, reason: 'flat' });
-    expect(detectGrid(tall, { square: true })).toMatchObject({
+    const expected = {
       found: true,
       cellWidth: 4,
-      cellHeight: 4,
+      cellHeight: 4, // the empty axis takes the found axis' cell size
       offsetX: 0,
+      offsetY: 0,
+      confidence: 1, // the score of the axis with edges
+      confidenceX: 1,
+      confidenceY: 0,
+    };
+    expect(detectGrid(tall)).toEqual(expected);
+    expect(detectGrid(tall, { square: true })).toMatchObject({ ...expected, confidence: 1 });
+    // The same with the edges on y only, and with a phase.
+    const wide = upscaleWithPhase(randomArt(1, 12, 6), 20, 5, 0, 3);
+    expect(detectGrid(wide)).toMatchObject({
+      found: true,
+      cellWidth: 5,
+      cellHeight: 5,
+      offsetX: 0,
+      offsetY: 3,
+      confidenceX: 0,
+    });
+  });
+
+  it('a strip one pixel high is a grid on x', () => {
+    const strip = upscaleWithPhase(randomArt(12, 1, 6), 4, 1, 1, 0);
+    expect(strip.height).toBe(1);
+    expect(detectGrid(strip)).toMatchObject({
+      found: true,
+      cellWidth: 4,
+      offsetX: 1,
       offsetY: 0,
       confidenceY: 0,
     });
+  });
+
+  it('an axis with edges but no period still blocks the other axis', () => {
+    // Columns have a 4-wide grid; rows are native pixel art (every row different, cell 1).
+    const cols = upscale(randomArt(12, 30, 21), 4, 1);
+    expect(detectGrid(cols)).toMatchObject({ found: false, reason: 'no-period' });
   });
 
   it('too few grid lines', () => {
@@ -179,8 +210,8 @@ describe('detectGrid: no grid', () => {
 
   it.each([
     [1, 1],
-    [5, 30],
-    [30, 5],
+    [5, 5],
+    [5, 1],
     [2, 2],
   ])('too small: %ix%i', (w, h) => {
     expect(detectGrid(randomArt(w, h, 1))).toEqual({
@@ -188,6 +219,49 @@ describe('detectGrid: no grid', () => {
       reason: 'too-small',
       confidence: 0,
     });
+  });
+
+  it('native one-pixel stripes and a native checkerboard are not flat', () => {
+    const gray = (w: number, h: number, f: (x: number, y: number) => boolean): RgbaImage => {
+      const data = new Uint8Array(w * h * 4);
+      for (let y = 0; y < h; y++)
+        for (let x = 0; x < w; x++)
+          data.set(f(x, y) ? [255, 255, 255, 255] : [0, 0, 0, 255], (y * w + x) * 4);
+      return { width: w, height: h, data };
+    };
+    const stripes = gray(16, 16, (x) => x % 2 === 1);
+    const checker = gray(16, 16, (x, y) => (x + y) % 2 === 1);
+    for (const img of [stripes, checker]) {
+      for (const square of [false, true]) {
+        expect(detectGrid(img, { square })).toMatchObject({ found: false, reason: 'no-period' });
+      }
+    }
+  });
+
+  it('a plateau of equal differences counts once, at its first boundary; next to a higher one it is no maximum', () => {
+    // Cells of 8 alternate 0 and 240. Before every rise the last two pixels ramp (60, 120), so the
+    // differences are 60, 60, 120: the 60-plateau sits next to the higher 120 and is no edge. Only
+    // the 120 steps are, all on the comb, so the grid is perfect.
+    const cell = 8;
+    const cols = 6;
+    const w = cell * cols;
+    const h = cell * cols;
+    const data = new Uint8Array(w * h * 4);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const v = (((x / cell) | 0) + ((y / cell) | 0)) % 2 === 1 ? 240 : 0;
+        data.set([v, v, v, 255], (y * w + x) * 4);
+      }
+      for (let b = cell; b < w; b += cell) {
+        if (data[(y * w + b) * 4] === 240 && data[(y * w + b - 1) * 4] === 0) {
+          data.set([60, 60, 60, 255], (y * w + b - 2) * 4);
+          data.set([120, 120, 120, 255], (y * w + b - 1) * 4);
+        }
+      }
+    }
+    const d = detectGrid({ width: w, height: h, data });
+    expect(grid(d)).toEqual([8, 8, 0, 0]);
+    expect(d.found && d.confidenceX).toBe(1);
   });
 
   it('square mode needs only one long axis', () => {

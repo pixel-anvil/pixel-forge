@@ -9,8 +9,10 @@
  *   source is refused (use `scaleInt` in `@pixel-forge/raster` to upscale).
  * - **Grid target** (`grid`, for example a `GridFound` from `detectGrid`): cells of the grid's size
  *   starting at its offset. A partial cell at an edge (left of the offset, or cut off at the right or
- *   bottom) is kept by default (`edges: 'keep'`), so no source pixel is lost; `edges: 'drop'` leaves
- *   them out.
+ *   bottom) is kept by default (`edges: 'keep'`) when it covers at least half a cell (`2 * size >=
+ *   cell` along that axis); a thinner sliver is dropped, so a 1 pixel remnant never becomes a whole
+ *   output pixel. If no cell of an axis would remain (the image is smaller than the grid), the whole
+ *   axis is one cell. `edges: 'drop'` leaves out every partial cell.
  *
  * Alpha (the same for every method): a pixel is *visible* when its alpha is at least
  * `alphaThreshold` (default 128). A cell where fewer than half of the pixels are visible becomes
@@ -24,7 +26,7 @@
  *   go to the first in row-major order, so an even-sized cell takes the top-left of its middle 2x2).
  * - `mode`: the most common RGBA among the visible pixels; ties go to the colour seen first in
  *   row-major order.
- * - `kcentroid`: k-means in OKLab over the cell's visible colours, then the centroid of the
+ * - `kcentroid`: k-means in OKLab over the cell's distinct visible RGBs, then the centroid of the
  *   heaviest cluster (see {@link KCENTROID_MAX_ITERATIONS}). This is the "K-Centroid" downscale idea
  *   as publicly described by Astropulse (2023): per output tile, cluster the tile's colours with a
  *   small k and keep the dominant cluster. Written here from that description only, on top of
@@ -34,7 +36,10 @@
  *
  * Determinism: cells, `box`, `nearest` and `mode` are integer maths. `kcentroid` uses the
  * deterministic OKLab of `@pixel-forge/color` with sums in a fixed order, so it is bit-identical on
- * every platform. A cluster made of one distinct colour returns that colour exactly.
+ * every platform. A cluster made of one distinct RGB returns that RGB exactly, whatever its alphas
+ * (no OKLab round trip); the alpha is the mean of the cluster's visible alphas. The clusters and
+ * their centroid come from one final assignment against the final centres, also when the iteration
+ * cap ends the loop.
  * @packageDocumentation
  */
 import { oklabDistanceSq, oklabToSrgb8, srgb8ToOklab } from '@pixel-forge/color';
@@ -69,7 +74,7 @@ export interface DownscaleOptions {
   readonly height?: number;
   /** Sample per cell of this grid instead of a size target. */
   readonly grid?: GridSpec;
-  /** Grid target only: `'keep'` (default) keeps partial cells at the image edges, `'drop'` leaves them out. */
+  /** Grid target only: `'keep'` (default) keeps a partial cell at the image edge when it covers at least half a cell (thinner slivers are dropped), `'drop'` leaves out all partial cells. */
   readonly edges?: 'keep' | 'drop';
   /** Pixels with alpha at least this (integer 1..255) are visible. Default {@link DEFAULT_ALPHA_THRESHOLD}. */
   readonly alphaThreshold?: number;
@@ -98,16 +103,27 @@ function evenCuts(src: number, out: number): number[] {
   return cuts;
 }
 
-/** Cell edges along one axis of a grid target. */
+/**
+ * Cell edges along one axis of a grid target. With `keep`, a partial cell at an edge stays only when
+ * it covers at least half a cell (`2 * size >= cell`); a thinner sliver is dropped. If that leaves no
+ * cell (the axis is shorter than the grid), the whole axis is one cell. Without `keep` every partial
+ * cell is dropped and an axis without a full cell has no cuts.
+ */
 function gridCuts(n: number, cell: number, offset: number, keep: boolean): number[] {
+  const starts: number[] = offset > 0 ? [0] : [];
+  for (let s = offset; s < n; s += cell) starts.push(s);
   const cuts: number[] = [];
-  if (offset > 0 && keep) cuts.push(0);
-  for (let s = offset; s < n; s += cell) {
-    if (s + cell > n && !keep) break;
-    cuts.push(s);
+  for (let i = 0; i < starts.length; i++) {
+    const st = starts[i] ?? 0;
+    const end = starts[i + 1] ?? n;
+    const size = end - st;
+    const full = size >= cell;
+    if (full || (keep && 2 * size >= cell)) {
+      if (cuts.length === 0) cuts.push(st);
+      cuts.push(end);
+    }
   }
-  const last = cuts.at(-1);
-  if (last !== undefined) cuts.push(keep ? n : Math.min(n, last + cell));
+  if (cuts.length === 0 && keep) cuts.push(0, n);
   return cuts;
 }
 
@@ -147,6 +163,7 @@ function cellCuts(img: RgbaImage, opts: DownscaleOptions): { xs: number[]; ys: n
     const xs = gridCuts(w, grid.cellWidth, grid.offsetX, keep);
     const ys = gridCuts(h, grid.cellHeight, grid.offsetY, keep);
     if (xs.length < 2 || ys.length < 2) {
+      // Only `edges: 'drop'` gets here: with 'keep' every axis keeps at least one cell.
       throw new ConvertError('BAD_OPTION', 'the grid has no full cell inside the image');
     }
     return { xs, ys };
@@ -266,15 +283,38 @@ function modeColor(d: Uint8Array, cell: Cell, out: Uint8Array, o: number): void 
   writePacked(out, o, best);
 }
 
+/** One distinct visible RGB of a cell (all its alphas together). */
 interface Item {
-  readonly key: number;
-  readonly weight: number;
+  readonly rgb: number;
   readonly lab: Oklab;
-  readonly alpha: number;
+  /** Number of visible pixels of this RGB. */
+  weight: number;
+  /** Sum of their alphas. */
+  alphaSum: number;
 }
 
-function labOf(cache: Map<number, Oklab>, key: number): Oklab {
-  const rgb = Math.floor(key / 0x100);
+/** Distinct visible RGBs of a cell in order of first appearance, with weights and alpha sums. */
+function cellItems(d: Uint8Array, cell: Cell, cache: Map<number, Oklab>): Item[] {
+  const out: Item[] = [];
+  const index = new Map<number, number>();
+  for (let j = 0; j < cell.count; j++) {
+    const p = cell.vis[j] ?? 0;
+    const rgb = (d[p] ?? 0) * 0x10000 + (d[p + 1] ?? 0) * 0x100 + (d[p + 2] ?? 0);
+    const alpha = d[p + 3] ?? 0;
+    const at = index.get(rgb);
+    const it = at === undefined ? undefined : out[at];
+    if (it === undefined) {
+      index.set(rgb, out.length);
+      out.push({ rgb, lab: labOf(cache, rgb), weight: 1, alphaSum: alpha });
+    } else {
+      it.weight++;
+      it.alphaSum += alpha;
+    }
+  }
+  return out;
+}
+
+function labOf(cache: Map<number, Oklab>, rgb: number): Oklab {
   let lab = cache.get(rgb);
   if (lab === undefined) {
     lab = srgb8ToOklab(Math.floor(rgb / 0x10000), Math.floor(rgb / 0x100) % 256, rgb % 256);
@@ -305,10 +345,7 @@ function kcentroidColor(
   out: Uint8Array,
   o: number,
 ): void {
-  const items: Item[] = [];
-  for (const [key, weight] of distinct(d, cell)) {
-    items.push({ key, weight, lab: labOf(cache, key), alpha: key % 256 });
-  }
+  const items = cellItems(d, cell, cache);
   // Seeding: the most common colour, then repeatedly the colour farthest from every chosen centre.
   let first = 0;
   for (let i = 1; i < items.length; i++) {
@@ -363,6 +400,11 @@ function kcentroidColor(
       if (sw > 0) centres[c] = { L: sL / sw, a: sa / sw, b: sb / sw };
     }
   }
+  // The loop may end right after a centre update (iteration cap), so assign once more against the
+  // final centres: the weights, the heaviest cluster and its centroid all come from this assignment.
+  for (let i = 0; i < items.length; i++) {
+    assign[i] = nearestCentre(centres, items[i]?.lab ?? firstItem.lab);
+  }
   // The heaviest cluster (lowest index on ties).
   const weights = new Array<number>(centres.length).fill(0);
   for (let i = 0; i < items.length; i++) {
@@ -371,23 +413,31 @@ function kcentroidColor(
   }
   let top = 0;
   for (let c = 1; c < weights.length; c++) if ((weights[c] ?? 0) > (weights[top] ?? 0)) top = c;
+  // Its centroid and mean alpha. The sums run in item order, as in the Lloyd update.
   let members = 0;
-  let only = 0;
+  let only: Item | undefined;
   let sw = 0;
+  let sL = 0;
+  let sa = 0;
+  let sb = 0;
   let salpha = 0;
   for (let i = 0; i < items.length; i++) {
     const it = items[i];
     if (it === undefined || assign[i] !== top) continue;
     members++;
-    only = it.key;
+    only = it;
     sw += it.weight;
-    salpha += it.alpha * it.weight;
+    sL += it.lab.L * it.weight;
+    sa += it.lab.a * it.weight;
+    sb += it.lab.b * it.weight;
+    salpha += it.alphaSum;
   }
-  if (members === 1) {
-    writePacked(out, o, only);
+  if (members === 1 && only !== undefined) {
+    // One distinct RGB (at any alphas): exactly that RGB, no OKLab round trip.
+    writePacked(out, o, only.rgb * 0x100 + divRound(only.alphaSum, only.weight));
     return;
   }
-  const [r, g, b] = oklabToSrgb8(centres[top] ?? firstItem.lab);
+  const [r, g, b] = oklabToSrgb8({ L: sL / sw, a: sa / sw, b: sb / sw });
   out[o] = r;
   out[o + 1] = g;
   out[o + 2] = b;
@@ -401,7 +451,8 @@ function kcentroidColor(
  *
  * Round trip: an image made by integer nearest-neighbour upscaling (any cell size and phase)
  * downscaled with its grid gives the source back exactly with `nearest`, `mode` and `kcentroid`, and
- * with `box` too when the cells are uniform.
+ * with `box` too when the cells are uniform. This holds while every cropped edge cell keeps at least
+ * half of its size; a thinner remnant is a sliver and is dropped (see the module comment).
  * @returns a new image, never larger than the source
  * @throws ConvertError `BAD_OPTION` for an unknown method, a target larger than the source, a
  *   missing or doubled target, a bad grid, `alphaThreshold` or `k`; `BAD_IMAGE`
