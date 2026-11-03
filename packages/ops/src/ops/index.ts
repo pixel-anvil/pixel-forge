@@ -17,6 +17,7 @@ import { ioImport } from './io-import.js';
 import { layerUpdate } from './layer-update.js';
 import { paletteEdit } from './palette-edit.js';
 import { paletteRamp } from './palette-ramp.js';
+import { paletteRemap } from './palette-remap.js';
 import { paletteSort } from './palette-sort.js';
 import { overrideImport } from './override-import.js';
 import { overrideList } from './override-list.js';
@@ -63,6 +64,7 @@ export { CellSpec, MAX_CELLS, expandCells, ioImport } from './io-import.js';
 export { layerUpdate } from './layer-update.js';
 export { paletteEdit } from './palette-edit.js';
 export { paletteRamp } from './palette-ramp.js';
+export { paletteRemap } from './palette-remap.js';
 export { paletteSort } from './palette-sort.js';
 export { overrideImport } from './override-import.js';
 export { overrideList } from './override-list.js';
@@ -113,6 +115,7 @@ export const ALL_OPS: readonly AnyOp[] = [
   overrideList,
   paletteEdit,
   paletteRamp,
+  paletteRemap,
   paletteSort,
   overrideResolve,
   pxfPack,

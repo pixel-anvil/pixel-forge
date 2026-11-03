@@ -964,6 +964,56 @@
       ]
     },
     {
+      "op": "palette.remap",
+      "command": ["palette", "remap"],
+      "summary": "Recolour drawings with a mapping table, or swap the palette colours.",
+      "safety": "mutate",
+      "options": [
+        {
+          "name": "doc",
+          "flag": "--doc",
+          "kind": "string",
+          "required": true,
+          "description": "Document id from doc_open or doc_create."
+        },
+        {
+          "name": "map",
+          "flag": "--map",
+          "kind": "json",
+          "required": false,
+          "description": "Mapping table."
+        },
+        {
+          "name": "swap",
+          "flag": "--swap",
+          "kind": "json",
+          "required": false,
+          "description": "Replace the active palette colours. Whole document only."
+        },
+        {
+          "name": "layer",
+          "flag": "--layer",
+          "kind": "string",
+          "required": false,
+          "description": "map: only this pixel layer."
+        },
+        {
+          "name": "animation",
+          "flag": "--animation",
+          "kind": "json",
+          "required": false,
+          "description": "map: only the cels of this animation (with frames)."
+        },
+        {
+          "name": "frames",
+          "flag": "--frames",
+          "kind": "json",
+          "required": false,
+          "description": "map: only these frames."
+        }
+      ]
+    },
+    {
       "op": "palette.sort",
       "command": ["palette", "sort"],
       "summary": "Sort the active palette by hue, luminance, luma or chroma.",

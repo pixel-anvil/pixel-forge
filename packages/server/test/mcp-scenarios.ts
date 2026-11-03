@@ -232,6 +232,11 @@ export const SCENARIOS: Record<string, Scenario> = {
     args: ({ doc }) => ({ doc, by: 'luminance' }),
     entry: 'one',
   },
+  palette_remap: {
+    base: 'hero',
+    args: ({ doc }) => ({ doc, map: [{ from: '#e8be96', to: '#010203' }] }),
+    entry: 'one',
+  },
   part_paint_variant: {
     base: 'hero',
     args: ({ doc }) => ({

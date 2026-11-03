@@ -79,6 +79,7 @@ Every failure is `{"code", "message", "details"}`, identical on every transport.
 | [`override.resolve`](#overrideresolve) | rig | mutate | `override_resolve` | `pf override resolve` | Resolve overrides: "keep" them, "rebase" onto the current art, or "discard" them. |
 | [`palette.edit`](#paletteedit) | palette | mutate | `palette_edit` | `pf palette edit` | Add, remove, replace or move colours of the active palette. |
 | [`palette.ramp`](#paletteramp) | palette | mutate | `palette_ramp` | `pf palette ramp` | Generate a dark-to-light colour ramp from a base colour; optionally add it. |
+| [`palette.remap`](#paletteremap) | palette | mutate | `palette_remap` | `pf palette remap` | Recolour drawings with a mapping table, or swap the palette colours. |
 | [`palette.sort`](#palettesort) | palette | mutate | `palette_sort` | `pf palette sort` | Sort the active palette by hue, luminance, luma or chroma. |
 | [`part.paintOverlap`](#partpaintoverlap) | rig | mutate | `part_paint_overlap` | `pf part paint-overlap` | Close joint gaps by painting hidden overlap on the part drawn lower; the rest composite stays the same. |
 | [`part.paintVariant`](#partpaintvariant) | rig | mutate | `part_paint_variant` | `pf part paint-variant` | Paint a text grid into a part variant's own image. |
@@ -1029,6 +1030,53 @@ A 5-colour skin ramp, added to the palette:
 
 ```json
 {"doc":"doc_g1ed5q","base":"#c8503c","steps":5,"add":true,"name":"skin"}
+```
+
+## palette.remap
+
+Recolour drawings with a mapping table, or swap the palette colours.
+
+Give map or swap. map: [{from,to}] by palette index (indexed document) or exact "#rrggbb[aa]" (RGBA); applied at once, unlisted and transparent pixels stay. Scope: all drawings, or layer and/or animation+frames (cels only). swap: {palette: id} or {colors: [...]} of the same length replaces the active colours, indices stay. Locked RGBA: a map target off the palette is refused.
+
+- Group: `palette`
+- Safety: `mutate`
+- MCP tool: `palette_remap`
+- CLI: `pf palette remap`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
+| `map` | {from, to}[] | no | Mapping table. |
+| `swap` | {palette, colors} | no | Replace the active palette colours. Whole document only. |
+| `layer` | string | no | map: only this pixel layer. |
+| `animation` | {group, direction} \| {id} | no | map: only the cels of this animation (with frames). |
+| `frames` | integer >= 0 \| string[] | no | map: only these frames. |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `mode` | "map" \| "swap" | yes |  |
+| `changed` | integer | yes | Pixels changed in all drawings. |
+| `drawings` | {where, changed}[] | yes | Drawings that changed, with their changed pixels. |
+| `scanned` | integer | yes | Drawings looked at. |
+| `palette` | string | no | swap: palette id. |
+| `colors` | string[] | no | swap: the colours afterwards. |
+
+### Examples
+
+Indexed: move red (3) to blue (5) in one layer:
+
+```json
+{"doc":"doc_g1ed5q","map":[{"from":3,"to":5}],"layer":"Body"}
+```
+
+Swap in a team palette of the same length:
+
+```json
+{"doc":"doc_g1ed5q","swap":{"colors":["#00000000","#1a1c2c","#b13e53"]}}
 ```
 
 ## palette.sort

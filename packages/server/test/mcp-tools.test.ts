@@ -31,8 +31,8 @@ describe('tools/list', () => {
     const long = tools.filter((t) => (t.description ?? '').length > 800);
     expect(long.map((t) => `${t.name}: ${String(t.description?.length)}`)).toEqual([]);
     const bytes = Buffer.byteLength(JSON.stringify({ tools }));
-    // MCP-04: 75,775 bytes after B0.3 (was 83,005); T5.16 `rig_fit_template` and B0.1 `rig_fit_pose` raised the limit 76,300 -> 82,000 (list: 81,159). E3.3 `rig_apply_preset` raised it 82,000 -> 84,000 (list: 83,499). TG.1 adds no tool to the default list (83,506 bytes). E5.2 `palette_edit`, `palette_ramp`, `palette_sort` raised it 84,000 -> 89,000 (list: 88,627); `core` alone is held under 45,000 in mcp-groups.test.ts.
-    expect(bytes).toBeLessThan(89_000);
+    // MCP-04: 75,775 bytes after B0.3 (was 83,005); T5.16 `rig_fit_template` and B0.1 `rig_fit_pose` raised the limit 76,300 -> 82,000 (list: 81,159). E3.3 `rig_apply_preset` raised it 82,000 -> 84,000 (list: 83,499). TG.1 adds no tool to the default list (83,506 bytes). E5.2 `palette_edit`, `palette_ramp`, `palette_sort` raised it 84,000 -> 89,000 (list: 88,627). E5.4 `palette_remap` raised it 89,000 -> 92,000 (list: 91,059); `core` alone is held under 45,000 in mcp-groups.test.ts.
+    expect(bytes).toBeLessThan(92_000);
   });
 
   it('states the shared conventions once, in the server instructions', async () => {

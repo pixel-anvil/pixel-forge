@@ -2899,6 +2899,196 @@
     }
   },
   {
+    "name": "palette_remap",
+    "title": "palette.remap",
+    "description": "Recolour drawings with a mapping table, or swap the palette colours.\n\nGive map or swap. map: [{from,to}] by palette index (indexed document) or exact \"#rrggbb[aa]\" (RGBA); applied at once, unlisted and transparent pixels stay. Scope: all drawings, or layer and/or animation+frames (cels only). swap: {palette: id} or {colors: [...]} of the same length replaces the active colours, indices stay. Locked RGBA: a map target off the palette is refused.\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Indexed: move red (3) to blue (5) in one layer): {\"doc\":\"doc_g1ed5q\",\"map\":[{\"from\":3,\"to\":5}],\"layer\":\"Body\"}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id from doc_open or doc_create."
+        },
+        "map": {
+          "description": "Mapping table.",
+          "minItems": 1,
+          "maxItems": 256,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "from": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 255
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+                  }
+                ]
+              },
+              "to": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 255
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+                  }
+                ]
+              }
+            },
+            "required": ["from", "to"],
+            "additionalProperties": false
+          }
+        },
+        "swap": {
+          "description": "Replace the active palette colours. Whole document only.",
+          "type": "object",
+          "properties": {
+            "palette": {
+              "description": "Id of another palette of this document.",
+              "type": "string"
+            },
+            "colors": {
+              "description": "New colours, same count.",
+              "minItems": 1,
+              "maxItems": 256,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "layer": {
+          "description": "map: only this pixel layer.",
+          "type": "string",
+          "minLength": 1
+        },
+        "animation": {
+          "description": "map: only the cels of this animation (with frames).",
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "group": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                },
+                "direction": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_-]{1,48}$"
+                }
+              },
+              "required": ["group"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^anm_[0-9a-z]{1,24}$"
+                }
+              },
+              "required": ["id"],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "frames": {
+          "description": "map: only these frames.",
+          "minItems": 1,
+          "maxItems": 256,
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "string",
+                "pattern": "^frm_[0-9a-z]{1,24}$"
+              }
+            ],
+            "description": "Frame: 0-based index or frame id (\"frm_...\")."
+          }
+        }
+      },
+      "required": ["doc"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["map", "swap"]
+        },
+        "changed": {
+          "type": "integer",
+          "description": "Pixels changed in all drawings."
+        },
+        "drawings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "where": {
+                "type": "string"
+              },
+              "changed": {
+                "type": "integer"
+              }
+            },
+            "required": ["where", "changed"],
+            "additionalProperties": false
+          },
+          "description": "Drawings that changed, with their changed pixels."
+        },
+        "scanned": {
+          "type": "integer",
+          "description": "Drawings looked at."
+        },
+        "palette": {
+          "description": "swap: palette id.",
+          "type": "string"
+        },
+        "colors": {
+          "description": "swap: the colours afterwards.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["mode", "changed", "drawings", "scanned"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "palette.remap",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "palette.remap",
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "palette"
+    }
+  },
+  {
     "name": "palette_sort",
     "title": "palette.sort",
     "description": "Sort the active palette by hue, luminance, luma or chroma.\n\nStable: equal keys keep their order. luminance = OKLab lightness, luma = Rec. 709 on 8-bit sRGB, hue puts greys first. Indexed documents: pixels, ramps and skins follow the colours.\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Dark to light): {\"doc\":\"doc_g1ed5q\",\"by\":\"luminance\"}",

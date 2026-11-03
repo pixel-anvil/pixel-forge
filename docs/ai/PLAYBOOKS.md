@@ -225,5 +225,8 @@ Filled in by card T4.2.
 ## Add a palette preset
 Filled in by card T1.3.
 
+## Remap or swap a palette
+Use `palette_remap`. Recolour: `map: [{from, to}]` (indices in an indexed document, exact `#rrggbb` colours in an RGBA one; a table applies at once, so 1 to 3 plus 3 to 1 swaps). Limit it with `layer` or `animation` + `frames`. Team kit: `swap: {colors: [...]}` or `swap: {palette: id}` of the same length keeps every index and changes the colours. Check the `changed` counts, then `render_frame` and `lint`. In a palette-locked RGBA document a `map` target must already be a palette colour. To add a new colour first, use `palette_edit`. In code, build tables with `indexLut` / `colorTable` from `@pixel-forge/color` and walk drawings with `recolorDrawings` (`packages/ops/src/recolor-drawings.ts`).
+
 ## Dispatch and verify a card (orchestrator)
 Filled in by the orchestrator; the procedure is in `docs/02-plan.md` section 0.1 until then.
