@@ -52,6 +52,16 @@ table, no frames) or `TOO_LARGE` (a limit). `decodeImageFile` (the converter's r
 GIF with a message that says so. Oracle files: `fixtures/gif/` (Pillow, macOS ImageIO and `sips`) plus hand-built files
 with ASCII expectations.
 
+## Animated GIF export (FR-DOC-06, E6.2)
+
+`exportGif(view, { animation?, scale = 1, skin?, exportOnly = true, rig? }) -> { gif, animation, frames, size, colors }` renders one animation (a mirror takes its source's frames) like a sheet export frame and encodes it with `encodeGif(frames, { loop? }) -> { bytes, colors, transparent }` (`src/gif-encode.ts`, RGBA frames in, bytes out). `io.export` / `export` / `pf export` take a `.gif` path for it (one animation: name it with `animations` if the document has several; `allSkins` is refused; no JSON is written).
+
+- Clean-room from the GIF89a specification (CompuServe 1990) and the Netscape loop block; no code ported, no new dependency.
+- **Colours.** One global table, in order of first appearance, so the bytes are deterministic. At most 256 entries including transparency: more is refused with `PALETTE_TOO_LARGE`; there is no quantiser (reduce the colours first with `convert` or `palette_remap`). Each pixel must have alpha 0 or 255: other alpha is refused (`BAD_INPUT`) rather than thresholded. If anything is transparent, index 0 is the transparent index.
+- **Frames.** Every frame is the whole canvas; disposal 2 when there is transparency, otherwise 1. Delay is `round(ms / 10)` cs, at least 1 (longest 655,350 ms); durations are not kept exactly below 10 ms resolution.
+- **Loop.** `loop` writes `NETSCAPE2.0` with count 0 (forever); `once` writes no block. `pingpong` plays forward then back without repeating the end frames (`0 1 2 3 2 1`) and loops forever; the file holds those `2n - 2` frames.
+- **Oracle.** Round trip through `decodeGif` (pixels, durations, loop) and macOS `sips` (size and first frame). Aseprite was not available.
+
 ## Spritesheet export (FR-DOC-06)
 
 `exportSpritesheet(view, { animations?, layout: 'rows' | 'packed', scale = 1, skin?, exportOnly = true, imageName? }) -> { png, json }`.

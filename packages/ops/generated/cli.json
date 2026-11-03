@@ -795,7 +795,7 @@
           "flag": "--path",
           "kind": "string",
           "required": true,
-          "description": "Output PNG path (absolute, inside the workspace roots); the JSON goes beside it."
+          "description": "Output path (absolute, inside the workspace roots). .png: sheet, JSON beside it. .gif: one animation (give animations if several), loop from the animation, up to 256 colours."
         },
         {
           "name": "animations",

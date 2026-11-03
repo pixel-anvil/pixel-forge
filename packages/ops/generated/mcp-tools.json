@@ -2062,8 +2062,8 @@
         "path": {
           "type": "string",
           "minLength": 1,
-          "pattern": "\\.png$",
-          "description": "Output PNG path (absolute, inside the workspace roots); the JSON goes beside it."
+          "pattern": "\\.(png|gif)$",
+          "description": "Output path (absolute, inside the workspace roots). .png: sheet, JSON beside it. .gif: one animation (give animations if several), loop from the animation, up to 256 colours."
         },
         "animations": {
           "description": "Animations to export, in order (default: all).",
@@ -2137,12 +2137,16 @@
       "type": "object",
       "properties": {
         "png": {
-          "type": "string",
-          "description": "Path of the written PNG."
+          "description": "Path of the written PNG.",
+          "type": "string"
         },
         "json": {
-          "type": "string",
-          "description": "Path of the written JSON."
+          "description": "Path of the written JSON.",
+          "type": "string"
+        },
+        "gif": {
+          "description": "Path of the written GIF (.gif paths only).",
+          "type": "string"
         },
         "size": {
           "type": "object",
@@ -2190,7 +2194,7 @@
           }
         }
       },
-      "required": ["png", "json", "size", "frames", "animations"],
+      "required": ["size", "frames", "animations"],
       "additionalProperties": false
     },
     "annotations": {

@@ -794,7 +794,7 @@ Renders every frame like the game would see it (export layers only; rig, overrid
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `doc` | string | yes | Document id from doc_open or doc_create. |
-| `path` | string | yes | Output PNG path (absolute, inside the workspace roots); the JSON goes beside it. |
+| `path` | string | yes | Output path (absolute, inside the workspace roots). .png: sheet, JSON beside it. .gif: one animation (give animations if several), loop from the animation, up to 256 colours. |
 | `animations` | {group, direction} \| {id}[] | no | Animations to export, in order (default: all). |
 | `layout` | "rows" \| "packed" | no | "rows" (default) or "packed". |
 | `scale` | integer >= 1 | no | Integer scale, 1..16 (default 1). |
@@ -806,8 +806,9 @@ Renders every frame like the game would see it (export layers only; rig, overrid
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `png` | string | yes | Path of the written PNG. |
-| `json` | string | yes | Path of the written JSON. |
+| `png` | string | no | Path of the written PNG. |
+| `json` | string | no | Path of the written JSON. |
+| `gif` | string | no | Path of the written GIF (.gif paths only). |
 | `size` | {w, h} | yes | Sheet size, px. |
 | `frames` | integer | yes | Frames exported. |
 | `animations` | string[] | yes | Animation tags in sheet order. |

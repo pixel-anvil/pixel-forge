@@ -1,4 +1,5 @@
 // io.export: spritesheet PNG + JSON written atomically through the host file system.
+import { decodeGif } from '@pixel-forge/io';
 import { decodePng } from '@pixel-forge/png';
 import { describe, expect, it, vi } from 'vitest';
 import { ioExport, registry } from '../src/index.js';
@@ -21,7 +22,7 @@ describe('io.export', () => {
   it('rejects bad input with the issue path', async () => {
     const { run } = await openHero();
     const cases: [Record<string, unknown>, string][] = [
-      [{ path: '/work/out/hero.gif' }, 'path'],
+      [{ path: '/work/out/hero.jpg' }, 'path'],
       [{ path: '/work/out/hero.png', scale: 17 }, 'scale'],
       [{ path: '/work/out/hero.png', layout: 'diagonal' }, 'layout'],
     ];
@@ -158,5 +159,55 @@ describe('io.export', () => {
     );
     expect(both.code).toBe('BAD_INPUT');
     expect(await fs.exists('/work/x.png')).toBe(false);
+  });
+
+  it('writes an animated GIF: one animation, its durations and loop, no JSON, atomically', async () => {
+    const { fs, run } = await openHero();
+    await registry.execute(
+      'anim.create',
+      { doc: HERO_ID, group: 'run', frames: 3, durationMs: 50 },
+      run,
+    );
+    const out = await registry.execute(
+      'io.export',
+      { doc: HERO_ID, path: '/work/out/run.gif', animations: [{ group: 'run' }], scale: 2 },
+      run,
+    );
+    expect(out).toEqual({
+      gif: '/work/out/run.gif',
+      size: { w: 96, h: 96 },
+      frames: 3,
+      animations: ['run'],
+    });
+    const gif = decodeGif(await fs.readFile('/work/out/run.gif'));
+    expect([gif.width, gif.height, gif.frames.length, gif.loopCount]).toEqual([96, 96, 3, 0]);
+    expect(gif.frames.map((f) => f.durationMs)).toEqual([50, 50, 50]);
+    expect((await fs.readdir('/work/out')).map((e) => e.name)).toEqual(['run.gif']);
+  });
+
+  it('refuses a GIF of several animations or with allSkins', async () => {
+    const { fs, run } = await openHero();
+    await registry.execute('anim.create', { doc: HERO_ID, group: 'run', frames: 2 }, run);
+    const several = await rejection(
+      registry.execute('io.export', { doc: HERO_ID, path: '/work/a.gif' }, run),
+    );
+    expect(several.code).toBe('BAD_INPUT');
+    const two = await rejection(
+      registry.execute(
+        'io.export',
+        { doc: HERO_ID, path: '/work/a.gif', animations: [{ group: 'run' }, { group: 'default' }] },
+        run,
+      ),
+    );
+    expect(two.code).toBe('BAD_INPUT');
+    const skins = await rejection(
+      registry.execute(
+        'io.export',
+        { doc: HERO_ID, path: '/work/a.gif', animations: [{ group: 'run' }], allSkins: true },
+        run,
+      ),
+    );
+    expect(skins.code).toBe('BAD_INPUT');
+    expect(await fs.exists('/work/a.gif')).toBe(false);
   });
 });

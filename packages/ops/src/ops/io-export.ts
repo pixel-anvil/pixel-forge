@@ -2,7 +2,7 @@
  * `io.export`: render animations into a spritesheet PNG plus Aseprite-style JSON.
  * @packageDocumentation
  */
-import { exportSpritesheet, saveAtomic } from '@pixel-forge/io';
+import { exportGif, exportSpritesheet, saveAtomic } from '@pixel-forge/io';
 import { z } from 'zod';
 import { defineOp } from '../define.js';
 import { utf8 } from '../file-io.js';
@@ -24,8 +24,10 @@ export const ioExport = defineOp({
     path: z
       .string()
       .min(1)
-      .regex(/\.png$/i, 'expected a .png path')
-      .describe('Output PNG path (absolute, inside the workspace roots); the JSON goes beside it.'),
+      .regex(/\.(png|gif)$/i, 'expected a .png or .gif path')
+      .describe(
+        'Output path (absolute, inside the workspace roots). .png: sheet, JSON beside it. .gif: one animation (give animations if several), loop from the animation, up to 256 colours.',
+      ),
     animations: z
       .array(AnimRef)
       .optional()
@@ -40,8 +42,9 @@ export const ioExport = defineOp({
     exportOnly: z.boolean().default(true).describe('Only layers with export: true (default true).'),
   }),
   output: z.strictObject({
-    png: z.string().describe('Path of the written PNG.'),
-    json: z.string().describe('Path of the written JSON.'),
+    png: z.string().optional().describe('Path of the written PNG.'),
+    json: z.string().optional().describe('Path of the written JSON.'),
+    gif: z.string().optional().describe('Path of the written GIF (.gif paths only).'),
     size: z.strictObject({ w: z.int(), h: z.int() }).describe('Sheet size, px.'),
     frames: z.int().describe('Frames exported.'),
     animations: z.array(z.string()).describe('Animation tags in sheet order.'),
@@ -67,6 +70,26 @@ export const ioExport = defineOp({
     const { host } = ctx;
     const png = host.resolvePath(input.path);
     const stem = png.slice(0, -4);
+    if (/\.gif$/i.test(png)) {
+      if (input.allSkins)
+        throw new OpError('BAD_INPUT', 'a GIF is one skin: use "skin", not allSkins');
+      const only = input.animations?.length === 1 ? input.animations[0] : undefined;
+      if (input.animations !== undefined && only === undefined) {
+        throw new OpError(
+          'BAD_INPUT',
+          'a GIF holds one animation: give exactly one in "animations"',
+        );
+      }
+      const g = exportGif(ctx.view, {
+        scale: input.scale,
+        exportOnly: input.exportOnly,
+        rig: host.renderer,
+        ...(only === undefined ? {} : { animation: only }),
+        ...(input.skin === 'base' ? {} : { skin: { name: input.skin } }),
+      });
+      await saveAtomic(host.fs, png, g.gif);
+      return { gif: png, size: g.size, frames: g.frames, animations: [g.animation] };
+    }
     if (input.allSkins && input.skin !== 'base') {
       throw new OpError('BAD_INPUT', 'give "skin" or "allSkins", not both', {
         issues: [{ path: 'allSkins', message: 'allSkins already includes every skin' }],

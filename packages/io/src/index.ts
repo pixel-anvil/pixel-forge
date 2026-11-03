@@ -107,3 +107,9 @@ export type {
   UnboundPartReport,
   UpdatedVariantReport,
 } from './aseprite-import.js';
+
+// Animated GIF export (FR-DOC-06, E6.2).
+export { encodeGif } from './gif-encode.js';
+export type { EncodedGif, GifEncodeFrame, GifEncodeOptions } from './gif-encode.js';
+export { exportGif } from './gif-export.js';
+export type { ExportGifOptions, ExportedGif } from './gif-export.js';
