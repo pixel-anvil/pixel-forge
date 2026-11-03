@@ -4940,6 +4940,226 @@
     }
   },
   {
+    "name": "render_compare",
+    "title": "render.compare",
+    "description": "Render two frames side by side (A, B) plus a difference tile with changed pixels in magenta (long edge at most 1568 px).\n\nCompare two poses, two skins or two animations of one document: tiles are A, B, diff, left to right. The diff marks pixels whose colour or alpha differ. Output counts them and gives their bounding box in canvas pixels. For a before/after of an edit, copy the frame first (frame_duplicate), edit, then compare. Vision judges gesture; lint owns precision.\n\nRead-only. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Compare the base look with the rival skin): {\"doc\":\"doc_g1ed5q\",\"a\":{\"animation\":{\"group\":\"default\"},\"frame\":0},\"b\":{\"animation\":{\"group\":\"default\"},\"frame\":0,\"skin\":\"rival\"}}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id from doc_open or doc_create."
+        },
+        "a": {
+          "type": "object",
+          "properties": {
+            "animation": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "group": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9_-]{1,48}$"
+                    },
+                    "direction": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9_-]{1,48}$"
+                    }
+                  },
+                  "required": ["group"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^anm_[0-9a-z]{1,24}$"
+                    }
+                  },
+                  "required": ["id"],
+                  "additionalProperties": false
+                }
+              ],
+              "description": "Animation: {\"group\": \"run\", \"direction\": \"side\"} ({\"group\": \"idle\"} for an undirected one) or {\"id\": \"anm_...\"}."
+            },
+            "frame": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^frm_[0-9a-z]{1,24}$"
+                }
+              ],
+              "description": "Frame: 0-based index or frame id (\"frm_...\")."
+            },
+            "skin": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Skin name or id (\"skn_...\"); omit for the base render."
+            }
+          },
+          "required": ["animation", "frame"],
+          "additionalProperties": false,
+          "description": "First frame (left)."
+        },
+        "b": {
+          "type": "object",
+          "properties": {
+            "animation": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "group": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9_-]{1,48}$"
+                    },
+                    "direction": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9_-]{1,48}$"
+                    }
+                  },
+                  "required": ["group"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^anm_[0-9a-z]{1,24}$"
+                    }
+                  },
+                  "required": ["id"],
+                  "additionalProperties": false
+                }
+              ],
+              "description": "Animation: {\"group\": \"run\", \"direction\": \"side\"} ({\"group\": \"idle\"} for an undirected one) or {\"id\": \"anm_...\"}."
+            },
+            "frame": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^frm_[0-9a-z]{1,24}$"
+                }
+              ],
+              "description": "Frame: 0-based index or frame id (\"frm_...\")."
+            },
+            "skin": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Skin name or id (\"skn_...\"); omit for the base render."
+            }
+          },
+          "required": ["animation", "frame"],
+          "additionalProperties": false,
+          "description": "Second frame (middle)."
+        },
+        "scale": {
+          "description": "Integer upscale 1..16 (default: the largest that fits 1568 px).",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
+        }
+      },
+      "required": ["doc", "a", "b"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "a": {
+          "type": "string",
+          "description": "\"group/direction #frame\" of A."
+        },
+        "b": {
+          "type": "string",
+          "description": "\"group/direction #frame\" of B."
+        },
+        "scale": {
+          "type": "integer",
+          "description": "The upscale used."
+        },
+        "identical": {
+          "type": "boolean",
+          "description": "True when no pixel differs."
+        },
+        "changedPixels": {
+          "type": "integer",
+          "description": "Pixels that differ between A and B."
+        },
+        "bounds": {
+          "description": "Bounding box of the differences, canvas pixels; missing when identical.",
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "integer"
+            },
+            "y": {
+              "type": "integer"
+            },
+            "w": {
+              "type": "integer"
+            },
+            "h": {
+              "type": "integer"
+            }
+          },
+          "required": ["x", "y", "w", "h"],
+          "additionalProperties": false
+        },
+        "image": {
+          "type": "object",
+          "properties": {
+            "mimeType": {
+              "type": "string",
+              "const": "image/png",
+              "description": "Always \"image/png\"."
+            },
+            "data": {
+              "type": "string",
+              "description": "The PNG file, base64 (standard alphabet, padded)."
+            },
+            "width": {
+              "type": "integer",
+              "description": "Image width, px (at most 1568)."
+            },
+            "height": {
+              "type": "integer",
+              "description": "Image height, px (at most 1568)."
+            }
+          },
+          "required": ["mimeType", "data", "width", "height"],
+          "additionalProperties": false,
+          "description": "The PNG: A, B, diff."
+        }
+      },
+      "required": ["a", "b", "scale", "identical", "changedPixels", "image"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "render.compare",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "render.compare",
+      "pixel-forge/safety": "read",
+      "pixel-forge/group": "rig"
+    }
+  },
+  {
     "name": "render_contact_sheet",
     "title": "render.contactSheet",
     "description": "Render the frames of some or all animations as one labelled PNG contact sheet (long edge at most 1568 px), optionally with bone lines and pivot markers.\n\nJudge motion across frames (before/after a re-pose, a walk cycle): vision judges gesture and readability, lint owns precision (1 px gaps, off-palette pixels). Check the tile edges: art past the canvas is cut off and lint does not report it. Tiles are labelled \"GROUP/DIRECTION #n\" (n = frame index). The scale is the largest that fits 1568 px, or lower than `scale`. `bones` draws yellow bone lines and `pivots` red pivot squares (need a rig).\n\nRead-only. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Show every frame of the hero with the skeleton drawn): {\"doc\":\"doc_g1ed5q\",\"bones\":true,\"pivots\":true}",
@@ -5776,6 +5996,171 @@
     },
     "_meta": {
       "pixel-forge/op": "rig.bindParts",
+      "pixel-forge/safety": "mutate",
+      "pixel-forge/group": "rig"
+    }
+  },
+  {
+    "name": "rig_copy_pose",
+    "title": "rig.copyPose",
+    "description": "Copy the bone keys of one frame onto another frame, optionally mirrored left/right.\n\nCopies the bone keys that exist on the source frame (angle, offset, flipX, interp), not interpolated values and not part keys. Each pasted bone key replaces the one on the target; other keys stay. mirrored swaps _l and _r bones and negates angles and offset x: a right-foot-forward frame becomes left-foot-forward. Source and target may be in one animation or two. Unmatched bones are listed in skipped.\n\nEdit: one undo step. Conventions: origin top-left, y down, angles deg clockwise, integer px.\n\nExample (Frame 4 of the run is frame 0 with the legs swapped): {\"doc\":\"doc_g1ed5q\",\"from\":{\"animation\":{\"group\":\"run\",\"direction\":\"side\"},\"frame\":0},\"to\":{\"animation\":{\"group\":\"run\",\"direction\":\"side\"},\"frame\":4},\"mirrored\":true}",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "doc": {
+          "type": "string",
+          "pattern": "^doc_[0-9a-z]{1,24}$",
+          "description": "Document id from doc_open or doc_create."
+        },
+        "from": {
+          "type": "object",
+          "properties": {
+            "animation": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "group": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9_-]{1,48}$"
+                    },
+                    "direction": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9_-]{1,48}$"
+                    }
+                  },
+                  "required": ["group"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^anm_[0-9a-z]{1,24}$"
+                    }
+                  },
+                  "required": ["id"],
+                  "additionalProperties": false
+                }
+              ],
+              "description": "Animation: {\"group\": \"run\", \"direction\": \"side\"} ({\"group\": \"idle\"} for an undirected one) or {\"id\": \"anm_...\"}."
+            },
+            "frame": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^frm_[0-9a-z]{1,24}$"
+                }
+              ],
+              "description": "Frame: 0-based index or frame id (\"frm_...\")."
+            }
+          },
+          "required": ["animation", "frame"],
+          "additionalProperties": false,
+          "description": "Source frame."
+        },
+        "to": {
+          "type": "object",
+          "properties": {
+            "animation": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "group": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9_-]{1,48}$"
+                    },
+                    "direction": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9_-]{1,48}$"
+                    }
+                  },
+                  "required": ["group"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^anm_[0-9a-z]{1,24}$"
+                    }
+                  },
+                  "required": ["id"],
+                  "additionalProperties": false
+                }
+              ],
+              "description": "Animation: {\"group\": \"run\", \"direction\": \"side\"} ({\"group\": \"idle\"} for an undirected one) or {\"id\": \"anm_...\"}."
+            },
+            "frame": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^frm_[0-9a-z]{1,24}$"
+                }
+              ],
+              "description": "Frame: 0-based index or frame id (\"frm_...\")."
+            }
+          },
+          "required": ["animation", "frame"],
+          "additionalProperties": false,
+          "description": "Target frame."
+        },
+        "mirrored": {
+          "description": "Swap _l/_r bones, negate angles and x (default false).",
+          "type": "boolean"
+        }
+      },
+      "required": ["doc", "from", "to"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "string",
+          "description": "\"group/direction #frame\" of the source."
+        },
+        "to": {
+          "type": "string",
+          "description": "\"group/direction #frame\" of the target."
+        },
+        "pasted": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Bone names that received a key."
+        },
+        "skipped": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Source bone names that no target bone matched."
+        }
+      },
+      "required": ["from", "to", "pasted", "skipped"],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "rig.copyPose",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "pixel-forge/op": "rig.copyPose",
       "pixel-forge/safety": "mutate",
       "pixel-forge/group": "rig"
     }

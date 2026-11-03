@@ -92,12 +92,14 @@ Every failure is `{"code", "message", "details"}`, identical on every transport.
 | [`pixels.writeGrid`](#pixelswritegrid) | core | mutate | `pixels_write_grid` | `pf pixels write-grid` | Paint a text grid (at most 32x32 px) at (x, y) of a frame; symbols come from "legend". |
 | [`pxf.pack`](#pxfpack) | core | io | `pxf_pack` | `pf pack` | Build a .pxf from a .pxfd folder (the inverse of pxf_unpack). |
 | [`pxf.unpack`](#pxfunpack) | core | io | `pxf_unpack` | `pf unpack` | Expand a .pxf into a .pxfd folder (manifest, document, images, render cache). |
+| [`render.compare`](#rendercompare) | rig | read | `render_compare` | `pf render compare` | Render two frames side by side (A, B) plus a difference tile with changed pixels in magenta (long edge at most 1568 px). |
 | [`render.contactSheet`](#rendercontactsheet) | core | read | `render_contact_sheet` | `pf render contact-sheet` | Render the frames of some or all animations as one labelled PNG contact sheet (long edge at most 1568 px), optionally with bone lines and pivot markers. |
 | [`render.frame`](#renderframe) | core | read | `render_frame` | `pf render frame` | Render one frame to an upscaled PNG on a checkerboard (long edge at most 1568 px), optionally with bone lines and pivot markers. |
 | [`rig.applyPreset`](#rigapplypreset) | rig | mutate | `rig_apply_preset` | `pf rig apply-preset` | Generate a motion preset (walk, run, jump, idle-breathe, swing) as an animation. |
 | [`rig.applyTemplate`](#rigapplytemplate) | rig | mutate | `rig_apply_template` | `pf rig apply-template` | Apply a humanoid skeleton template: bones matched by name are reused, missing ones are created. |
 | [`rig.bake`](#rigbake) | rig | destructive | `rig_bake` | `pf rig bake` | Bake a rig animation into one plain pixel layer: as a new animation, or in place. |
 | [`rig.bindParts`](#rigbindparts) | rig | mutate | `rig_bind_parts` | `pf rig bind-parts` | Bind pixel layers to bones as parts, by layer name ("part:<bone>[.<part>][@variant][#view]") or by overlap. |
+| [`rig.copyPose`](#rigcopypose) | rig | mutate | `rig_copy_pose` | `pf rig copy-pose` | Copy the bone keys of one frame onto another frame, optionally mirrored left/right. |
 | [`rig.editBones`](#rigeditbones) | rig | mutate | `rig_edit_bones` | `pf rig edit-bones` | Edit the skeleton: add/delete/reparent/rename bones, set length and rest pose per view, add/rename/delete views. |
 | [`rig.fitPose`](#rigfitpose) | rig | io | `rig_fit_pose` | `pf rig fit-pose` | Find the bone angles (deg, relative to rest) and part variants whose render of one frame matches a target image. |
 | [`rig.fitTemplate`](#rigfittemplate) | rig | mutate | `rig_fit_template` | `pf rig fit-template` | Fit a humanoid template to landmark points: lengths and rest pose in one call. |
@@ -1583,6 +1585,46 @@ Output:
 {"file":"/work/hero.pxf","dir":"/work/hero.pxfd"}
 ```
 
+## render.compare
+
+Render two frames side by side (A, B) plus a difference tile with changed pixels in magenta (long edge at most 1568 px).
+
+Compare two poses, two skins or two animations of one document: tiles are A, B, diff, left to right. The diff marks pixels whose colour or alpha differ. Output counts them and gives their bounding box in canvas pixels. For a before/after of an edit, copy the frame first (frame_duplicate), edit, then compare. Vision judges gesture; lint owns precision.
+
+- Group: `rig`
+- Safety: `read`
+- MCP tool: `render_compare`
+- CLI: `pf render compare`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
+| `a` | {animation, frame, skin} | yes | First frame (left). |
+| `b` | {animation, frame, skin} | yes | Second frame (middle). |
+| `scale` | integer >= 1 | no | Integer upscale 1..16 (default: the largest that fits 1568 px). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `a` | string | yes | "group/direction #frame" of A. |
+| `b` | string | yes | "group/direction #frame" of B. |
+| `scale` | integer | yes | The upscale used. |
+| `identical` | boolean | yes | True when no pixel differs. |
+| `changedPixels` | integer | yes | Pixels that differ between A and B. |
+| `bounds` | {x, y, w, h} | no | Bounding box of the differences, canvas pixels; missing when identical. |
+| `image` | {mimeType, data, width, height} | yes | The PNG: A, B, diff. |
+
+### Examples
+
+Compare the base look with the rival skin:
+
+```json
+{"doc":"doc_g1ed5q","a":{"animation":{"group":"default"},"frame":0},"b":{"animation":{"group":"default"},"frame":0,"skin":"rival"}}
+```
+
 ## render.contactSheet
 
 Render the frames of some or all animations as one labelled PNG contact sheet (long edge at most 1568 px), optionally with bone lines and pivot markers.
@@ -1825,6 +1867,43 @@ Bind every layer named after a bone, no overlap guessing:
 
 ```json
 {"doc":"doc_g1ed5q","byOverlap":false}
+```
+
+## rig.copyPose
+
+Copy the bone keys of one frame onto another frame, optionally mirrored left/right.
+
+Copies the bone keys that exist on the source frame (angle, offset, flipX, interp), not interpolated values and not part keys. Each pasted bone key replaces the one on the target; other keys stay. mirrored swaps _l and _r bones and negates angles and offset x: a right-foot-forward frame becomes left-foot-forward. Source and target may be in one animation or two. Unmatched bones are listed in skipped.
+
+- Group: `rig`
+- Safety: `mutate`
+- MCP tool: `rig_copy_pose`
+- CLI: `pf rig copy-pose`
+
+### Input
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `doc` | string | yes | Document id from doc_open or doc_create. |
+| `from` | {animation, frame} | yes | Source frame. |
+| `to` | {animation, frame} | yes | Target frame. |
+| `mirrored` | boolean | no | Swap _l/_r bones, negate angles and x (default false). |
+
+### Output
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `from` | string | yes | "group/direction #frame" of the source. |
+| `to` | string | yes | "group/direction #frame" of the target. |
+| `pasted` | string[] | yes | Bone names that received a key. |
+| `skipped` | string[] | yes | Source bone names that no target bone matched. |
+
+### Examples
+
+Frame 4 of the run is frame 0 with the legs swapped:
+
+```json
+{"doc":"doc_g1ed5q","from":{"animation":{"group":"run","direction":"side"},"frame":0},"to":{"animation":{"group":"run","direction":"side"},"frame":4},"mirrored":true}
 ```
 
 ## rig.editBones

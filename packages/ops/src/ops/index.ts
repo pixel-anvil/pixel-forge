@@ -31,6 +31,8 @@ import { partPaintOverlap } from './part-paint-overlap.js';
 import { partPaintVariant } from './part-paint-variant.js';
 import { partSplit } from './part-split.js';
 import { rigBake } from './rig-bake.js';
+import { rigCopyPose } from './rig-copy-pose.js';
+import { renderCompare } from './render-compare.js';
 import { rigBindParts } from './rig-bind-parts.js';
 import { rigEditBones } from './rig-edit-bones.js';
 import { rigMirrorAnimation } from './rig-mirror-animation.js';
@@ -82,6 +84,8 @@ export { partPaintOverlap } from './part-paint-overlap.js';
 export { partPaintVariant } from './part-paint-variant.js';
 export { SplitSelectionInput, partSplit } from './part-split.js';
 export { rigBake } from './rig-bake.js';
+export { rigCopyPose } from './rig-copy-pose.js';
+export { renderCompare } from './render-compare.js';
 export { rigBindParts } from './rig-bind-parts.js';
 export { BoneEdit, rigEditBones } from './rig-edit-bones.js';
 export { rigMirrorAnimation } from './rig-mirror-animation.js';
@@ -136,6 +140,8 @@ export const ALL_OPS: readonly AnyOp[] = [
   partPaintVariant,
   partSplit,
   rigBake,
+  rigCopyPose,
+  renderCompare,
   rigBindParts,
   rigEditBones,
   rigMirrorAnimation,

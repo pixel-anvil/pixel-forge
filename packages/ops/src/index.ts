@@ -145,6 +145,8 @@ export {
   rigApplyTemplate,
   rigFitTemplate,
   rigBake,
+  rigCopyPose,
+  renderCompare,
   rigBindParts,
   rigEditBones,
   rigJointCheck,

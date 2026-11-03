@@ -406,6 +406,43 @@ export const SCENARIOS: Record<string, Scenario> = {
     args: ({ doc }) => ({ doc, part: 'lower_arm_r', z: 5 }),
     entry: 'one',
   },
+  rig_copy_pose: {
+    base: 'hero',
+    setup: async (f, doc) => {
+      await f.call('frame_duplicate', { doc, animation: frame0, frame: 0 });
+      await f.call('rig_set_pose', {
+        doc,
+        animation: frame0,
+        frame: 0,
+        bones: { upper_arm_r: { angle: 30 } },
+      });
+    },
+    args: ({ doc }) => ({
+      doc,
+      from: { animation: frame0, frame: 0 },
+      to: { animation: frame0, frame: 1 },
+      mirrored: true,
+    }),
+    entry: 'one',
+  },
+  render_compare: {
+    base: 'hero',
+    setup: async (f, doc) => {
+      await f.call('frame_duplicate', { doc, animation: frame0, frame: 0 });
+      await f.call('rig_set_pose', {
+        doc,
+        animation: frame0,
+        frame: 1,
+        bones: { upper_arm_r: { angle: 40 } },
+      });
+    },
+    args: ({ doc }) => ({
+      doc,
+      a: { animation: frame0, frame: 0 },
+      b: { animation: frame0, frame: 1 },
+    }),
+    entry: IMAGE,
+  },
   rig_read_pose: {
     base: 'hero',
     args: ({ doc }) => ({ doc, animation: frame0, frame: 0 }),

@@ -1789,6 +1789,42 @@
       ]
     },
     {
+      "op": "render.compare",
+      "command": ["render", "compare"],
+      "summary": "Render two frames side by side (A, B) plus a difference tile with changed pixels in magenta (long edge at most 1568 px).",
+      "safety": "read",
+      "options": [
+        {
+          "name": "doc",
+          "flag": "--doc",
+          "kind": "string",
+          "required": true,
+          "description": "Document id from doc_open or doc_create."
+        },
+        {
+          "name": "a",
+          "flag": "--a",
+          "kind": "json",
+          "required": true,
+          "description": "First frame (left)."
+        },
+        {
+          "name": "b",
+          "flag": "--b",
+          "kind": "json",
+          "required": true,
+          "description": "Second frame (middle)."
+        },
+        {
+          "name": "scale",
+          "flag": "--scale",
+          "kind": "integer",
+          "required": false,
+          "description": "Integer upscale 1..16 (default: the largest that fits 1568 px)."
+        }
+      ]
+    },
+    {
       "op": "render.contactSheet",
       "command": ["render", "contact-sheet"],
       "summary": "Render the frames of some or all animations as one labelled PNG contact sheet (long edge at most 1568 px), optionally with bone lines and pivot markers.",
@@ -2115,6 +2151,42 @@
           "kind": "json",
           "required": false,
           "description": "Default z of new parts by part-layer name, then bone name; higher draws on top. Set at creation; change later with rig_set_part_z."
+        }
+      ]
+    },
+    {
+      "op": "rig.copyPose",
+      "command": ["rig", "copy-pose"],
+      "summary": "Copy the bone keys of one frame onto another frame, optionally mirrored left/right.",
+      "safety": "mutate",
+      "options": [
+        {
+          "name": "doc",
+          "flag": "--doc",
+          "kind": "string",
+          "required": true,
+          "description": "Document id from doc_open or doc_create."
+        },
+        {
+          "name": "from",
+          "flag": "--from",
+          "kind": "json",
+          "required": true,
+          "description": "Source frame."
+        },
+        {
+          "name": "to",
+          "flag": "--to",
+          "kind": "json",
+          "required": true,
+          "description": "Target frame."
+        },
+        {
+          "name": "mirrored",
+          "flag": "--mirrored",
+          "kind": "boolean",
+          "required": false,
+          "description": "Swap _l/_r bones, negate angles and x (default false)."
         }
       ]
     },
