@@ -143,6 +143,7 @@ const IO_CODES: Readonly<Record<IoErrorCode, OpErrorCode>> = {
   EXISTS: 'CONFLICT',
   BAD_PALETTE_FILE: 'BAD_FILE',
   PALETTE_TOO_LARGE: 'REFUSED',
+  UNSUPPORTED_IMAGE: 'REFUSED',
 };
 
 const RIG_CODES: Readonly<Record<RigErrorCode, OpErrorCode>> = {

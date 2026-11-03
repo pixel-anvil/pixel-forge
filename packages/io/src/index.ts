@@ -8,6 +8,7 @@
 export const ioPackage = '@pixel-forge/io' as const;
 
 export { IoError } from './errors.js';
+export { decodeImageFile } from './image-input.js';
 export type { IoErrorCode } from './errors.js';
 export {
   DEFAULT_FRAME_MS,

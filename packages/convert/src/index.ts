@@ -1,2 +1,23 @@
-/** Package identifier, used by the scaffold smoke test. */
+/**
+ * `@pixel-forge/convert`: pure image-to-sprite steps over `RgbaImage`. No decoding here: PNG bytes are
+ * decoded in `@pixel-forge/io` (`decodeImageFile`).
+ * @packageDocumentation
+ */
+
+/** Package identifier. */
 export const convertPackage = '@pixel-forge/convert' as const;
+
+export { ConvertError } from './errors.js';
+export type { ConvertErrorCode } from './errors.js';
+export { cropImage } from './crop.js';
+export type { CropOptions } from './crop.js';
+export { MAX_RGB_TOLERANCE, autoKeyColor, removeBackground, rgbDistanceSq } from './background.js';
+export type {
+  BackgroundAlpha,
+  BackgroundColor,
+  BackgroundFlood,
+  BackgroundKey,
+  BackgroundNone,
+  BackgroundOptions,
+  RgbTriple,
+} from './background.js';
